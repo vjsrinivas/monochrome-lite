@@ -5062,61 +5062,6 @@ input:checked + .slider::before {
     }
 }
 
-#api-instance-list {
-    list-style: none;
-    margin-bottom: 1rem;
-}
-
-#api-instance-list li {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem;
-    background-color: var(--secondary);
-    border-radius: var(--radius);
-    margin-bottom: 0.5rem;
-}
-
-#api-instance-list li .instance-url {
-    flex-grow: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 0.9rem;
-}
-
-#api-instance-list li .controls {
-    display: flex;
-    gap: 0.5rem;
-}
-
-#api-instance-list li button {
-    background: transparent;
-    border: none;
-    color: var(--muted-foreground);
-    cursor: pointer;
-    padding: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-sm);
-    transition:
-        transform var(--transition-fast),
-        color var(--transition-fast),
-        background-color var(--transition-fast);
-}
-
-#api-instance-list li button:hover {
-    color: var(--foreground);
-    background-color: var(--muted);
-    transform: scale(1.15);
-}
-
-#api-instance-list li button:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-}
-
 .theme-picker {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -6494,6 +6439,10 @@ img[src=''] {
 
 #page-library .library-create-dashed-card .card-title {
     margin-bottom: 0;
+}
+
+#page-library .card-grid {
+    margin-bottom: var(--spacing-xl);
 }
 
 .library-liked-tracks-toolbar {

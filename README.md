@@ -68,7 +68,6 @@
 - Public playlists for social sharing
 - Smart recommendations for new songs, albums & artists
 - Infinite Recommendation Radio
-- Explore Page (Hot & New) for discovering newly added music and whats trending overall or within each genre
 
 ### Lyrics & Metadata
 
@@ -83,7 +82,6 @@
 - Real-time Listening Parties for synced playback with friends
 - Last.fm and ListenBrainz integration for scrobbling
 - OAuth support (Google, Discord, GitHub, Spotify)
-- Unreleased music from [ArtistGrid](https://artistgrid.cx)
 - Dynamic Discord Embeds
 - Artist Biography + Social Links for learning more about your favorite artists
 - Multiple API instance support with failover

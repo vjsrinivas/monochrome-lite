@@ -4342,15 +4342,6 @@ export async function initializeSettings(scrobbler, player, api, ui) {
                 { id: 3, type: 'peaking', freq: 2500, gain: 0.5, q: 1.0, enabled: true, channel: 'stereo' },
             ],
         },
-        shelf_hifi: {
-            name: 'Hi-Fi',
-            bands: [
-                { id: 0, type: 'lowshelf', freq: 80, gain: 2.5, q: 0.7, enabled: true, channel: 'stereo' },
-                { id: 1, type: 'highshelf', freq: 10000, gain: 2.0, q: 0.5, enabled: true, channel: 'stereo' },
-                { id: 2, type: 'peaking', freq: 400, gain: -1.0, q: 1.0, enabled: true, channel: 'stereo' },
-                { id: 3, type: 'peaking', freq: 3000, gain: 0.5, q: 1.5, enabled: true, channel: 'stereo' },
-            ],
-        },
         shelf_dark: {
             name: 'Dark & Smooth',
             bands: [
@@ -6464,74 +6455,6 @@ export async function initializeSettings(scrobbler, player, api, ui) {
     }
 
     // API settings
-    document.getElementById('refresh-speed-test-btn')?.addEventListener('click', async () => {
-        const btn = document.getElementById('refresh-speed-test-btn');
-        const originalText = btn.textContent;
-        btn.textContent = 'Testing...';
-        btn.disabled = true;
-
-        try {
-            await api.settings.refreshInstances();
-            ui.renderApiSettings();
-            btn.textContent = 'Done!';
-            setTimeout(() => {
-                btn.textContent = originalText;
-                btn.disabled = false;
-            }, 1500);
-        } catch (error) {
-            console.error('Failed to refresh speed tests:', error);
-            btn.textContent = 'Error';
-            setTimeout(() => {
-                btn.textContent = originalText;
-                btn.disabled = false;
-            }, 1500);
-        }
-    });
-
-    document.getElementById('api-instance-list')?.addEventListener('click', async (e) => {
-        const button = e.target.closest('button');
-        if (!button) return;
-
-        const li = button.closest('li');
-        const type = button.dataset.type || li?.dataset.type || 'api';
-
-        if (button.classList.contains('add-instance')) {
-            const url = prompt(`Enter custom ${type.toUpperCase()} instance URL (e.g. https://my-instance.com):`);
-            if (url && url.trim()) {
-                let formattedUrl = url.trim();
-                if (!formattedUrl.startsWith('http')) {
-                    formattedUrl = 'https://' + formattedUrl;
-                }
-                api.settings.addUserInstance(type, formattedUrl);
-                ui.renderApiSettings();
-            }
-            return;
-        }
-
-        if (button.classList.contains('delete-instance')) {
-            const url = li.dataset.url;
-            if (url && confirm(`Delete custom instance ${url}?`)) {
-                api.settings.removeUserInstance(type, url);
-                ui.renderApiSettings();
-            }
-            return;
-        }
-
-        const index = parseInt(li?.dataset.index, 10);
-        if (isNaN(index)) return;
-
-        const instances = await api.settings.getInstances(type);
-
-        if (button.classList.contains('move-up') && index > 0) {
-            [instances[index], instances[index - 1]] = [instances[index - 1], instances[index]];
-        } else if (button.classList.contains('move-down') && index < instances.length - 1) {
-            [instances[index], instances[index + 1]] = [instances[index + 1], instances[index]];
-        }
-
-        api.settings.saveInstances(instances, type);
-        ui.renderApiSettings();
-    });
-
     document.getElementById('clear-cache-btn')?.addEventListener('click', async () => {
         const btn = document.getElementById('clear-cache-btn');
         const originalText = btn.textContent;

@@ -4,7 +4,6 @@ import { VitePWA } from 'vite-plugin-pwa';
 import authGatePlugin from './vite-plugin-auth-gate.js';
 import blobAssetPlugin from './vite-plugin-blob.js';
 import svgUse from './vite-plugin-svg-use.js';
-import uploadPlugin from './vite-plugin-upload.js';
 import { playwright } from '@vitest/browser-playwright';
 import { execSync } from 'child_process';
 
@@ -84,7 +83,6 @@ export default defineConfig((_options) => {
         plugins: [
             proxyAudioPlugin(),
             authGatePlugin(),
-            uploadPlugin(),
             blobAssetPlugin(),
             svgUse(),
             VitePWA({

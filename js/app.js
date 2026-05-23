@@ -34,7 +34,6 @@ import { registerSW } from 'virtual:pwa-register';
 import { openEditProfile } from './profile.js';
 import { ThemeStore } from './themeStore.js';
 import './commandPalette.js';
-import { initTracker } from './tracker.js';
 import { initAnalytics } from './analytics.js';
 import {
     parseCSV,
@@ -56,7 +55,6 @@ import {
     SVG_CLOSE,
     SVG_RESET,
 } from './icons.js';
-import { HiFiClient } from './HiFi.js';
 
 // Capture real iOS state before spoofing (needed for background audio)
 if (typeof window !== 'undefined') {
@@ -387,29 +385,6 @@ async function disablePwaForAuthGate() {
     }
 }
 
-async function uploadCoverImage(file) {
-    try {
-        const response = await fetch(`https://worker.uploads.monochrome.qzz.io/${file.name}`, {
-            method: 'PUT',
-            headers: {
-                'x-api-key': 'if_youre_reading_this_fuck_off',
-                'Content-Type': file.type || 'application/octet-stream',
-            },
-            body: file,
-        });
-
-        if (!response.ok) {
-            if (response.status === 413) throw new Error('File exceeds 10MB');
-            throw new Error(`Upload failed: ${response.status}`);
-        }
-
-        return `https://images.monochrome.qzz.io/${await response.text()}`;
-    } catch (error) {
-        console.error('Cover upload error:', error);
-        throw error;
-    }
-}
-
 document.addEventListener('DOMContentLoaded', async () => {
     await modernSettings.waitPending();
 
@@ -422,7 +397,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (import.meta.env.DEV) {
         window.monochrome = {
-            HiFiClient,
             LyricsManager,
             MusicAPI,
             Player,
@@ -455,22 +429,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     new ThemeStore();
 
-    await HiFiClient.initialize({
-        storage: [
-            localStorage,
-            ...(import.meta.env.DEV
-                ? [
-                      {
-                          setItem: (key, value) => console.debug(`HiFiClient storage set: ${key} = ${value}`),
-                          removeItem: (key) => console.debug(`HiFiClient storage remove: ${key}`),
-                      },
-                  ]
-                : []),
-        ],
-        token: localStorage.getItem('hifi_token') || undefined,
-        tokenExpiry: parseInt(localStorage.getItem('hifi_token_expiry') || '0'),
-    });
-
     await MusicAPI.initialize(apiSettings);
 
     const audioPlayer = document.getElementById('audio-player');
@@ -478,9 +436,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // i love ios and macos!!!! webkit fucking SUCKS BULLSHIT sorry ios/macos heads yall getting lossless only playback
     const currentQuality = localStorage.getItem('playback-quality') || 'HI_RES_LOSSLESS';
     await Player.initialize(audioPlayer, MusicAPI.instance, currentQuality);
-
-    // Initialize tracker
-    initTracker().catch(console.error);
 
     await fetchcontributors();
     const castBtn = document.getElementById('cast-btn');

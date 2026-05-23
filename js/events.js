@@ -1619,11 +1619,8 @@ export async function handleTrackAction(
         modal.classList.add('active');
     } else if (action === 'go-to-artist') {
         const artistId = extraData?.artistId || item.artist?.id || item.artists?.[0]?.id;
-        const trackerSheetId = extraData?.trackerSheetId || (item.isTracker ? item.trackerInfo?.sheetId : null);
 
-        if (trackerSheetId) {
-            navigate(`/unreleased/${trackerSheetId}`);
-        } else if (artistId) {
+        if (artistId) {
             navigate(`/artist/${artistId}`);
         }
     } else if (action === 'go-to-album') {
@@ -1658,142 +1655,65 @@ export async function handleTrackAction(
         window.open(harmonyUrl, '_blank');
     } else if (action === 'track-info') {
         // Show detailed track info modal
-        const isTracker = item.isTracker;
-        let infoHTML = '';
+        const releaseDate = item.album?.releaseDate || item.streamStartDate;
+        const dateDisplay = releaseDate ? new Date(releaseDate).toLocaleDateString() : 'Unknown';
+        const quality = item.audioQuality || 'Unknown';
+        const bitrate = item.bitrate ? `${item.bitrate} kbps` : '';
 
-        if (isTracker && item.trackerInfo) {
-            // Detailed unreleased/tracker track info
-            const releaseDate = item.trackerInfo.releaseDate || item.streamStartDate;
-            const dateDisplay = releaseDate ? new Date(releaseDate).toLocaleDateString() : 'Unknown';
-            const addedDate = item.trackerInfo.addedDate
-                ? new Date(item.trackerInfo.addedDate).toLocaleDateString()
-                : 'Unknown';
-
-            infoHTML = `
-                <div style="padding: 1.5rem; max-width: 500px; max-height: 80vh; overflow-y: auto;">
-                    <h3 style="margin-bottom: 1rem; font-size: 1.3rem; font-weight: 600;">${escapeHtml(item.title)}</h3>
-                    <div style="color: var(--muted-foreground); font-size: 0.9rem; line-height: 1.8;">
-                        <div style="margin-bottom: 1rem; padding: 0.75rem; background: var(--accent); border-radius: 8px;">
-                            <p style="color: var(--primary); font-weight: 500;">Unreleased Track</p>
-                        </div>
-
-                        <div style="display: grid; gap: 0.5rem;">
-                            ${item.artists ? `<p><strong style="color: var(--foreground);">Artist:</strong> ${escapeHtml(Array.isArray(item.artists) ? item.artists.map((a) => a.name || a).join(', ') : item.artists)}</p>` : ''}
-                            ${item.trackerInfo.artist ? `<p><strong style="color: var(--foreground);">Tracked Artist:</strong> ${escapeHtml(item.trackerInfo.artist)}</p>` : ''}
-                            ${item.trackerInfo.project ? `<p><strong style="color: var(--foreground);">Project:</strong> ${escapeHtml(item.trackerInfo.project)}</p>` : ''}
-                            ${item.trackerInfo.era ? `<p><strong style="color: var(--foreground);">Era:</strong> ${escapeHtml(item.trackerInfo.era)}</p>` : ''}
-                            ${item.trackerInfo.timeline ? `<p><strong style="color: var(--foreground);">Timeline:</strong> ${escapeHtml(item.trackerInfo.timeline)}</p>` : ''}
-                            ${item.trackerInfo.category ? `<p><strong style="color: var(--foreground);">Category:</strong> ${escapeHtml(item.trackerInfo.category)}</p>` : ''}
-                            ${item.trackerInfo.trackNumber ? `<p><strong style="color: var(--foreground);">Track Number:</strong> ${escapeHtml(String(item.trackerInfo.trackNumber))}</p>` : ''}
-                            <p><strong style="color: var(--foreground);">Duration:</strong> ${escapeHtml(formatTime(item.duration))}</p>
-                            ${releaseDate !== 'Unknown' ? `<p><strong style="color: var(--foreground);">Release Date:</strong> ${escapeHtml(dateDisplay)}</p>` : ''}
-                            ${item.trackerInfo.addedDate ? `<p><strong style="color: var(--foreground);">Added to Tracker:</strong> ${escapeHtml(addedDate)}</p>` : ''}
-                            ${item.trackerInfo.leakedDate ? `<p><strong style="color: var(--foreground);">Leak Date:</strong> ${escapeHtml(new Date(item.trackerInfo.leakedDate).toLocaleDateString())}</p>` : ''}
-                            ${item.trackerInfo.recordingDate ? `<p><strong style="color: var(--foreground);">Recording Date:</strong> ${escapeHtml(new Date(item.trackerInfo.recordingDate).toLocaleDateString())}</p>` : ''}
-                        </div>
-
-                        ${
-                            item.trackerInfo.description
-                                ? `
-                            <div style="margin-top: 1rem; padding: 0.75rem; background: var(--accent); border-radius: 8px;">
-                                <p style="color: var(--foreground); font-weight: 500; margin-bottom: 0.5rem;">Description</p>
-                                <p style="font-size: 0.85rem; line-height: 1.6;">${escapeHtml(item.trackerInfo.description)}</p>
-                            </div>
-                        `
-                                : ''
-                        }
-
-                        ${
-                            item.trackerInfo.notes
-                                ? `
-                            <div style="margin-top: 1rem; padding: 0.75rem; background: var(--accent); border-radius: 8px;">
-                                <p style="color: var(--foreground); font-weight: 500; margin-bottom: 0.5rem;">Notes</p>
-                                <p style="font-size: 0.85rem; line-height: 1.6;">${escapeHtml(item.trackerInfo.notes)}</p>
-                            </div>
-                        `
-                                : ''
-                        }
-
-                        ${
-                            item.trackerInfo.sourceUrl
-                                ? `
-                            <div style="margin-top: 1rem;">
-                                <p style="margin-bottom: 0.5rem;"><strong style="color: var(--foreground);">Source URL:</strong></p>
-                                <a href="${escapeHtml(item.trackerInfo.sourceUrl)}" target="_blank" style="color: var(--primary); word-break: break-all; font-size: 0.85rem; display: block; padding: 0.5rem; background: var(--accent); border-radius: 6px; text-decoration: none;">
-                                    ${escapeHtml(item.trackerInfo.sourceUrl)}
-                                </a>
-                            </div>
-                        `
-                                : ''
-                        }
-
-                        ${item.id ? `<p style="margin-top: 1rem; font-size: 0.8rem; color: var(--muted);"><strong>Track ID:</strong> ${escapeHtml(item.id)}</p>` : ''}
+        let infoHTML = `
+            <div style="padding: 1.5rem; max-width: 500px; max-height: 80vh; overflow-y: auto;">
+                <h3 style="margin-bottom: 1rem; font-size: 1.3rem; font-weight: 600;">${escapeHtml(item.title)}</h3>
+                <div style="color: var(--muted-foreground); font-size: 0.9rem; line-height: 1.8;">
+                    <div style="display: grid; gap: 0.5rem;">
+                        <p><strong style="color: var(--foreground);">Artist:</strong> ${escapeHtml(getTrackArtists(item))}</p>
+                        <p><strong style="color: var(--foreground);">Album:</strong> ${escapeHtml(item.album?.title || 'Unknown')}</p>
+                        ${item.album?.artist?.name ? `<p><strong style="color: var(--foreground);">Album Artist:</strong> ${escapeHtml(item.album.artist.name)}</p>` : ''}
+                        <p><strong style="color: var(--foreground);">Release Date:</strong> ${escapeHtml(dateDisplay)}</p>
+                        <p><strong style="color: var(--foreground);">Duration:</strong> ${escapeHtml(formatTime(item.duration))}</p>
+                        ${item.trackNumber ? `<p><strong style="color: var(--foreground);">Track Number:</strong> ${escapeHtml(String(item.trackNumber))}</p>` : ''}
+                        ${item.discNumber ? `<p><strong style="color: var(--foreground);">Disc Number:</strong> ${escapeHtml(String(item.discNumber))}</p>` : ''}
+                        ${item.version ? `<p><strong style="color: var(--foreground);">Version:</strong> ${escapeHtml(item.version)}</p>` : ''}
+                        ${item.explicit ? `<p><strong style="color: var(--foreground);">Explicit:</strong> Yes</p>` : ''}
+                        <p><strong style="color: var(--foreground);">Quality:</strong> ${escapeHtml(quality)} ${bitrate ? `(${escapeHtml(bitrate)})` : ''}</p>
                     </div>
-                    <button class="btn-primary track-info-close-btn" style="margin-top: 1.5rem; width: 100%;">Close</button>
-                </div>
-            `;
-        } else {
-            // Detailed normal track info
-            const releaseDate = item.album?.releaseDate || item.streamStartDate;
-            const dateDisplay = releaseDate ? new Date(releaseDate).toLocaleDateString() : 'Unknown';
-            const quality = item.audioQuality || 'Unknown';
-            const bitrate = item.bitrate ? `${item.bitrate} kbps` : '';
 
-            infoHTML = `
-                <div style="padding: 1.5rem; max-width: 500px; max-height: 80vh; overflow-y: auto;">
-                    <h3 style="margin-bottom: 1rem; font-size: 1.3rem; font-weight: 600;">${escapeHtml(item.title)}</h3>
-                    <div style="color: var(--muted-foreground); font-size: 0.9rem; line-height: 1.8;">
-                        <div style="display: grid; gap: 0.5rem;">
-                            <p><strong style="color: var(--foreground);">Artist:</strong> ${escapeHtml(getTrackArtists(item))}</p>
-                            <p><strong style="color: var(--foreground);">Album:</strong> ${escapeHtml(item.album?.title || 'Unknown')}</p>
-                            ${item.album?.artist?.name ? `<p><strong style="color: var(--foreground);">Album Artist:</strong> ${escapeHtml(item.album.artist.name)}</p>` : ''}
-                            <p><strong style="color: var(--foreground);">Release Date:</strong> ${escapeHtml(dateDisplay)}</p>
-                            <p><strong style="color: var(--foreground);">Duration:</strong> ${escapeHtml(formatTime(item.duration))}</p>
-                            ${item.trackNumber ? `<p><strong style="color: var(--foreground);">Track Number:</strong> ${escapeHtml(String(item.trackNumber))}</p>` : ''}
-                            ${item.discNumber ? `<p><strong style="color: var(--foreground);">Disc Number:</strong> ${escapeHtml(String(item.discNumber))}</p>` : ''}
-                            ${item.version ? `<p><strong style="color: var(--foreground);">Version:</strong> ${escapeHtml(item.version)}</p>` : ''}
-                            ${item.explicit ? `<p><strong style="color: var(--foreground);">Explicit:</strong> Yes</p>` : ''}
-                            <p><strong style="color: var(--foreground);">Quality:</strong> ${escapeHtml(quality)} ${bitrate ? `(${escapeHtml(bitrate)})` : ''}</p>
+                    ${
+                        item.credits && item.credits.length > 0
+                            ? `
+                        <div style="margin-top: 1rem; padding: 0.75rem; background: var(--accent); border-radius: 8px;">
+                            <p style="color: var(--foreground); font-weight: 500; margin-bottom: 0.5rem;">Credits</p>
+                            <div style="font-size: 0.85rem; line-height: 1.6;">
+                                ${item.credits.map((c) => `<p>${escapeHtml(c.type)}: ${escapeHtml(c.name)}</p>`).join('')}
+                            </div>
                         </div>
+                    `
+                            : ''
+                    }
 
-                        ${
-                            item.credits && item.credits.length > 0
-                                ? `
-                            <div style="margin-top: 1rem; padding: 0.75rem; background: var(--accent); border-radius: 8px;">
-                                <p style="color: var(--foreground); font-weight: 500; margin-bottom: 0.5rem;">Credits</p>
-                                <div style="font-size: 0.85rem; line-height: 1.6;">
-                                    ${item.credits.map((c) => `<p>${escapeHtml(c.type)}: ${escapeHtml(c.name)}</p>`).join('')}
-                                </div>
-                            </div>
-                        `
-                                : ''
-                        }
+                    ${
+                        item.composers && item.composers.length > 0
+                            ? `
+                        <p style="margin-top: 0.5rem;"><strong style="color: var(--foreground);">Composers:</strong> ${escapeHtml(item.composers.map((c) => c.name).join(', '))}</p>
+                    `
+                            : ''
+                    }
 
-                        ${
-                            item.composers && item.composers.length > 0
-                                ? `
-                            <p style="margin-top: 0.5rem;"><strong style="color: var(--foreground);">Composers:</strong> ${escapeHtml(item.composers.map((c) => c.name).join(', '))}</p>
-                        `
-                                : ''
-                        }
+                    ${
+                        item.lyrics?.text
+                            ? `
+                        <div style="margin-top: 1rem; padding: 0.75rem; background: var(--accent); border-radius: 8px;">
+                            <p style="color: var(--foreground); font-weight: 500; margin-bottom: 0.5rem;">Has Lyrics</p>
+                        </div>
+                    `
+                            : ''
+                    }
 
-                        ${
-                            item.lyrics?.text
-                                ? `
-                            <div style="margin-top: 1rem; padding: 0.75rem; background: var(--accent); border-radius: 8px;">
-                                <p style="color: var(--foreground); font-weight: 500; margin-bottom: 0.5rem;">Has Lyrics</p>
-                            </div>
-                        `
-                                : ''
-                        }
-
-                        ${item.id ? `<p style="margin-top: 1rem; font-size: 0.8rem; color: var(--muted);"><strong>Track ID:</strong> ${escapeHtml(item.id)}</p>` : ''}
-                        ${item.album?.id ? `<p style="font-size: 0.8rem; color: var(--muted);"><strong>Album ID:</strong> ${escapeHtml(item.album.id)}</p>` : ''}
-                    </div>
-                    <button class="btn-primary track-info-close-btn" style="margin-top: 1.5rem; width: 100%;">Close</button>
+                    ${item.id ? `<p style="margin-top: 1rem; font-size: 0.8rem; color: var(--muted);"><strong>Track ID:</strong> ${escapeHtml(item.id)}</p>` : ''}
+                    ${item.album?.id ? `<p style="font-size: 0.8rem; color: var(--muted);"><strong>Album ID:</strong> ${escapeHtml(item.album.id)}</p>` : ''}
                 </div>
-            `;
-        }
+                <button class="btn-primary track-info-close-btn" style="margin-top: 1.5rem; width: 100%;">Close</button>
+            </div>
+        `;
 
         // Create and show modal
         const modal = document.createElement('div');
@@ -1898,13 +1818,6 @@ async function updateContextMenuLikeState(contextMenu, contextTrack) {
     if (trackMixItem) {
         const hasMix = contextTrack.mixes && contextTrack.mixes.TRACK_MIX;
         trackMixItem.style.display = hasMix ? 'block' : 'none';
-    }
-
-    // Show/hide "Open Original URL" only for unreleased/tracker tracks
-    const openOriginalUrlItem = contextMenu.querySelector('li[data-action="open-original-url"]');
-    if (openOriginalUrlItem) {
-        const isUnreleased = contextTrack.isTracker || (contextTrack.trackerInfo && contextTrack.trackerInfo.sourceUrl);
-        openOriginalUrlItem.style.display = isUnreleased ? 'block' : 'none';
     }
 
     // Update block/unblock labels
@@ -2212,10 +2125,7 @@ export function initializeTrackInteractions(player, api, mainContent, contextMen
         if (artistLink) {
             e.stopPropagation();
             const artistId = artistLink.dataset.artistId;
-            const trackerSheetId = artistLink.dataset.trackerSheetId;
-            if (trackerSheetId) {
-                navigate(`/unreleased/${trackerSheetId}`);
-            } else if (artistId) {
+            if (artistId) {
                 navigate(`/artist/${artistId}`);
             }
             return;
@@ -2525,11 +2435,7 @@ export function initializeTrackInteractions(player, api, mainContent, contextMen
         if (link) {
             e.stopPropagation();
             const artistId = link.dataset.artistId;
-            const trackerSheetId = link.dataset.trackerSheetId;
-            if (trackerSheetId) {
-                // Navigate to tracker artist page
-                navigate(`/unreleased/${trackerSheetId}`);
-            } else if (artistId) {
+            if (artistId) {
                 navigate(`/artist/${artistId}`);
             }
             return;
@@ -2537,14 +2443,8 @@ export function initializeTrackInteractions(player, api, mainContent, contextMen
 
         // Fallback for non-link clicks (e.g. separators) or single artist legacy
         const track = player.currentTrack;
-        if (track) {
-            // Check if this is a tracker track
-            const isTracker = track.isTracker || (track.id && String(track.id).startsWith('tracker-'));
-            if (isTracker && track.trackerInfo?.sheetId) {
-                navigate(`/unreleased/${track.trackerInfo.sheetId}`);
-            } else if (track.artist?.id) {
-                navigate(`/artist/${track.artist.id}`);
-            }
+        if (track && track.artist?.id) {
+            navigate(`/artist/${track.artist.id}`);
         }
     });
 

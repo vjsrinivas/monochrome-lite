@@ -42,10 +42,6 @@ vi.mock('../storage.js', () => ({
     },
     qualityBadgeSettings: { isEnabled: vi.fn(() => true) },
     coverArtSizeSettings: { getSize: vi.fn(() => '1280') },
-    apiSettings: {
-        loadInstancesFromGitHub: vi.fn(() => Promise.resolve([])),
-        getInstances: vi.fn(() => Promise.resolve([])),
-    },
     recentActivityManager: { addArtist: vi.fn(), addAlbum: vi.fn() },
     themeManager: { getTheme: vi.fn(() => 'dark'), setTheme: vi.fn() },
     lastFMStorage: { isEnabled: vi.fn(() => false) },

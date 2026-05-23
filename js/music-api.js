@@ -133,10 +133,6 @@ export class MusicAPI {
         return this.podcastsAPI.getPodcastEpisodes(id, options);
     }
 
-    async getTrendingPodcasts(options = {}) {
-        return this.podcastsAPI.getTrendingPodcasts(options);
-    }
-
     // Get methods
     async getTrack(id, quality) {
         const api = this.getAPI();

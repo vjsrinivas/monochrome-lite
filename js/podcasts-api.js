@@ -155,35 +155,6 @@ export class PodcastsAPI {
         }
     }
 
-    async getTrendingPodcasts(options = {}) {
-        try {
-            const max = options.max || 20;
-            const lang = options.lang || '';
-            const cat = options.cat || '';
-            const since = options.since || '';
-            const params = new URLSearchParams({ max, pretty: '' });
-            if (lang) params.append('lang', lang);
-            if (cat) params.append('cat', cat);
-            if (since) params.append('since', since);
-            const queryString = params.toString().replace(/&pretty=$/, '');
-            const data = await this.fetchWithRetry(`/podcasts/trending?${queryString}`, options);
-
-            if (data.status !== 'true' || !data.feeds) {
-                return { items: [], total: 0 };
-            }
-
-            const podcasts = data.feeds.map((feed) => this.transformPodcast(feed));
-            return {
-                items: podcasts,
-                total: data.count || podcasts.length,
-            };
-        } catch (error) {
-            if (error.name === 'AbortError') throw error;
-            console.error('Get trending podcasts failed:', error);
-            return { items: [], total: 0 };
-        }
-    }
-
     async testAuth() {
         console.log('Testing PodcastIndex auth...');
         try {

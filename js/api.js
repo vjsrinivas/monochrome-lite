@@ -21,7 +21,17 @@ import { isCustomFormat } from './ffmpegFormats.ts';
 import { DownloadProgress } from './progressEvents.js';
 import { resolveDownloadTotalBytes } from './downloadProgressUtils.js';
 import { readableStreamIterator } from './readableStreamIterator.js';
-import { HiFiClient, TidalResponse } from './HiFi.ts';
+// Minimal stub for TidalResponse — the original class lived in js/HiFi.ts which has been removed.
+// The instanceof check here is always false, so all API responses are cached (same as the
+// pre-HiFiClient-fallback behaviour).
+class TidalResponse extends Response {
+    constructor(body, init) {
+        super(body, init);
+    }
+}
+
+TidalResponse.prototype.json = Response.prototype.json;
+
 import { isIos, isSafari, isChrome } from './platform-detection.js';
 import {
     TrackAlbum,
@@ -73,114 +83,6 @@ export class LosslessAPI {
 
     async fetchWithRetry(relativePath, options = {}) {
         const type = options.type || 'api';
-        const isSearchRequest = relativePath.startsWith('/search/');
-        const getInstances = async (forceRefresh = false) => {
-            if (forceRefresh && this.settings && typeof this.settings.refreshInstances === 'function') {
-                try {
-                    await this.settings.refreshInstances();
-                } catch (refreshError) {
-                    console.warn('Failed to refresh API instances from uptime workers:', refreshError);
-                }
-            }
-
-            let instances = await this.settings.getInstances(type);
-            if (options.userInstancesOnly) {
-                instances = instances.filter((i) => i.isUser);
-                if (instances.length === 0) {
-                    throw new Error(`No user API instances configured for type: ${type}`);
-                }
-            } else if (instances.length === 0) {
-                throw new Error(`No API instances configured for type: ${type}`);
-            }
-
-            if (options.minVersion) {
-                instances = instances.filter((instance) => {
-                    if (!instance.version) return false;
-                    return parseFloat(instance.version) >= parseFloat(options.minVersion);
-                });
-                if (instances.length === 0) {
-                    throw new Error(
-                        `No API instances configured for type: ${type} with minVersion: ${options.minVersion}`
-                    );
-                }
-            }
-
-            if (options.allowedDomains) {
-                instances = instances.filter((instance) => {
-                    const url = typeof instance === 'string' ? instance : instance.url;
-                    return options.allowedDomains.some((domain) => url.includes(domain));
-                });
-                if (instances.length === 0) {
-                    throw new Error(
-                        `No API instances configured for type: ${type} matching allowedDomains: ${options.allowedDomains.join(', ')}`
-                    );
-                }
-            }
-
-            return instances;
-        };
-
-        const tryInstances = async (instances) => {
-            const maxTotalAttempts = instances.length * 2; // Allow some retries across instances
-            let lastError = null;
-            let instanceIndex = Math.floor(Math.random() * instances.length);
-
-            for (let attempt = 1; attempt <= maxTotalAttempts; attempt++) {
-                const instance = instances[instanceIndex % instances.length];
-                const baseUrl = typeof instance === 'string' ? instance : instance.url;
-
-                const isTidal = baseUrl.includes('api.tidal.com') || baseUrl.includes('openapi.tidal.com');
-                const targetUrl = baseUrl.endsWith('/')
-                    ? `${baseUrl}${relativePath.substring(1)}`
-                    : `${baseUrl}${relativePath}`;
-
-                const url = isTidal ? wrapTidalUrl(targetUrl) : targetUrl;
-
-                try {
-                    const response = await fetch(url, { signal: options.signal });
-
-                    if (response.status === 429) {
-                        console.warn(`Rate limit hit on ${baseUrl}. Trying next instance...`);
-                        instanceIndex++;
-                        await delay(500);
-                        continue;
-                    }
-
-                    if (response.ok) {
-                        return response;
-                    }
-
-                    if (response.status === 401) {
-                        const errorData = await response
-                            .clone()
-                            .json()
-                            .catch(() => null);
-                        if (errorData?.subStatus === 11002) {
-                            console.warn(`Auth failed on ${baseUrl}. Trying next instance...`);
-                            instanceIndex++;
-                            continue;
-                        }
-                    }
-
-                    if (response.status >= 500) {
-                        console.warn(`Server error ${response.status} on ${baseUrl}. Trying next instance...`);
-                        instanceIndex++;
-                        continue;
-                    }
-
-                    lastError = new Error(`Request failed with status ${response.status}`);
-                    instanceIndex++;
-                } catch (error) {
-                    if (error.name === 'AbortError') throw error;
-                    lastError = error;
-                    console.warn(`Network error on ${baseUrl}: ${error.message}. Trying next instance...`);
-                    instanceIndex++;
-                    await delay(200);
-                }
-            }
-
-            throw lastError || new Error(`All API instances failed for: ${relativePath}`);
-        };
 
         if (devModeSettings.isEnabled()) {
             const devBaseUrl = devModeSettings.getUrl().replace(/\/+$/, '');
@@ -197,45 +99,70 @@ export class LosslessAPI {
             return response;
         }
 
-        const shouldTryNative = type !== 'streaming';
+        const instances = await this.settings.getInstances(type);
+        if (instances.length === 0) {
+            throw new Error(`No API instances configured for type: ${type}`);
+        }
 
-        if (shouldTryNative) {
+        const maxTotalAttempts = instances.length * 2;
+        let lastError = null;
+        let instanceIndex = Math.floor(Math.random() * instances.length);
+
+        for (let attempt = 1; attempt <= maxTotalAttempts; attempt++) {
+            const instance = instances[instanceIndex % instances.length];
+            const baseUrl = typeof instance === 'string' ? instance : instance.url;
+
+            const isTidal = baseUrl.includes('api.tidal.com') || baseUrl.includes('openapi.tidal.com');
+            const targetUrl = baseUrl.endsWith('/')
+                ? `${baseUrl}${relativePath.substring(1)}`
+                : `${baseUrl}${relativePath}`;
+
+            const url = isTidal ? wrapTidalUrl(targetUrl) : targetUrl;
+
             try {
-                if (import.meta.env.DEV) {
-                    console.log(relativePath);
+                const response = await fetch(url, { signal: options.signal });
+
+                if (response.status === 429) {
+                    console.warn(`Rate limit hit on ${baseUrl}. Trying next instance...`);
+                    instanceIndex++;
+                    await delay(500);
+                    continue;
                 }
 
-                // HiFiClient.query fans out across the native TIDAL endpoints used by the route
-                // implementation, including api.tidal.com and openapi.tidal.com where applicable.
-                return await HiFiClient.instance.query(relativePath);
-            } catch (err) {
-                if (options.directOnly) {
-                    throw err;
+                if (response.ok) {
+                    return response;
                 }
 
-                if (import.meta.env.DEV && isSearchRequest) {
-                    console.warn(
-                        `[search] native TIDAL query failed for ${relativePath}, trying HiFi worker instances`,
-                        err
-                    );
-                } else {
-                    console.warn(
-                        `Native TIDAL query failed for ${relativePath}. Falling back to configured HiFi API instances...`,
-                        err
-                    );
+                if (response.status === 401) {
+                    const errorData = await response
+                        .clone()
+                        .json()
+                        .catch(() => null);
+                    if (errorData?.subStatus === 11002) {
+                        console.warn(`Auth failed on ${baseUrl}. Trying next instance...`);
+                        instanceIndex++;
+                        continue;
+                    }
                 }
+
+                if (response.status >= 500) {
+                    console.warn(`Server error ${response.status} on ${baseUrl}. Trying next instance...`);
+                    instanceIndex++;
+                    continue;
+                }
+
+                lastError = new Error(`Request failed with status ${response.status}`);
+                instanceIndex++;
+            } catch (error) {
+                if (error.name === 'AbortError') throw error;
+                lastError = error;
+                console.warn(`Network error on ${baseUrl}: ${error.message}. Trying next instance...`);
+                instanceIndex++;
+                await delay(200);
             }
         }
 
-        try {
-            return await tryInstances(await getInstances(false));
-        } catch (error) {
-            if (type === 'streaming' || options.userInstancesOnly) {
-                throw error;
-            }
-        }
-
-        return await tryInstances(await getInstances(true));
+        throw lastError || new Error(`All API instances failed for: ${relativePath}`);
     }
 
     findSearchSection(source, key, visited) {

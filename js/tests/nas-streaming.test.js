@@ -5,8 +5,7 @@ import { LosslessAPI } from '../api.js';
 // Create a mock settings object for the API
 function createMockSettings() {
     return {
-        getInstances: vi.fn().mockResolvedValue([{ url: 'https://hifi.geeked.wtf', isUser: false, version: '2.0' }]),
-        refreshInstances: vi.fn(),
+        getInstances: vi.fn().mockResolvedValue([]),
     };
 }
 

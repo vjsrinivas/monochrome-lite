@@ -2,7 +2,6 @@ import { expect, test, suite, vi } from 'vitest';
 import { apiSettings, preferDolbyAtmosSettings, losslessContainerSettings } from './storage.js';
 import { MusicAPI } from './music-api.js';
 import { LyricsManager } from './lyrics.js';
-import { HiFiClient } from './HiFi.js';
 import { FileRef } from '!/@dantheman827/taglib-ts/src/fileRef.js';
 import { Mp4File } from '!/@dantheman827/taglib-ts/src/mp4/mp4File.js';
 import { MpegFile } from '!/@dantheman827/taglib-ts/src/mpeg/mpegFile.js';
@@ -100,14 +99,13 @@ suite('Track Downloads', async () => {
 
     await MusicAPI.initialize(apiSettings);
     await LyricsManager.initialize(apiSettings);
-    await HiFiClient.initialize();
 
     const api = MusicAPI.instance.audioAPI;
 
     async function downloadTrack(trackId: number, quality: string) {
-        const track = (await (await HiFiClient.instance.getInfo(trackId)).json()) as { data: Track };
+        const metadata = await MusicAPI.instance.getTrackMetadata(trackId);
         return await api.downloadTrack(trackId.toString(), quality, undefined, {
-            track: track.data,
+            track: metadata.track,
             triggerDownload: false,
         });
     }

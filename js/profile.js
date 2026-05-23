@@ -37,102 +37,6 @@ const usernameError = document.getElementById('username-error');
 let currentFavoriteAlbums = [];
 const api = new MusicAPI(apiSettings);
 
-async function uploadImage(file) {
-    try {
-        const fileNameWithoutSpace = file.name.replace(/\s/g, '_');
-        const response = await fetch(`https://worker.uploads.monochrome.qzz.io/${fileNameWithoutSpace}`, {
-            method: 'PUT',
-            headers: {
-                'x-api-key': 'if_youre_reading_this_fuck_off',
-                'Content-Type': file.type || 'application/octet-stream',
-            },
-            body: file,
-        });
-
-        if (!response.ok) {
-            if (response.status === 413) throw new Error('File exceeds 10MB');
-            throw new Error(`Upload failed: ${response.status}`);
-        }
-
-        return `https://images.monochrome.qzz.io/${await response.text()}`;
-    } catch (error) {
-        console.error('Upload error:', error);
-        throw error;
-    }
-}
-
-function setupImageUploadControl(idPrefix) {
-    const urlInput = document.getElementById(idPrefix);
-    const fileInput = document.getElementById(idPrefix + '-file');
-    const uploadBtn = document.getElementById(idPrefix + '-upload-btn');
-    const toggleBtn = document.getElementById(idPrefix + '-toggle-btn');
-    const statusEl = document.getElementById(idPrefix + '-upload-status');
-
-    if (!urlInput || !fileInput || !uploadBtn || !toggleBtn || !statusEl) return () => {};
-
-    let useUrl = false;
-
-    function updateUI() {
-        if (useUrl) {
-            uploadBtn.style.display = 'none';
-            urlInput.style.display = 'block';
-            toggleBtn.textContent = 'Upload';
-        } else {
-            uploadBtn.style.display = 'flex';
-            urlInput.style.display = 'none';
-            toggleBtn.textContent = 'or URL';
-        }
-    }
-
-    toggleBtn.addEventListener('click', () => {
-        useUrl = !useUrl;
-        updateUI();
-    });
-
-    uploadBtn.addEventListener('click', () => fileInput.click());
-
-    fileInput.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        if (!file.type.startsWith('image/')) {
-            alert('Please select an image file');
-            return;
-        }
-
-        statusEl.style.display = 'block';
-        statusEl.textContent = 'Uploading...';
-        statusEl.style.color = 'var(--muted-foreground)';
-        uploadBtn.disabled = true;
-
-        try {
-            const url = await uploadImage(file);
-            urlInput.value = url;
-            statusEl.textContent = 'Done!';
-            statusEl.style.color = '#10b981';
-            setTimeout(() => {
-                statusEl.style.display = 'none';
-            }, 2000);
-        } catch {
-            statusEl.textContent = 'Failed - try URL';
-            statusEl.style.color = '#ef4444';
-        } finally {
-            uploadBtn.disabled = false;
-            fileInput.value = '';
-        }
-    });
-
-    return (currentUrl) => {
-        urlInput.value = currentUrl || '';
-        useUrl = !!currentUrl;
-        updateUI();
-        statusEl.style.display = 'none';
-    };
-}
-
-const resetAvatarControl = setupImageUploadControl('edit-profile-avatar');
-const resetBannerControl = setupImageUploadControl('edit-profile-banner');
-
 export async function loadProfile(username) {
     document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
     profilePage.classList.add('active');
@@ -523,8 +427,8 @@ export async function openEditProfile() {
 
         editUsername.value = p.username || '';
         editDisplayName.value = p.display_name || '';
-        resetAvatarControl(p.avatar_url);
-        resetBannerControl(p.banner);
+        editAvatar.value = p.avatar_url || '';
+        editBanner.value = p.banner || '';
 
         editStatusJson.value = p.status || '';
         editStatusSearch.value = '';
