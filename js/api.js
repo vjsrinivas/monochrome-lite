@@ -10,7 +10,7 @@ import {
     getTrackCoverId,
     getCoverBlob,
 } from './utils.js';
-import { preferDolbyAtmosSettings, trackDateSettings, devModeSettings } from './storage.js';
+import { preferDolbyAtmosSettings, trackDateSettings, devModeSettings, nasSettings } from './storage.js';
 import { APICache } from './cache.js';
 import { DashDownloader } from './dash-downloader.ts';
 import { HlsDownloader } from './hls-downloader.js';
@@ -1777,76 +1777,75 @@ export class LosslessAPI {
         return result;
     }
 
-    async getQobuzStreamUrl(isrc, quality = 'LOSSLESS') {
-        let qobuzInstances = [];
-        try {
-            qobuzInstances = await this.settings.getInstances('qobuz');
-        } catch {
-            // ignore
-        }
+    async getNasStreamUrl(track, quality = 'LOSSLESS') {
+        if (!nasSettings.isEnabled()) return null;
 
-        if (!qobuzInstances || qobuzInstances.length === 0) {
-            return null;
-        }
+        const baseUrl = nasSettings.getBaseUrl();
+        if (!baseUrl) return null;
 
-        for (const instance of qobuzInstances) {
-            const rawUrl = typeof instance === 'string' ? instance : instance?.url;
-            if (!rawUrl || typeof rawUrl !== 'string') continue;
-            const baseUrl = rawUrl.replace(/\/+$/, '');
+        const strategy = nasSettings.getMappingStrategy();
+        const apiUrl = nasSettings.getApiUrl();
+
+        let resolvedPath = null;
+
+        if (strategy === 'CUSTOM_API' && apiUrl) {
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-                const trackRes = await fetch(`${baseUrl}/api/get-music?q=${encodeURIComponent(isrc)}&offset=0`, {
+                const trackId = track?.id || track?.tidalId;
+                const params = new URLSearchParams({ id: String(trackId), quality });
+                const apiRes = await fetch(`${apiUrl}/resolve?${params.toString()}`, {
                     signal: controller.signal,
                 });
                 clearTimeout(timeoutId);
-                if (!trackRes.ok) continue;
-                const trackJson = await trackRes.json();
 
-                const tracks = trackJson.data?.tracks?.items || [];
-                const match = tracks.find((t) => t.isrc?.toLowerCase() === isrc.toLowerCase()) || tracks[0];
-
-                if (match && match.id) {
-                    const qobuzTrackId = match.id;
-                    const qobuzQualityMap = {
-                        HI_RES_LOSSLESS: '27',
-                        LOSSLESS: '6',
-                        HIGH: '5',
-                        LOW: '5',
-                    };
-                    const qobuzQuality = qobuzQualityMap[quality] || '6';
-
-                    const streamController = new AbortController();
-                    const streamTimeoutId = setTimeout(() => streamController.abort(), 8000);
-
-                    const streamRes = await fetch(
-                        `${baseUrl}/api/download-music?track_id=${qobuzTrackId}&quality=${qobuzQuality}`,
-                        { signal: streamController.signal }
-                    );
-                    clearTimeout(streamTimeoutId);
-                    if (!streamRes.ok) continue;
-                    const streamJson = await streamRes.json();
-
-                    if (streamJson.success && streamJson.data && streamJson.data.url) {
-                        let rgInfo = null;
-                        if (match.audio_info) {
-                            rgInfo = {
-                                trackReplayGain: match.audio_info.replaygain_track_gain,
-                                trackPeakAmplitude: match.audio_info.replaygain_track_peak,
-                                albumReplayGain: match.audio_info.replaygain_album_gain,
-                                albumPeakAmplitude: match.audio_info.replaygain_album_peak,
-                            };
-                        }
-                        return { url: streamJson.data.url, rgInfo };
+                if (apiRes.ok) {
+                    const apiJson = await apiRes.json();
+                    if (apiJson?.path) {
+                        resolvedPath = apiJson.path;
                     }
                 }
             } catch (e) {
-                console.warn(`Qobuz instance ${baseUrl} failed for ISRC ${isrc}:`, e);
-                continue;
+                console.warn(`NAS API resolver failed for track ${track?.id}:`, e);
             }
         }
-        return null;
+
+        if (!resolvedPath) {
+            let identifier = null;
+
+            if (strategy === 'ISRC' && track?.isrc) {
+                identifier = track.isrc;
+            } else if (strategy === 'TIDAL_ID') {
+                identifier = track?.id || track?.tidalId;
+            }
+
+            if (!identifier) return null;
+
+            const qualityExt = quality === 'HI_RES_LOSSLESS' ? 'flac' : quality === 'LOSSLESS' ? 'flac' : 'mp3';
+            resolvedPath = `/music/${identifier}.${qualityExt}`;
+        }
+
+        const nasUrl = `${baseUrl}${resolvedPath}`;
+
+        try {
+            const headController = new AbortController();
+            const headTimeoutId = setTimeout(() => headController.abort(), 5000);
+
+            const headRes = await fetch(nasUrl, { method: 'HEAD', signal: headController.signal });
+            clearTimeout(headTimeoutId);
+
+            if (!headRes.ok) return null;
+        } catch (e) {
+            console.warn(`NAS HEAD request failed for ${nasUrl}:`, e);
+            return null;
+        }
+
+        return {
+            url: nasUrl,
+            rgInfo: null,
+            source: 'nas',
+        };
     }
 
     async getStreamUrl(id, quality = 'LOSSLESS') {
@@ -1877,34 +1876,41 @@ export class LosslessAPI {
                           albumPeakAmplitude: lookup.info.albumPeakAmplitude,
                       }
                     : null,
+                source: 'dev',
             };
             this.streamCache.set(cacheKey, result);
             return result;
         }
 
         const track = await this.getTrackMetadata(id);
-        if (!track?.isrc) {
-            notifyAudioSourceMissing();
-            throw new Error('Could not resolve stream URL: track has no ISRC for Qobuz lookup');
+        if (!track) {
+            throw new Error('Could not resolve stream URL: track metadata not found');
         }
 
-        const qobuzResult = await this.getQobuzStreamUrl(track.isrc, quality);
-        if (!qobuzResult?.url) {
-            notifyAudioSourceMissing();
-            throw new Error('Could not resolve stream URL from Qobuz');
+        let nasResult = null;
+        if (nasSettings.isEnabled()) {
+            nasResult = await this.getNasStreamUrl(track, quality);
         }
 
-        const result = {
-            url: qobuzResult.url,
-            rgInfo: qobuzResult.rgInfo || {
-                trackReplayGain: 0,
-                trackPeakAmplitude: 1,
-                albumReplayGain: 0,
-                albumPeakAmplitude: 1,
-            },
-        };
-        this.streamCache.set(cacheKey, result);
-        return result;
+        if (nasResult?.url) {
+            const result = {
+                url: nasResult.url,
+                rgInfo: nasResult.rgInfo || {
+                    trackReplayGain: 0,
+                    trackPeakAmplitude: 1,
+                    albumReplayGain: 0,
+                    albumPeakAmplitude: 1,
+                },
+                source: 'nas',
+            };
+            this.streamCache.set(cacheKey, result);
+            return result;
+        }
+
+        notifyAudioSourceMissing();
+        throw new Error(
+            'Could not resolve stream URL: NAS file not found. Ensure NAS is enabled and the track exists on your NAS.'
+        );
     }
 
     async getVideoStreamUrl(id) {
@@ -1965,42 +1971,41 @@ export class LosslessAPI {
         const cleanQuality = isCustomFormat(downloadQuality) ? 'LOSSLESS' : downloadQuality;
 
         let lookup = null;
-        let qobuzRgInfo = null;
-        let qobuzStreamUrl = null;
+        let nasStreamUrl = null;
+        let streamSource = null;
 
         if (isVideo) {
             lookup = await this.getVideo(id);
         } else if (devModeSettings.isEnabled()) {
             lookup = new PlaybackInfo(await this.getTrackFromDevMode(id, cleanQuality));
         } else {
-            if (!track?.isrc) {
-                notifyAudioSourceMissing();
-                throw new Error('Cannot resolve audio stream: track has no ISRC for Qobuz lookup');
+            let nasResult = null;
+            if (nasSettings.isEnabled() && track) {
+                nasResult = await this.getNasStreamUrl(track, cleanQuality);
             }
 
-            const qobuzResult = await this.getQobuzStreamUrl(track.isrc, cleanQuality);
-            if (!qobuzResult?.url) {
+            if (nasResult?.url) {
+                nasStreamUrl = nasResult.url;
+                streamSource = 'nas';
+                lookup = {
+                    info: {
+                        audioQuality: cleanQuality,
+                        trackReplayGain: 0,
+                        trackPeakAmplitude: 1,
+                        albumReplayGain: 0,
+                        albumPeakAmplitude: 1,
+                    },
+                };
+            } else {
                 notifyAudioSourceMissing();
-                throw new Error('Could not resolve audio stream from Qobuz');
+                throw new Error(
+                    'Cannot resolve audio stream: NAS file not found. Ensure NAS is enabled and the track exists on your NAS.'
+                );
             }
-
-            qobuzStreamUrl = qobuzResult.url;
-            qobuzRgInfo = qobuzResult.rgInfo;
-            lookup = {
-                info: {
-                    audioQuality: cleanQuality,
-                    trackReplayGain: qobuzRgInfo?.trackReplayGain ?? 0,
-                    trackPeakAmplitude: qobuzRgInfo?.trackPeakAmplitude ?? 1,
-                    albumReplayGain: qobuzRgInfo?.albumReplayGain ?? 0,
-                    albumPeakAmplitude: qobuzRgInfo?.albumPeakAmplitude ?? 1,
-                },
-            };
         }
 
         const enrichedTrack = { ...this.prepareTrack(track) };
-        if (qobuzRgInfo) {
-            enrichedTrack.replayGain = new ReplayGain(qobuzRgInfo);
-        } else if (lookup.info) {
+        if (lookup.info) {
             enrichedTrack.replayGain = new ReplayGain({
                 trackReplayGain: lookup.info.trackReplayGain,
                 trackPeakAmplitude: lookup.info.trackPeakAmplitude,
@@ -2050,9 +2055,9 @@ export class LosslessAPI {
         }
 
         const finalEnriched = new EnrichedTrack(enrichedTrack);
-        const result = { lookup, enrichedTrack: finalEnriched, isVideo };
-        if (qobuzStreamUrl) {
-            result.qobuzStreamUrl = qobuzStreamUrl;
+        const result = { lookup, enrichedTrack: finalEnriched, isVideo, streamSource };
+        if (nasStreamUrl) {
+            result.nasStreamUrl = nasStreamUrl;
         }
         return result;
     }
@@ -2099,7 +2104,7 @@ export class LosslessAPI {
             const enriched = await this.enrichTrack(inputTrack || id, { downloadQuality });
             const { lookup, enrichedTrack, isVideo } = enriched;
 
-            let streamUrl = enriched.qobuzStreamUrl || null;
+            let streamUrl = enriched.nasStreamUrl || null;
             let postProcessingQuality = lookup.info?.audioQuality ?? null;
             let blob;
 

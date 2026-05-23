@@ -40,12 +40,6 @@ export function createRouter(ui) {
         };
 
         switch (page) {
-            case 'parties':
-                await ui.renderPartiesPage();
-                break;
-            case 'party':
-                await ui.renderPartyDetailPage(param);
-                break;
             case 'search':
                 await ui.renderSearchPage(decodeURIComponent(param));
                 break;
@@ -90,20 +84,7 @@ export function createRouter(ui) {
             case 'recent':
                 await ui.renderRecentPage();
                 break;
-            case 'unreleased':
-                if (param) {
-                    const parts = param.split('/');
-                    const sheetId = parts[0];
-                    const projectName = parts[1] ? decodeURIComponent(parts[1]) : null;
-                    if (projectName) {
-                        await ui.renderTrackerProjectPage(sheetId, projectName);
-                    } else {
-                        await ui.renderTrackerArtistPage(sheetId);
-                    }
-                } else {
-                    await ui.renderUnreleasedPage();
-                }
-                break;
+
             case 'podcasts':
                 if (param) {
                     await ui.renderPodcastPage(param);
@@ -117,9 +98,7 @@ export function createRouter(ui) {
             case 'reset-password':
                 await ui.renderResetPasswordPage();
                 break;
-            case 'donate':
-                ui.showPage('donate');
-                break;
+
             case 'user':
                 if (param && param.startsWith('@') && !param.includes('/')) {
                     await loadProfile(decodeURIComponent(param.slice(1)));

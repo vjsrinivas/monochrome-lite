@@ -35,15 +35,11 @@ import { db } from './db.js';
 import { getVibrantColorFromImage } from './vibrant-color.js';
 import { syncManager } from './accounts/pocketbase.js';
 import { authManager } from './accounts/auth.js';
-import { partyManager } from './listening-party.js';
 import { Visualizer } from './visualizer.js';
 import { audioContextManager } from './audio-context.js';
 import { navigate } from './router.js';
 import { sidePanelManager } from './side-panel.js';
 import {
-    renderUnreleasedPage as renderUnreleasedTrackerPage,
-    renderTrackerArtistPage as renderTrackerArtistContent,
-    renderTrackerProjectPage as renderTrackerProjectContent,
     renderTrackerTrackPage as renderTrackerTrackContent,
     findTrackerArtistByName,
     getArtistUnreleasedProjects,
@@ -2452,21 +2448,6 @@ export class UIRenderer {
         }
     }
 
-    async renderPartiesPage() {
-        await this.showPage('parties');
-        const authRequired = document.getElementById('parties-auth-required');
-        const hostControls = document.getElementById('parties-host-controls');
-        const loginBtn = document.getElementById('parties-login-btn');
-
-        hostControls.style.display = 'block';
-        if (authManager.user) {
-            authRequired.style.display = 'none';
-        } else {
-            authRequired.style.display = 'block';
-            loginBtn.onclick = () => navigate('/account');
-        }
-    }
-
     async renderResetPasswordPage() {
         await this.showPage('reset-password');
         const form = document.getElementById('reset-password-form');
@@ -2530,11 +2511,6 @@ export class UIRenderer {
                 spinner.style.display = 'none';
             }
         };
-    }
-
-    async renderPartyDetailPage(id) {
-        await this.showPage('party-detail');
-        await partyManager.joinParty(id);
     }
 
     async renderLibraryPage() {
@@ -4309,7 +4285,7 @@ export class UIRenderer {
                         });
                     }
                 });
-                finalArtists = await this.api.tidalAPI.enrichArtistsWithPicture(Array.from(artistMap.values()));
+                finalArtists = await this.api.audioAPI.enrichArtistsWithPicture(Array.from(artistMap.values()));
             }
 
             if (finalAlbums.length === 0 && finalTracks.length > 0) {
@@ -6348,24 +6324,6 @@ export class UIRenderer {
         }
     }
 
-    async renderUnreleasedPage() {
-        await this.showPage('unreleased');
-        const container = document.getElementById('unreleased-content');
-        await renderUnreleasedTrackerPage(container);
-    }
-
-    async renderTrackerArtistPage(sheetId) {
-        await this.showPage('tracker-artist');
-        const container = document.getElementById('tracker-artist-projects-container');
-        await renderTrackerArtistContent(sheetId, container);
-    }
-
-    async renderTrackerProjectPage(sheetId, projectName) {
-        await this.showPage('album'); // Use album page template
-        const container = document.getElementById('album-detail-tracklist');
-        await renderTrackerProjectContent(sheetId, projectName, container, this);
-    }
-
     async renderTrackerTrackPage(trackId) {
         await this.showPage('album'); // Use album page template
         const container = document.getElementById('album-detail-tracklist');
@@ -6687,20 +6645,14 @@ export class UIRenderer {
 
     renderApiSettings() {
         const container = document.getElementById('api-instance-list');
-        Promise.allSettled([
-            this.api.settings.getInstances('api'),
-            this.api.settings.getInstances('streaming'),
-            this.api.settings.getInstances('qobuz'),
-        ])
+        Promise.allSettled([this.api.settings.getInstances('api'), this.api.settings.getInstances('streaming')])
             .then((results) => {
                 const apiInstances = results[0].status === 'fulfilled' ? results[0].value : [];
                 const streamingInstances = results[1].status === 'fulfilled' ? results[1].value : [];
-                const qobuzInstances = results[2].status === 'fulfilled' ? results[2].value : [];
                 const renderGroup = (instances, type) => {
                     const groupLabels = {
                         api: 'API Instances',
                         streaming: 'Streaming Instances',
-                        qobuz: 'Qobuz Instances',
                     };
 
                     const listHtml = (instances || [])
@@ -6753,8 +6705,7 @@ export class UIRenderer {
                     renderGroup(apiInstances, 'api') +
                     (streamingInstances && streamingInstances.length > 0
                         ? renderGroup(streamingInstances, 'streaming')
-                        : '') +
-                    renderGroup(qobuzInstances, 'qobuz');
+                        : '');
 
                 const stats = this.api.getCacheStats();
                 const cacheInfo = document.getElementById('cache-info');

@@ -1086,7 +1086,7 @@ export async function downloadTrackWithMetadata(
     }
 
     /** @type {LosslessAPI} */
-    const tidalAPI = api.tidalAPI || api;
+    const audioAPI = api.audioAPI || api;
 
     const downloadKey = `track-${track.id}`;
     if (ongoingDownloads.has(downloadKey)) {
@@ -1094,7 +1094,7 @@ export async function downloadTrackWithMetadata(
         return;
     }
 
-    const { enrichedTrack } = await tidalAPI.enrichTrack(track, { downloadQuality: quality });
+    const { enrichedTrack } = await audioAPI.enrichTrack(track, { downloadQuality: quality });
     const filename = buildTrackFilename(enrichedTrack, quality);
 
     const controller = abortController || new AbortController();

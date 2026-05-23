@@ -102,7 +102,7 @@ suite('Track Downloads', async () => {
     await LyricsManager.initialize(apiSettings);
     await HiFiClient.initialize();
 
-    const api = MusicAPI.instance.tidalAPI;
+    const api = MusicAPI.instance.audioAPI;
 
     async function downloadTrack(trackId: number, quality: string) {
         const track = (await (await HiFiClient.instance.getInfo(trackId)).json()) as { data: Track };

@@ -594,6 +594,9 @@ export class Player {
 
                 this.preloadCache.set(track.id, streamInfo);
                 const streamUrl = streamInfo.url;
+                if (streamInfo.source) {
+                    track._streamSource = streamInfo.source;
+                }
 
                 // Warm connection and pre-fetch
                 if (!streamUrl.startsWith('blob:')) {
@@ -1130,6 +1133,21 @@ export class Player {
         }
         document.querySelector('.now-playing-bar .title').innerHTML =
             `${escapeHtml(trackTitle)} ${createQualityBadgeHTML(track)}`;
+        const sourceBadge = document.getElementById('audio-source-badge');
+        if (sourceBadge) {
+            const streamSource = track.streamSource || track._streamSource || null;
+            if (streamSource === 'nas') {
+                sourceBadge.style.display = 'inline-flex';
+                sourceBadge.textContent = 'NAS';
+                sourceBadge.title = 'Playing from NAS';
+            } else if (streamSource === 'dev') {
+                sourceBadge.style.display = 'inline-flex';
+                sourceBadge.textContent = 'DEV';
+                sourceBadge.title = 'Playing from Dev Mode';
+            } else {
+                sourceBadge.style.display = 'none';
+            }
+        }
         const albumEl = document.querySelector('.now-playing-bar .album');
         if (albumEl) {
             const albumTitle = track.album?.title || '';
@@ -1333,6 +1351,9 @@ export class Player {
                 if (this.playbackSequence !== currentSequence) return;
 
                 streamUrl = resolvedStreamInfo.url;
+                if (resolvedStreamInfo.source) {
+                    track._streamSource = resolvedStreamInfo.source;
+                }
 
                 if (resolvedStreamInfo.rgInfo) {
                     this.currentRgValues = resolvedStreamInfo.rgInfo;

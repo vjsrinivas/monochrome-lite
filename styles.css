@@ -1027,6 +1027,7 @@ ul {
 .sidebar-nav-bottom {
     margin-top: auto;
     padding-top: 1rem;
+    padding-bottom: 1.5rem;
     flex: 0 0 auto;
     border-top: 1px solid var(--border);
     background: var(--background);
@@ -2093,6 +2094,29 @@ input[type='search']::-webkit-search-cancel-button {
     width: auto;
 }
 
+.source-badge {
+    border: 1px solid var(--border);
+    color: var(--muted-foreground);
+    font-size: 0.55rem;
+    font-weight: 700;
+    padding: 0.1rem 0.25rem;
+    border-radius: var(--radius-xs);
+    margin-left: 0.35rem;
+    vertical-align: middle;
+    line-height: 1;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    background: var(--secondary);
+}
+
+.source-badge[title='Playing from NAS'] {
+    border-color: var(--accent);
+    color: var(--accent-foreground);
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
 .track-list {
     display: flex;
     flex-direction: column;
@@ -2896,19 +2920,6 @@ body.multi-select-mode .track-item:hover {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-}
-
-#page-party-detail .detail-header-actions .btn-primary,
-#page-party-detail .detail-header-actions .btn-secondary {
-    width: auto;
-    height: auto;
-    padding: 0.6rem 1.2rem;
-    border-radius: var(--radius-full);
-}
-
-#page-party-detail .detail-header-actions .btn-primary span,
-#page-party-detail .detail-header-actions .btn-secondary span {
-    display: inline;
 }
 
 .detail-header-actions .card-menu-btn,
@@ -5182,29 +5193,6 @@ input:checked + .slider::before {
     padding: 2rem 0;
     max-width: 800px;
     margin: 0 auto;
-}
-
-.about-donate {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 2rem;
-    margin: 2rem 0;
-    text-align: center;
-}
-
-.about-donate .section-title {
-    margin-bottom: 1rem;
-}
-
-.donate-description {
-    color: var(--muted-foreground);
-    line-height: 1.6;
-}
-
-.about-donate .btn-secondary {
-    padding: 0.75rem 1.5rem;
-    font-size: 0.95rem;
 }
 
 .about-description {
@@ -10356,197 +10344,9 @@ body:has(#side-panel.active) #close-fullscreen-cover-btn {
     gap: 0.5rem;
 }
 
-.party-container {
-    padding: 2rem;
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
-#party-chat-messages > :first-child {
-    margin-top: auto;
-}
-
-.party-content-layout {
-    display: grid;
-    grid-template-columns: 1fr 350px;
-    gap: 2rem;
-}
-
-@media (max-width: 1024px) {
-    .party-content-layout {
-        grid-template-columns: 1fr;
-    }
-}
-
-.party-now-playing {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 1.5rem;
-    padding: 2rem;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-}
-
-.party-now-playing-cover {
-    width: 100%;
-    max-width: 250px;
-    height: auto;
-    aspect-ratio: 1 / 1;
-    border-radius: var(--radius);
-    object-fit: cover;
-    box-shadow: 0 10px 30px rgb(0, 0, 0, 0.3);
-}
-
-.party-now-playing-info {
-    max-width: 100%;
-    min-width: 0;
-}
-
-.party-now-playing-title {
-    font-size: clamp(1.25rem, 4vw, 1.8rem);
-    font-weight: var(--font-bold);
-    line-height: var(--leading-tight);
-    margin-bottom: 0.35rem;
-    overflow-wrap: anywhere;
-}
-
-.party-now-playing-artist {
-    font-size: clamp(0.95rem, 3vw, 1.2rem);
-    color: var(--muted-foreground);
-    line-height: var(--leading-snug);
-    overflow-wrap: anywhere;
-}
-
-.party-now-playing-paused {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: var(--primary);
-    font-weight: var(--font-semibold);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-size: 0.9rem;
-}
-
-.party-now-playing-empty {
-    padding: 4rem 2rem;
-    text-align: center;
-    background: var(--card);
-    border-radius: var(--radius);
-    border: 1px dashed var(--border);
-    color: var(--muted-foreground);
-    font-size: 1.2rem;
-}
-
-@media (max-width: 768px) {
-    .party-container {
-        padding: 1rem;
-    }
-
-    .party-now-playing {
-        padding: 1.25rem;
-        gap: 1rem;
-    }
-
-    .party-now-playing-empty {
-        padding: 2.5rem 1rem;
-        font-size: 1rem;
-    }
-}
-
 .chat-msg {
     margin-bottom: 0.5rem;
     animation: fade-in 0.2s ease-out;
-}
-
-.party-typing-indicator {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-xs) var(--spacing-md);
-    color: var(--muted-foreground);
-    font-size: var(--text-xs);
-    line-height: 1;
-    min-height: 22px;
-    animation: fade-in 0.15s ease-out;
-}
-
-.party-typing-indicator[hidden] {
-    display: none;
-}
-
-.party-typing-text {
-    font-style: italic;
-}
-
-.party-typing-dots {
-    display: inline-flex;
-    align-items: flex-end;
-    gap: 3px;
-    height: 10px;
-}
-
-.party-typing-dots span {
-    display: block;
-    width: 4px;
-    height: 4px;
-    border-radius: var(--radius-full);
-    background: var(--muted-foreground);
-    animation: party-typing-bounce 1.2s var(--ease-in-out) infinite;
-}
-
-.party-typing-dots span:nth-child(2) {
-    animation-delay: 0.15s;
-}
-
-.party-typing-dots span:nth-child(3) {
-    animation-delay: 0.3s;
-}
-
-@keyframes party-typing-bounce {
-    0%,
-    60%,
-    100% {
-        transform: translateY(0);
-        opacity: 0.4;
-    }
-
-    30% {
-        transform: translateY(-4px);
-        opacity: 1;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .party-typing-dots span {
-        animation: none;
-        opacity: 0.7;
-    }
-}
-
-@keyframes fade-in {
-    from {
-        opacity: 0;
-        transform: translateY(5px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.party-status-badge {
-    padding: 0.25rem 0.5rem;
-    background: var(--primary);
-    color: var(--primary-foreground);
-    border-radius: var(--radius-sm);
-    font-size: 0.75rem;
-    font-weight: bold;
-    text-transform: uppercase;
 }
 
 .member-item {

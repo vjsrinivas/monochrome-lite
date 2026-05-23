@@ -1720,7 +1720,7 @@
             <aside class="sidebar">
                 <div class="sidebar-content">
                     <div class="sidebar-logo">
-                        <a href="https://monochrome.tf/" class="sidebar-logo-link">
+                        <a href="/" class="sidebar-logo-link">
                             <use svg="./images/monochrome-logo.svg" size="200" class="app-logo" />
                             <span>Monochrome</span>
                         </a>
@@ -1754,18 +1754,7 @@
                                     <span>Recent</span>
                                 </a>
                             </li>
-                            <li class="nav-item" id="sidebar-nav-unreleased">
-                                <a href="/unreleased">
-                                    <use svg="./images/squares.svg" size="24" />
-                                    <span>Unreleased</span>
-                                </a>
-                            </li>
-                            <li class="nav-item" id="sidebar-nav-donate">
-                                <a id="sidebar-donate-link" href="/donate">
-                                    <use svg="!lucide/hand-heart.svg" size="24" />
-                                    <span>Donate</span>
-                                </a>
-                            </li>
+
                             <li class="nav-item" id="sidebar-nav-settings">
                                 <a href="/settings">
                                     <use svg="!lucide/settings.svg" size="24" />
@@ -1791,18 +1780,7 @@
                                             <span>About</span>
                                         </a>
                                     </li>
-                                    <li class="nav-item" id="sidebar-nav-discordbtn">
-                                        <a href="discord.html" target="_blank">
-                                            <use svg="./images/discord.svg" size="64" />
-                                            <span>Discord</span>
-                                        </a>
-                                    </li>
-                                    <li class="nav-item" id="sidebar-nav-party">
-                                        <a href="/parties" id="sidebar-party-btn">
-                                            <use svg="!lucide/users.svg" size="24" />
-                                            <span>Parties</span>
-                                        </a>
-                                    </li>
+
                                     <li class="nav-item" id="sidebar-nav-githubbtn" style="display: none">
                                         <a href="https://github.com/monochrome-music/monochrome" target="_blank">
                                             <use svg="./images/github.svg" size="24" />
@@ -2033,137 +2011,6 @@
                     </div>
                 </div>
 
-                <div id="page-parties" class="page">
-                    <div style="text-align: center; padding: 4rem 2rem; max-width: 600px; margin: 0 auto">
-                        <h2 class="section-title">Listening Parties</h2>
-                        <p style="color: var(--muted-foreground); margin-bottom: 2rem">
-                            Listen to music together with your friends in real-time. Host controls the music, everyone
-                            enjoys it.
-                        </p>
-                        <div id="parties-auth-required" style="display: none; margin-bottom: 2rem">
-                            <p style="margin-bottom: 1rem; color: var(--muted-foreground); font-size: 0.9rem">
-                                Hosting as a guest works, but signing in lets your party persist across devices and
-                                gives you a real profile in the chat.
-                            </p>
-                            <button id="parties-login-btn" class="btn-secondary">Sign In / Sign Up</button>
-                        </div>
-                        <div id="parties-host-controls" style="display: none">
-                            <input
-                                type="text"
-                                id="party-name-input"
-                                class="template-input"
-                                placeholder="Party Name"
-                                style="margin-bottom: 1rem"
-                            />
-                            <button id="create-party-btn" class="btn-primary" style="width: 100%">
-                                Create Listening Party
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="page-party-detail" class="page">
-                    <div class="party-container">
-                        <header class="detail-header">
-                            <div class="detail-header-info">
-                                <div class="type">Listening Party</div>
-                                <h1 class="title" id="party-title">Party Name</h1>
-                                <div class="meta" id="party-meta">Host: ...</div>
-                                <div class="detail-header-actions">
-                                    <button id="leave-party-btn" class="btn-secondary danger">Leave Party</button>
-                                    <button id="copy-party-link-btn" class="btn-secondary">Copy Invite Link</button>
-                                </div>
-                            </div>
-                        </header>
-
-                        <div
-                            class="party-content-layout"
-                            style="display: grid; grid-template-columns: 1fr 350px; gap: 2rem; margin-top: 2rem"
-                        >
-                            <div class="party-main-section">
-                                <section class="content-section">
-                                    <h2 class="section-title">Currently Playing</h2>
-                                    <div id="party-current-track-display"></div>
-                                </section>
-
-                                <section class="content-section">
-                                    <h2 class="section-title">Participants (<span id="party-member-count">0</span>)</h2>
-                                    <div id="party-members-list" class="card-grid compact"></div>
-                                </section>
-
-                                <section class="content-section" id="party-requests-section">
-                                    <h2 class="section-title">Song Requests</h2>
-                                    <div id="party-requests-list" class="track-list"></div>
-                                </section>
-                            </div>
-
-                            <div class="party-sidebar-section">
-                                <div
-                                    class="party-chat-container"
-                                    style="
-                                        display: flex;
-                                        flex-direction: column;
-                                        height: 600px;
-                                        background: var(--background-secondary);
-                                        border-radius: var(--radius);
-                                        border: 1px solid var(--border);
-                                    "
-                                >
-                                    <div
-                                        class="chat-header"
-                                        style="padding: 1rem; border-bottom: 1px solid var(--border); font-weight: 600"
-                                    >
-                                        Chat
-                                    </div>
-                                    <div
-                                        id="party-chat-messages"
-                                        style="
-                                            flex: 1;
-                                            overflow-y: auto;
-                                            padding: 1rem;
-                                            display: flex;
-                                            flex-direction: column;
-                                            gap: 0.5rem;
-                                            min-height: 0;
-                                        "
-                                    ></div>
-                                    <div
-                                        id="party-typing-indicator"
-                                        class="party-typing-indicator"
-                                        aria-live="polite"
-                                        hidden
-                                    >
-                                        <span class="party-typing-dots" aria-hidden="true"
-                                            ><span></span><span></span><span></span
-                                        ></span>
-                                        <span class="party-typing-text"></span>
-                                    </div>
-                                    <div
-                                        class="chat-input-container"
-                                        style="
-                                            padding: 1rem;
-                                            border-top: 1px solid var(--border);
-                                            display: flex;
-                                            gap: 0.5rem;
-                                        "
-                                    >
-                                        <input
-                                            type="text"
-                                            id="party-chat-input"
-                                            class="template-input"
-                                            placeholder="Say something..."
-                                            style="flex: 1"
-                                        />
-                                        <button id="party-chat-send-btn" class="btn-primary" style="padding: 0 1rem">
-                                            Send
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <div id="page-search" class="page">
                     <h2 class="section-title" id="search-results-title">Search Results</h2>
                     <div class="search-tabs">
@@ -2375,10 +2222,6 @@
                     <div class="track-list" id="recent-tracks-container"></div>
                 </div>
 
-                <div id="page-unreleased" class="page">
-                    <div id="unreleased-content" style="padding: 1rem 0"></div>
-                </div>
-
                 <div id="page-podcasts" class="page">
                     <header class="detail-header">
                         <img
@@ -2417,33 +2260,6 @@
                     <div class="search-tab-content" id="podcasts-tab-recent">
                         <div class="card-grid" id="podcasts-recent-container"></div>
                     </div>
-                </div>
-
-                <div id="page-tracker-artist" class="page">
-                    <header class="detail-header">
-                        <img
-                            id="tracker-artist-detail-image"
-                            src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
-                            alt=""
-                            class="detail-header-image artist"
-                        />
-                        <div class="detail-header-info">
-                            <div class="type">Unreleased Artist</div>
-                            <h1 class="title" id="tracker-artist-detail-name"></h1>
-                            <div class="meta" id="tracker-artist-detail-meta"></div>
-                            <div class="detail-header-actions">
-                                <button id="play-tracker-artist-btn" class="btn-primary" title="Shuffle Play">
-                                    <use svg="./images/play.svg" size="20" />
-                                    <span>Shuffle Play</span>
-                                </button>
-                                <button id="download-tracker-artist-btn" class="btn-primary" title="Download">
-                                    <use svg="!lucide/download.svg" size="20" />
-                                    <span>Download All</span>
-                                </button>
-                            </div>
-                        </div>
-                    </header>
-                    <div id="tracker-artist-projects-container"></div>
                 </div>
 
                 <div id="page-album" class="page">
@@ -2941,6 +2757,7 @@
                         <button class="settings-tab" data-tab="interface">Interface</button>
                         <button class="settings-tab" data-tab="scrobbling">Scrobbling</button>
                         <button class="settings-tab" data-tab="audio">Audio</button>
+                        <button class="settings-tab" data-tab="nas">NAS</button>
                         <button class="settings-tab" data-tab="downloads">Downloads</button>
                         <button class="settings-tab" data-tab="instances">Instances</button>
                         <button class="settings-tab" data-tab="system">System</button>
@@ -3554,30 +3371,7 @@
                                             <span class="slider"></span>
                                         </label>
                                     </div>
-                                    <div class="setting-item">
-                                        <div class="info">
-                                            <span class="label">Show Unreleased in Sidebar</span>
-                                            <span class="description"
-                                                >Display the Unreleased link in the sidebar navigation</span
-                                            >
-                                        </div>
-                                        <label class="toggle-switch">
-                                            <input type="checkbox" id="sidebar-show-unreleased-toggle" checked />
-                                            <span class="slider"></span>
-                                        </label>
-                                    </div>
-                                    <div class="setting-item">
-                                        <div class="info">
-                                            <span class="label">Show Donate in Sidebar</span>
-                                            <span class="description"
-                                                >Display the Donate link in the sidebar navigation</span
-                                            >
-                                        </div>
-                                        <label class="toggle-switch">
-                                            <input type="checkbox" id="sidebar-show-donate-toggle" checked />
-                                            <span class="slider"></span>
-                                        </label>
-                                    </div>
+
                                     <div class="setting-item">
                                         <div class="info">
                                             <span class="label">Show Settings in Sidebar</span>
@@ -3605,30 +3399,7 @@
                                             <span class="slider"></span>
                                         </label>
                                     </div>
-                                    <div class="setting-item">
-                                        <div class="info">
-                                            <span class="label">Show Discord in Sidebar</span>
-                                            <span class="description"
-                                                >Display the Discord link in the sidebar navigation</span
-                                            >
-                                        </div>
-                                        <label class="toggle-switch">
-                                            <input type="checkbox" id="sidebar-show-discordbtn-toggle" checked />
-                                            <span class="slider"></span>
-                                        </label>
-                                    </div>
-                                    <div class="setting-item">
-                                        <div class="info">
-                                            <span class="label">Show Parties in Sidebar</span>
-                                            <span class="description"
-                                                >Display the Parties button in the sidebar navigation</span
-                                            >
-                                        </div>
-                                        <label class="toggle-switch">
-                                            <input type="checkbox" id="sidebar-show-party-toggle" checked />
-                                            <span class="slider"></span>
-                                        </label>
-                                    </div>
+
                                     <div class="setting-item">
                                         <div class="info">
                                             <span class="label">Show GitHub in Sidebar</span>
@@ -5347,6 +5118,81 @@
                             </div>
                         </div>
                     </div>
+                    <div class="settings-tab-content" id="settings-tab-nas">
+                        <div class="settings-list">
+                            <div class="settings-group">
+                                <div class="setting-item">
+                                    <div class="info">
+                                        <span class="label">NAS Audio Source</span>
+                                        <span class="description"
+                                            >Use local NAS as primary audio source instead of streaming</span
+                                        >
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="nas-enabled-toggle" />
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                                <div class="setting-item">
+                                    <div class="info">
+                                        <span class="label">NAS Base URL</span>
+                                        <span class="description"
+                                            >Address of your NAS audio server (e.g., http://192.168.1.100:8080)</span
+                                        >
+                                    </div>
+                                    <input
+                                        type="url"
+                                        id="nas-base-url-input"
+                                        placeholder="http://192.168.1.100:8080"
+                                        style="width: 100%; max-width: 400px"
+                                    />
+                                </div>
+                                <div class="setting-item">
+                                    <div class="info">
+                                        <span class="label">File Mapping Strategy</span>
+                                        <span class="description">How track files are identified on the NAS</span>
+                                    </div>
+                                    <select id="nas-mapping-strategy-select">
+                                        <option value="ISRC">ISRC (International Standard Recording Code)</option>
+                                        <option value="TIDAL_ID">TIDAL Track ID</option>
+                                        <option value="CUSTOM_API">Custom API Resolver</option>
+                                    </select>
+                                </div>
+                                <div class="setting-item" id="nas-api-url-group" style="display: none">
+                                    <div class="info">
+                                        <span class="label">Custom API URL</span>
+                                        <span class="description"
+                                            >API endpoint to resolve track paths (must return { path: '/music/...'
+                                            })</span
+                                        >
+                                    </div>
+                                    <input
+                                        type="url"
+                                        id="nas-api-url-input"
+                                        placeholder="http://192.168.1.100:9000/api"
+                                        style="width: 100%; max-width: 400px"
+                                    />
+                                </div>
+                            </div>
+                            <div class="settings-group">
+                                <div class="setting-item">
+                                    <div class="info">
+                                        <span class="label">Source Priority</span>
+                                        <span class="description"
+                                            >When NAS is enabled, it takes priority over streaming services</span
+                                        >
+                                    </div>
+                                    <span
+                                        class="description"
+                                        style="color: var(--muted-foreground); font-size: 0.85rem"
+                                    >
+                                        NAS will be checked first. If a file is not found, playback will fail rather
+                                        than fall back to streaming.
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="settings-tab-content" id="settings-tab-downloads">
                         <div class="settings-list">
                             <div class="settings-group">
@@ -5890,57 +5736,7 @@
                             distraction-free listening experience.
                             <br />
                         </p>
-                        <div class="about-donate">
-                            <h2 class="section-title" style="text-align: center">Support Monochrome</h2>
-                            <p style="text-align: center" class="donate-description">
-                                If Monochrome has been useful to you and you're able to, consider making a donation.
-                                <br />
-                                It helps pay for the server and domain, and you get to support us :)
-                            </p>
-                            <p style="text-align: center; color: var(--muted-foreground); margin-top: 1rem">
-                                If you cannot financially support us, please consider starring the project on GitHub and
-                                sharing with friends!
-                            </p>
-                            <div
-                                class="donate-button"
-                                id="donate-button-container"
-                                style="
-                                    display: flex;
-                                    gap: 20px;
-                                    align-items: center;
-                                    justify-content: center;
-                                    margin-top: 30px;
-                                    flex-wrap: wrap;
-                                "
-                            >
-                                <a
-                                    href="/donate"
-                                    class="btn-secondary"
-                                    style="
-                                        text-decoration: none;
-                                        display: inline-flex;
-                                        align-items: center;
-                                        gap: 0.5rem;
-                                    "
-                                >
-                                    Donate to Monochrome
-                                </a>
-                                <a
-                                    href="https://github.com/monochrome-music/monochrome"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    class="btn-secondary"
-                                    style="
-                                        text-decoration: none;
-                                        display: inline-flex;
-                                        align-items: center;
-                                        gap: 0.5rem;
-                                    "
-                                >
-                                    Star on GitHub
-                                </a>
-                            </div>
-                        </div>
+
                         <p style="text-align: center; color: grey">
                             made with ‪‪❤︎‬ by
                             <a href="https://prigoana.com/" style="text-decoration: underline">Edideaur</a> &
@@ -6030,45 +5826,7 @@
                         </div>
                     </div>
                 </div>
-                <div id="page-donate" class="page">
-                    <div style="text-align: center; padding: 2rem; max-width: 500px; margin: 0 auto">
-                        <h2 class="section-title" style="margin-bottom: 1.5rem">Support Monochrome</h2>
-                        <p style="margin-bottom: 1.5rem; line-height: 1.6; color: var(--muted-foreground)">
-                            If Monochrome has been useful to you and you're able to, consider making a donation. It
-                            helps pay for the server and domain, and you get to support us :)
-                        </p>
-                        <a
-                            href="https://ko-fi.com/monochrometf"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="btn-primary"
-                            style="
-                                text-decoration: none;
-                                display: inline-flex;
-                                align-items: center;
-                                gap: 0.5rem;
-                                margin-bottom: 2rem;
-                            "
-                        >
-                            Donate on Ko-fi
-                        </a>
-                        <div style="padding-top: 1.5rem; border-top: 1px solid var(--border)">
-                            <p style="font-size: 0.9rem; color: var(--muted-foreground); margin-bottom: 1rem">
-                                If you cannot financially support us, please consider starring the project on GitHub and
-                                sharing with friends!
-                            </p>
-                            <a
-                                href="https://github.com/monochrome-music/monochrome"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="btn-secondary"
-                                style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem"
-                            >
-                                Star on GitHub
-                            </a>
-                        </div>
-                    </div>
-                </div>
+
                 <div id="page-reset-password" class="page">
                     <div
                         class="reset-password-container"
@@ -6181,6 +5939,7 @@
                     <img src="/assets/appicon.png" alt="Current Track Cover" class="cover" fetchpriority="high" />
                     <div class="details">
                         <div class="title">Select a song</div>
+                        <span class="source-badge" id="audio-source-badge" style="display: none"></span>
                         <div class="album"></div>
                         <div class="artist"></div>
                     </div>
@@ -6215,15 +5974,6 @@
                 </div>
                 <div class="volume-controls">
                     <div class="player-actions-row">
-                        <button
-                            id="now-playing-party-btn"
-                            class="now-playing-party-btn"
-                            title="Open listening party"
-                            aria-label="Open listening party"
-                            style="display: none"
-                        >
-                            <use svg="!lucide/users.svg" size="20" />
-                        </button>
                         <button
                             id="now-playing-like-btn"
                             class="like-btn"

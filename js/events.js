@@ -24,7 +24,6 @@ import { waveformGenerator } from './waveform.js';
 import { audioContextManager } from './audio-context.js';
 import { hapticLongPress, hapticMedium, hapticLight } from './haptics.js';
 import { SVG_BIN, SVG_MUTE, SVG_PAUSE, SVG_PLAY, SVG_VOLUME, SVG_CHECKBOX, SVG_CHECKBOX_CHECKED } from './icons.js';
-import { partyManager } from './listening-party.js';
 import { MusicAPI } from './music-api.js';
 import { LyricsManager } from './lyrics.js';
 import { Player } from './player.js';
@@ -356,7 +355,7 @@ async function handleSelectionAction(action) {
                     await downloadTrackWithMetadata(
                         track,
                         downloadQualitySettings.getQuality(),
-                        MusicAPI.instance.tidalAPI,
+                        MusicAPI.instance.audioAPI,
                         LyricsManager.instance
                     );
                 }
@@ -1153,15 +1152,6 @@ export async function handleTrackAction(
         return;
     }
 
-    if (action === 'request-song') {
-        if (partyManager.currentParty) {
-            await partyManager.requestSong(item);
-        } else {
-            showNotification('You are not in a listening party');
-        }
-        return;
-    }
-
     if (action === 'start-radio' || action === 'start-infinite-radio') {
         let tracks = [];
         if (type === 'track') {
@@ -1955,12 +1945,6 @@ async function updateContextMenuLikeState(contextMenu, contextTrack) {
         } else {
             item.style.display = 'block';
         }
-        if (item.dataset.action === 'request-song') {
-            if (!partyManager.currentParty) {
-                item.style.display = 'none';
-            }
-        }
-
         // Update labels for Like/Save
         if (item.dataset.action === 'toggle-like') {
             const labelPrefix = isLiked ? 'labelUnlike' : 'label';

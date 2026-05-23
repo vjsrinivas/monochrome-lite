@@ -5,7 +5,7 @@ import { SVG_RIGHT_ARROW } from './icons';
 export const apiSettings = {
     STORAGE_KEY: 'monochrome-api-instances-v9',
     INSTANCES_URLS: ['https://tidal-uptime.geeked.wtf'],
-    defaultInstances: { api: [], streaming: [], qobuz: [] },
+    defaultInstances: { api: [], streaming: [] },
     userInstances: null,
     instancesLoaded: false,
     _loadPromise: null,
@@ -14,11 +14,10 @@ export const apiSettings = {
         if (this.userInstances) return this.userInstances;
         try {
             const stored = localStorage.getItem('monochrome-user-api-instances-v1');
-            const parsed = stored ? JSON.parse(stored) : { api: [], streaming: [], qobuz: [] };
-            if (!parsed.qobuz) parsed.qobuz = [];
+            const parsed = stored ? JSON.parse(stored) : { api: [], streaming: [] };
             this.userInstances = parsed;
         } catch {
-            this.userInstances = { api: [], streaming: [], qobuz: [] };
+            this.userInstances = { api: [], streaming: [] };
         }
         return this.userInstances;
     },
@@ -96,17 +95,13 @@ export const apiSettings = {
                         { url: 'https://hund.qqdl.site', version: '2.6' },
                         { url: 'https://wolf.qqdl.site', version: '2.6' },
                     ],
-                    qobuz: [
-                        { url: 'https://qdl-api.monochrome.tf', version: '1.0' },
-                        { url: 'https://qobuz.kennyy.com.br', version: '1.0' },
-                    ],
                 };
                 this.instancesLoaded = true;
                 this._loadPromise = null;
                 return this.defaultInstances;
             }
 
-            let groupedInstances = { api: [], streaming: [], qobuz: [] };
+            let groupedInstances = { api: [], streaming: [] };
 
             const isBlockedInstance = (item) => {
                 const url = typeof item === 'string' ? item : item.url;
@@ -121,15 +116,6 @@ export const apiSettings = {
                 groupedInstances.streaming = data.streaming.filter((item) => !isBlockedInstance(item));
             } else if (groupedInstances.api.length > 0) {
                 groupedInstances.streaming = [...groupedInstances.api];
-            }
-
-            if (data.qobuz && Array.isArray(data.qobuz)) {
-                groupedInstances.qobuz = data.qobuz;
-            }
-
-            // Ensure default Qobuz instance is always available
-            if (groupedInstances.qobuz.length === 0) {
-                groupedInstances.qobuz = [{ url: 'https://qdl-api.monochrome.tf', version: '1.0' }];
             }
 
             this.defaultInstances = groupedInstances;
@@ -234,10 +220,6 @@ export const apiSettings = {
 
         if (instances.streaming && instances.streaming.length) {
             instances.streaming = prioritySort([...instances.streaming]);
-        }
-
-        if (instances.qobuz && instances.qobuz.length) {
-            instances.qobuz = shuffle([...instances.qobuz]);
         }
 
         this.saveInstances(instances);
@@ -2462,24 +2444,17 @@ export const sidebarSectionSettings = {
     SHOW_HOME_KEY: 'sidebar-show-home',
     SHOW_LIBRARY_KEY: 'sidebar-show-library',
     SHOW_RECENT_KEY: 'sidebar-show-recent',
-    SHOW_UNRELEASED_KEY: 'sidebar-show-unreleased',
-    SHOW_DONATE_KEY: 'sidebar-show-donate',
+
     SHOW_SETTINGS_KEY: 'sidebar-show-settings',
     SHOW_ABOUT_KEY: 'sidebar-show-about',
-    SHOW_DISCORD_KEY: 'sidebar-show-discord',
     SHOW_GITHUB_KEY: 'sidebar-show-github',
-    SHOW_PARTY_KEY: 'sidebar-show-party',
     ORDER_KEY: 'sidebar-menu-order',
     DEFAULT_ORDER: [
         'sidebar-nav-home',
         'sidebar-nav-library',
         'sidebar-nav-recent',
-        'sidebar-nav-unreleased',
-        'sidebar-nav-donate',
         'sidebar-nav-settings',
         'sidebar-nav-about-bottom',
-        'sidebar-nav-discordbtn',
-        'sidebar-nav-party',
         'sidebar-nav-githubbtn',
     ],
 
@@ -2528,32 +2503,6 @@ export const sidebarSectionSettings = {
         localStorage.setItem(this.SHOW_RECENT_KEY, enabled ? 'true' : 'false');
     },
 
-    shouldShowUnreleased() {
-        try {
-            const val = localStorage.getItem(this.SHOW_UNRELEASED_KEY);
-            return val === null ? true : val === 'true';
-        } catch {
-            return true;
-        }
-    },
-
-    setShowUnreleased(enabled) {
-        localStorage.setItem(this.SHOW_UNRELEASED_KEY, enabled ? 'true' : 'false');
-    },
-
-    shouldShowDonate() {
-        try {
-            const val = localStorage.getItem(this.SHOW_DONATE_KEY);
-            return val === null ? true : val === 'true';
-        } catch {
-            return true;
-        }
-    },
-
-    setShowDonate(enabled) {
-        localStorage.setItem(this.SHOW_DONATE_KEY, enabled ? 'true' : 'false');
-    },
-
     shouldShowSettings() {
         return true;
     },
@@ -2579,19 +2528,6 @@ export const sidebarSectionSettings = {
         localStorage.setItem(this.SHOW_ABOUT_KEY, enabled ? 'true' : 'false');
     },
 
-    shouldShowDiscord() {
-        try {
-            const val = localStorage.getItem(this.SHOW_DISCORD_KEY);
-            return val === null ? true : val === 'true';
-        } catch {
-            return true;
-        }
-    },
-
-    setShowDiscord(enabled) {
-        localStorage.setItem(this.SHOW_DISCORD_KEY, enabled ? 'true' : 'false');
-    },
-
     shouldShowGithub() {
         try {
             const val = localStorage.getItem(this.SHOW_GITHUB_KEY);
@@ -2603,19 +2539,6 @@ export const sidebarSectionSettings = {
 
     setShowGithub(enabled) {
         localStorage.setItem(this.SHOW_GITHUB_KEY, enabled ? 'true' : 'false');
-    },
-
-    shouldShowParty() {
-        try {
-            const val = localStorage.getItem(this.SHOW_PARTY_KEY);
-            return val === null ? true : val === 'true';
-        } catch {
-            return true;
-        }
-    },
-
-    setShowParty(enabled) {
-        localStorage.setItem(this.SHOW_PARTY_KEY, enabled ? 'true' : 'false');
     },
 
     normalizeOrder(order) {
@@ -2672,12 +2595,8 @@ export const sidebarSectionSettings = {
             { id: 'sidebar-nav-home', check: this.shouldShowHome() },
             { id: 'sidebar-nav-library', check: this.shouldShowLibrary() },
             { id: 'sidebar-nav-recent', check: this.shouldShowRecent() },
-            { id: 'sidebar-nav-unreleased', check: this.shouldShowUnreleased() },
-            { id: 'sidebar-nav-donate', check: this.shouldShowDonate() },
             { id: 'sidebar-nav-settings', check: this.shouldShowSettings() },
             { id: 'sidebar-nav-about-bottom', check: this.shouldShowAbout() },
-            { id: 'sidebar-nav-discordbtn', check: this.shouldShowDiscord() },
-            { id: 'sidebar-nav-party', check: this.shouldShowParty() },
             { id: 'sidebar-nav-githubbtn', check: this.shouldShowGithub() },
         ];
 
@@ -3063,9 +2982,9 @@ export const musicProviderSettings = {
 
     getProvider() {
         try {
-            return localStorage.getItem(this.STORAGE_KEY) || 'tidal';
+            return localStorage.getItem(this.STORAGE_KEY) || 'nas';
         } catch {
-            return 'tidal';
+            return 'nas';
         }
     },
 
@@ -3467,5 +3386,97 @@ export const keyboardShortcuts = {
     getShortcutForAction(action) {
         const shortcuts = this.getShortcuts();
         return shortcuts[action] || this.DEFAULT_SHORTCUTS[action];
+    },
+};
+
+export const nasSettings = {
+    STORAGE_KEY: 'nas-settings',
+
+    _defaults() {
+        return {
+            nasEnabled: false,
+            nasBaseUrl: '',
+            nasMappingStrategy: 'ISRC',
+            nasApiUrl: '',
+            nasFallbackToStream: false,
+        };
+    },
+
+    _getAll() {
+        try {
+            const stored = localStorage.getItem(this.STORAGE_KEY);
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                const defaults = this._defaults();
+                return { ...defaults, ...parsed };
+            }
+        } catch {
+            /* ignore */
+        }
+        return this._defaults();
+    },
+
+    _setAll(obj) {
+        try {
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(obj));
+        } catch {
+            /* ignore */
+        }
+    },
+
+    isEnabled() {
+        return this._getAll().nasEnabled === true;
+    },
+
+    setEnabled(enabled) {
+        const all = this._getAll();
+        all.nasEnabled = !!enabled;
+        this._setAll(all);
+    },
+
+    getBaseUrl() {
+        return this._getAll().nasBaseUrl || '';
+    },
+
+    setBaseUrl(url) {
+        const all = this._getAll();
+        all.nasBaseUrl = url.replace(/\/+$/, '');
+        this._setAll(all);
+    },
+
+    getMappingStrategy() {
+        const strategies = ['ISRC', 'TIDAL_ID', 'CUSTOM_API'];
+        const strategy = this._getAll().nasMappingStrategy;
+        return strategies.includes(strategy) ? strategy : 'ISRC';
+    },
+
+    setMappingStrategy(strategy) {
+        const all = this._getAll();
+        all.nasMappingStrategy = strategy;
+        this._setAll(all);
+    },
+
+    getApiUrl() {
+        return this._getAll().nasApiUrl || '';
+    },
+
+    setApiUrl(url) {
+        const all = this._getAll();
+        all.nasApiUrl = url.replace(/\/+$/, '');
+        this._setAll(all);
+    },
+
+    getFallbackToStream() {
+        return false;
+    },
+
+    setFallbackToStream(enabled) {
+        const all = this._getAll();
+        all.nasFallbackToStream = !!enabled;
+        this._setAll(all);
+    },
+
+    reset() {
+        localStorage.removeItem(this.STORAGE_KEY);
     },
 };

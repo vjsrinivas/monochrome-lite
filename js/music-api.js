@@ -2,16 +2,16 @@
 
 import { LosslessAPI } from './api.js';
 import { PodcastsAPI } from './podcasts-api.js';
-import { musicProviderSettings } from './storage.js';
 
 /**
- * MusicAPI - Singleton class that provides a unified interface for accessing music streaming services.
+ * MusicAPI - Singleton class that provides a unified interface for accessing music audio sources.
  *
- * Supports multiple providers (primarily Tidal) and includes functionality for searching,
- * retrieving metadata, streaming, and managing playlists, artists, albums, tracks, and podcasts.
+ * Primarily uses local NAS audio source.
+ * Includes functionality for searching, retrieving metadata, streaming, and managing
+ * playlists, artists, albums, tracks, and podcasts.
  *
  * @class MusicAPI
- * @classdesc Manages API interactions with music providers and provides caching mechanisms
+ * @classdesc Manages API interactions with audio sources and provides caching mechanisms
  * for cover artwork and video metadata.
  *
  * @example
@@ -30,7 +30,7 @@ import { musicProviderSettings } from './storage.js';
  * // Get stream URL
  * const streamUrl = await api.getStreamUrl('track-id', 'HIGH');
  *
- * @property {LosslessAPI} tidalAPI - The Tidal API instance
+ * @property {LosslessAPI} audioAPI - The audio source API instance (NAS/streaming)
  * @property {PodcastsAPI} podcastsAPI - The Podcasts API instance
  * @property {Object} _settings - Configuration settings
  * @property {Map} videoArtworkCache - Cache for video artwork data
@@ -52,7 +52,7 @@ export class MusicAPI {
 
     /** @private */
     constructor(settings) {
-        this.tidalAPI = new LosslessAPI(settings);
+        this.audioAPI = new LosslessAPI(settings);
         this.podcastsAPI = new PodcastsAPI();
         this._settings = settings;
         this.videoArtworkCache = new Map();
@@ -68,12 +68,12 @@ export class MusicAPI {
     }
 
     getCurrentProvider() {
-        return musicProviderSettings.getProvider();
+        return 'nas';
     }
 
     // Get the appropriate API based on provider
     getAPI() {
-        return this.tidalAPI;
+        return this.audioAPI;
     }
 
     // Search methods
@@ -114,11 +114,11 @@ export class MusicAPI {
     }
 
     async searchPlaylists(query, options = {}) {
-        return this.tidalAPI.searchPlaylists(query, options);
+        return this.audioAPI.searchPlaylists(query, options);
     }
 
     async searchVideos(query, options = {}) {
-        return this.tidalAPI.searchVideos(query, options);
+        return this.audioAPI.searchVideos(query, options);
     }
 
     async searchPodcasts(query, options = {}) {
@@ -186,17 +186,15 @@ export class MusicAPI {
     }
 
     async getArtistSocials(artistName) {
-        return this.tidalAPI.getArtistSocials(artistName);
+        return this.audioAPI.getArtistSocials(artistName);
     }
 
     async getPlaylist(id, _provider = null) {
-        // Playlists are always Tidal for now
-        return this.tidalAPI.getPlaylist(id);
+        return this.audioAPI.getPlaylist(id);
     }
 
     async getMix(id) {
-        // Mixes are always Tidal for now
-        return this.tidalAPI.getMix(id);
+        return this.audioAPI.getMix(id);
     }
 
     async getTrackRecommendations(id) {
@@ -220,14 +218,14 @@ export class MusicAPI {
         if (typeof id === 'string' && id.startsWith('blob:')) {
             return id;
         }
-        return this.tidalAPI.getCoverUrl(this.stripProviderPrefix(id), size);
+        return this.audioAPI.getCoverUrl(this.stripProviderPrefix(id), size);
     }
 
     getCoverSrcset(id) {
         if (typeof id === 'string' && id.startsWith('blob:')) {
             return '';
         }
-        return this.tidalAPI.getCoverSrcset(this.stripProviderPrefix(id));
+        return this.audioAPI.getCoverSrcset(this.stripProviderPrefix(id));
     }
 
     getVideoCoverUrl(imageId, size = '1280') {
@@ -237,7 +235,7 @@ export class MusicAPI {
         if (typeof imageId === 'string' && imageId.startsWith('blob:')) {
             return imageId;
         }
-        return this.tidalAPI.getVideoCoverUrl(this.stripProviderPrefix(imageId), size);
+        return this.audioAPI.getVideoCoverUrl(this.stripProviderPrefix(imageId), size);
     }
 
     async getVideoArtwork(title, artist) {
@@ -267,11 +265,11 @@ export class MusicAPI {
     }
 
     getArtistPictureUrl(id, size = '320') {
-        return this.tidalAPI.getArtistPictureUrl(this.stripProviderPrefix(id), size);
+        return this.audioAPI.getArtistPictureUrl(this.stripProviderPrefix(id), size);
     }
 
     getArtistPictureSrcset(id) {
-        return this.tidalAPI.getArtistPictureSrcset(this.stripProviderPrefix(id));
+        return this.audioAPI.getArtistPictureSrcset(this.stripProviderPrefix(id));
     }
 
     async getArtistBanner(artistName) {
@@ -316,7 +314,7 @@ export class MusicAPI {
     }
 
     extractStreamUrlFromManifest(manifest) {
-        return this.tidalAPI.extractStreamUrlFromManifest(manifest);
+        return this.audioAPI.extractStreamUrlFromManifest(manifest);
     }
 
     // Helper methods
@@ -351,7 +349,7 @@ export class MusicAPI {
     }
 
     async getArtistTopTracks(artistId, options = {}) {
-        return this.tidalAPI.getArtistTopTracks(artistId, options);
+        return this.audioAPI.getArtistTopTracks(artistId, options);
     }
 
     async getSimilarAlbums(albumId) {
@@ -361,17 +359,16 @@ export class MusicAPI {
     }
 
     async getRecommendedTracksForPlaylist(tracks, limit = 20, options = {}) {
-        // Use Tidal for recommendations
-        return this.tidalAPI.getRecommendedTracksForPlaylist(tracks, limit, options);
+        return this.audioAPI.getRecommendedTracksForPlaylist(tracks, limit, options);
     }
 
     // Cache methods
     async clearCache() {
-        await this.tidalAPI.clearCache();
+        await this.audioAPI.clearCache();
     }
 
     getCacheStats() {
-        return this.tidalAPI.getCacheStats();
+        return this.audioAPI.getCacheStats();
     }
 
     // Settings accessor for compatibility
