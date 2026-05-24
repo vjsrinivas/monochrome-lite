@@ -1,7 +1,6 @@
 //js/accounts/pocketbase.js
 import PocketBase from 'pocketbase';
 import { db } from '../db.js';
-import { authManager } from './auth.js';
 
 const DEFAULT_POCKETBASE_URL = 'https://data.samidy.xyz';
 const POCKETBASE_URL =
@@ -21,7 +20,7 @@ const syncManager = {
     async _getUserRecord(uid) {
         if (!uid) return null;
 
-        if (this._userRecordCache && this._userRecordCache.firebase_id === uid) {
+        if (this._userRecordCache && this._userRecordCache.id === uid) {
             return this._userRecordCache;
         }
 
@@ -32,9 +31,8 @@ const syncManager = {
         const promise = (async () => {
             try {
                 const result = await this.pb.collection('DB_users').getList(1, 1, {
-                    filter: `firebase_id="${uid}"`,
+                    filter: `id="${uid}"`,
                     sort: '-username',
-                    f_id: uid,
                 });
 
                 if (result.items.length > 0) {
@@ -44,22 +42,18 @@ const syncManager = {
                 }
 
                 try {
-                    const newRecord = await this.pb.collection('DB_users').create(
-                        {
-                            firebase_id: uid,
-                            library: {},
-                            history: [],
-                            user_playlists: {},
-                            user_folders: {},
-                        },
-                        { f_id: uid }
-                    );
+                    const newRecord = await this.pb.collection('DB_users').create({
+                        id: uid,
+                        library: {},
+                        history: [],
+                        user_playlists: {},
+                        user_folders: {},
+                    });
                     this._userRecordCache = newRecord;
                     return newRecord;
                 } catch (createError) {
                     const retryResult = await this.pb.collection('DB_users').getList(1, 1, {
-                        filter: `firebase_id="${uid}"`,
-                        f_id: uid,
+                        filter: `id="${uid}"`,
                     });
                     if (retryResult.items.length > 0) {
                         this._userRecordCache = retryResult.items[0];
@@ -81,10 +75,10 @@ const syncManager = {
     },
 
     async getUserData() {
-        const user = authManager.user;
+        const user = pb.authStore.model;
         if (!user) return null;
 
-        const record = await this._getUserRecord(user.$id);
+        const record = await this._getUserRecord(user.id);
         if (!record) return null;
 
         const library = this.safeParseInternal(record.library, 'library', {});
@@ -117,9 +111,7 @@ const syncManager = {
 
         try {
             const stringifiedData = typeof data === 'string' ? data : JSON.stringify(data);
-            const updated = await this.pb
-                .collection('DB_users')
-                .update(record.id, { [field]: stringifiedData }, { f_id: uid });
+            const updated = await this.pb.collection('DB_users').update(record.id, { [field]: stringifiedData });
             this._userRecordCache = updated;
         } catch (error) {
             console.error(`Failed to sync ${field} to PocketBase:`, error);
@@ -168,10 +160,10 @@ const syncManager = {
     },
 
     async syncLibraryItem(type, item, added) {
-        const user = authManager.user;
+        const user = pb.authStore.model;
         if (!user) return;
 
-        const record = await this._getUserRecord(user.$id);
+        const record = await this._getUserRecord(user.id);
         if (!record) return;
 
         let library = this.safeParseInternal(record.library, 'library', {});
@@ -296,10 +288,10 @@ const syncManager = {
     },
 
     async syncHistoryItem(historyEntry) {
-        const user = authManager.user;
+        const user = pb.authStore.model;
         if (!user) return;
 
-        const record = await this._getUserRecord(user.$id);
+        const record = await this._getUserRecord(user.id);
         if (!record) return;
 
         let history = this.safeParseInternal(record.history, 'history', []);
@@ -309,17 +301,17 @@ const syncManager = {
     },
 
     async clearHistory() {
-        const user = authManager.user;
+        const user = pb.authStore.model;
         if (!user) return;
 
-        await this._updateUserJSON(user.$id, 'history', []);
+        await this._updateUserJSON(user.id, 'history', []);
     },
 
     async syncUserPlaylist(playlist, action) {
-        const user = authManager.user;
+        const user = pb.authStore.model;
         if (!user) return;
 
-        const record = await this._getUserRecord(user.$id);
+        const record = await this._getUserRecord(user.id);
         if (!record) return;
 
         let userPlaylists = this.safeParseInternal(record.user_playlists, 'user_playlists', {});
@@ -343,10 +335,10 @@ const syncManager = {
     },
 
     async syncUserFolder(folder, action) {
-        const user = authManager.user;
+        const user = pb.authStore.model;
         if (!user) return;
 
-        const record = await this._getUserRecord(user.$id);
+        const record = await this._getUserRecord(user.id);
         if (!record) return;
 
         let userFolders = this.safeParseInternal(record.user_folders, 'user_folders', {});
@@ -384,14 +376,14 @@ const syncManager = {
     },
 
     async updateProfile(data) {
-        const user = authManager.user;
+        const user = pb.authStore.model;
         if (!user) return;
-        const record = await this._getUserRecord(user.$id);
+        const record = await this._getUserRecord(user.id);
         if (!record) return;
 
         const updateData = { ...data };
 
-        const updated = await this.pb.collection('DB_users').update(record.id, updateData, { f_id: user.$id });
+        const updated = await this.pb.collection('DB_users').update(record.id, updateData, { f_id: user.id });
         this._userRecordCache = updated;
     },
 
@@ -401,23 +393,6 @@ const syncManager = {
             return list.totalItems > 0;
         } catch {
             return false;
-        }
-    },
-
-    async clearCloudData() {
-        const user = authManager.user;
-        if (!user) return;
-
-        try {
-            const record = await this._getUserRecord(user.$id);
-            if (record) {
-                await this.pb.collection('DB_users').delete(record.id, { f_id: user.$id });
-                this._userRecordCache = null;
-                alert('Cloud data cleared successfully.');
-            }
-        } catch (error) {
-            console.error('Failed to clear cloud data!', error);
-            alert('Failed to clear cloud data! :( Check console for details.');
         }
     },
 
@@ -590,8 +565,8 @@ const syncManager = {
     },
 };
 
-if (pb) {
-    authManager.onAuthStateChanged(syncManager.onAuthStateChanged.bind(syncManager));
-}
+pb.authStore.onChange((token, model) => {
+    syncManager.onAuthStateChanged(model);
+}, true);
 
 export { pb, syncManager };

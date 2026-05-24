@@ -1,34 +1,15 @@
-// js/accounts/auth.js
-import { authClient } from './config.js';
+// js/accounts/auth.js - PocketBase auth wrapper
+import { pb } from './pocketbase.js';
 
 function normalizeUser(user) {
     if (!user) return null;
     return { ...user, $id: user.id };
 }
 
-export class AuthManager {
+class AuthManager {
     constructor() {
-        this.user = null;
+        this.user = normalizeUser(pb.authStore.model);
         this.authListeners = [];
-        this.init().catch(console.error);
-    }
-
-    async init() {
-        const params = new URLSearchParams(window.location.search);
-        if (params.has('oauth') || params.has('userId') || params.has('secret')) {
-            window.history.replaceState({}, '', window.location.pathname);
-        }
-
-        try {
-            const { data: session } = await authClient.getSession();
-            this.user = normalizeUser(session?.user);
-            this.updateUI(this.user);
-            this.authListeners.forEach((listener) => listener(this.user));
-        } catch (err) {
-            console.warn('Session check failed:', err);
-            this.user = null;
-            this.updateUI(null);
-        }
     }
 
     onAuthStateChanged(callback) {
@@ -40,10 +21,8 @@ export class AuthManager {
 
     async signInWithEmail(email, password) {
         try {
-            const { data, error } = await authClient.signIn.email({ email, password });
-            if (error) throw new Error(error.message);
-
-            this.user = normalizeUser(data.user);
+            const authData = await pb.collection('users').authWithPassword(email, password);
+            this.user = normalizeUser(authData.record);
             this.updateUI(this.user);
             this.authListeners.forEach((listener) => listener(this.user));
             return this.user;
@@ -56,14 +35,15 @@ export class AuthManager {
 
     async signUpWithEmail(email, password) {
         try {
-            const { data, error } = await authClient.signUp.email({
+            const data = {
                 email,
                 password,
-                name: email.split('@')[0],
-            });
-            if (error) throw new Error(error.message);
-
-            this.user = normalizeUser(data.user);
+                passwordConfirm: password,
+                emailVisibility: true,
+            };
+            await pb.collection('users').create(data);
+            await pb.collection('users').authWithPassword(email, password);
+            this.user = normalizeUser(pb.authStore.model);
             this.updateUI(this.user);
             this.authListeners.forEach((listener) => listener(this.user));
             return this.user;
@@ -76,11 +56,7 @@ export class AuthManager {
 
     async sendPasswordReset(email) {
         try {
-            const { error } = await authClient.requestPasswordReset({
-                email,
-                redirectTo: window.location.origin + '/reset-password',
-            });
-            if (error) throw new Error(error.message);
+            await pb.collection('users').requestPasswordReset(email);
             alert(`Password reset email sent to ${email}`);
         } catch (error) {
             console.error('Password reset failed:', error);
@@ -94,26 +70,47 @@ export class AuthManager {
             throw new Error('Passwords do not match');
         }
         try {
-            const { error } = await authClient.resetPassword({ newPassword: password, token });
-            if (error) throw new Error(error.message);
+            await pb.collection('users').confirmPasswordReset(token, password, confirmPassword);
         } catch (error) {
             console.error('Password reset failed:', error);
             throw error;
         }
     }
 
+    async signInWithGoogle() {
+        await this._oauthLogin('google');
+    }
+
+    async signInWithGitHub() {
+        await this._oauthLogin('github');
+    }
+
+    async signInWithDiscord() {
+        await this._oauthLogin('discord');
+    }
+
+    async signInWithSpotify() {
+        await this._oauthLogin('spotify');
+    }
+
+    async _oauthLogin(provider) {
+        try {
+            const authData = await pb.collection('users').authWithOAuth2({ provider });
+            this.user = normalizeUser(authData.record);
+            this.updateUI(this.user);
+            this.authListeners.forEach((listener) => listener(this.user));
+        } catch (error) {
+            console.error(`${provider} login failed:`, error);
+        }
+    }
+
     async signOut() {
         try {
-            await authClient.signOut();
+            pb.authStore.clear();
             this.user = null;
             this.updateUI(null);
             this.authListeners.forEach((listener) => listener(null));
-
-            if (window.__AUTH_GATE__) {
-                window.location.href = '/login';
-            } else {
-                window.location.reload();
-            }
+            window.location.reload();
         } catch (error) {
             console.error('Logout failed:', error);
             throw error;
@@ -122,51 +119,17 @@ export class AuthManager {
 
     updateUI(user) {
         const connectBtn = document.getElementById('auth-connect-btn');
-        const clearDataBtn = document.getElementById('auth-clear-cloud-btn');
         const statusText = document.getElementById('auth-status');
         const emailContainer = document.getElementById('email-auth-container');
         const emailToggleBtn = document.getElementById('toggle-email-auth-btn');
 
         if (!connectBtn) return;
 
-        if (window.__AUTH_GATE__) {
-            connectBtn.textContent = 'Sign Out';
-            connectBtn.classList.add('danger');
-            connectBtn.onclick = () => this.signOut();
-            if (clearDataBtn) clearDataBtn.style.display = 'none';
-            if (emailContainer) emailContainer.style.display = 'none';
-            if (emailToggleBtn) emailToggleBtn.style.display = 'none';
-            if (statusText) statusText.textContent = user ? `Signed in as ${user.email}` : 'Signed in';
-
-            const accountPage = document.getElementById('page-account');
-            if (accountPage) {
-                const title = accountPage.querySelector('.section-title');
-                if (title) title.textContent = 'Account';
-                accountPage.querySelectorAll('.account-content > p, .account-content > div').forEach((el) => {
-                    if (el.id !== 'auth-status' && el.id !== 'auth-buttons-container') {
-                        el.style.display = 'none';
-                    }
-                });
-            }
-
-            const customDbBtn = document.getElementById('custom-db-btn');
-            if (customDbBtn) {
-                const pbFromEnv = !!window.__POCKETBASE_URL__;
-                if (pbFromEnv) {
-                    const settingItem = customDbBtn.closest('.setting-item');
-                    if (settingItem) settingItem.style.display = 'none';
-                }
-            }
-
-            return;
-        }
-
         if (user) {
             connectBtn.textContent = 'Sign Out';
             connectBtn.classList.add('danger');
             connectBtn.onclick = () => this.signOut();
 
-            if (clearDataBtn) clearDataBtn.style.display = 'block';
             if (emailContainer) emailContainer.style.display = 'none';
             if (emailToggleBtn) emailToggleBtn.style.display = 'none';
             if (statusText) statusText.textContent = `Signed in as ${user.email}`;
@@ -181,11 +144,18 @@ export class AuthManager {
                 }
             };
 
-            if (clearDataBtn) clearDataBtn.style.display = 'none';
             if (emailToggleBtn) emailToggleBtn.style.display = 'inline-block';
             if (statusText) statusText.textContent = 'Sync your library across devices';
         }
     }
 }
 
-export const authManager = new AuthManager();
+const authManager = new AuthManager();
+
+pb.authStore.onChange((token, model) => {
+    authManager.user = normalizeUser(model);
+    authManager.updateUI(authManager.user);
+    authManager.authListeners.forEach((listener) => listener(authManager.user));
+}, true);
+
+export { authManager };

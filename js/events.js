@@ -8,7 +8,7 @@ import {
     getShareUrl,
     escapeHtml,
 } from './utils.js';
-import { listenBrainzSettings, waveformSettings, keyboardShortcuts } from './storage.js';
+import { waveformSettings, keyboardShortcuts } from './storage.js';
 import { showNotification, downloadTrackWithMetadata, downloadAlbum, downloadPlaylist } from './downloads.js';
 import { downloadQualitySettings } from './storage.js';
 import { updateTabTitle, navigate } from './router.js';
@@ -1267,9 +1267,7 @@ export async function handleTrackAction(
         await syncManager.syncLibraryItem(type, item, added);
 
         if (added && type === 'track' && scrobbler) {
-            if (listenBrainzSettings.isEnabled() && listenBrainzSettings.shouldLoveOnLike()) {
-                scrobbler.loveTrack(item);
-            }
+            scrobbler.loveTrack(item);
         }
 
         // Update all instances of this item's like button on the page

@@ -6004,42 +6004,10 @@ img[src=''] {
     filter: brightness(1.1);
 }
 
-.appwrite-settings-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    width: 100%;
-    max-width: 400px;
-}
-
-.custom-appwrite-endpoint,
-.custom-appwrite-project {
-    display: none;
-    flex-direction: column;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-    width: 100%;
-}
-
-.custom-appwrite-endpoint.visible,
-.custom-appwrite-project.visible {
-    display: flex;
-}
-
 .config-help-text {
     font-size: 0.8rem;
     opacity: 0.7;
     margin-bottom: 0.25rem;
-}
-
-.appwrite-controls-container {
-    display: flex;
-    gap: 0.5rem;
-    width: 100%;
-}
-
-#toggle-auth-config-btn {
-    width: fit-content;
 }
 
 .account-content {
@@ -6386,15 +6354,20 @@ img[src=''] {
     margin-bottom: var(--spacing-lg);
 }
 
-#page-library #my-playlists-container .library-create-dashed-card {
-    order: 1;
+#page-library #my-library-create-actions {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
 }
 
 #page-library .library-create-dashed-card {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
     width: 100%;
     min-width: 0;
-    padding: var(--spacing-md);
+    align-self: start;
+    padding: var(--spacing-sm) var(--spacing-md);
     margin: 0;
     text-align: left;
     font: inherit;
@@ -6402,21 +6375,31 @@ img[src=''] {
     cursor: pointer;
     border: 1px solid transparent;
     background-color: var(--card);
+    border-radius: var(--radius);
     -webkit-tap-highlight-color: transparent;
+    transition:
+        transform var(--transition-normal),
+        box-shadow var(--transition-normal),
+        background-color var(--transition-normal);
 }
 
-#page-library .library-create-dashed-art {
-    position: relative;
-    margin-bottom: var(--spacing-md);
-    border-radius: var(--radius);
-    overflow: hidden;
-    aspect-ratio: 1;
+#page-library .library-create-dashed-card:hover {
+    background-color: var(--secondary);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--border);
+}
+
+#page-library .library-create-dashed-card .library-create-dashed-art {
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: var(--radius);
     border: 2px dashed var(--border);
     background: var(--secondary);
-    box-shadow: var(--shadow-md);
     transition:
         border-color var(--transition-fast),
         box-shadow var(--transition-normal);
@@ -6424,15 +6407,23 @@ img[src=''] {
 
 #page-library .library-create-dashed-card:hover .library-create-dashed-art {
     border-color: var(--highlight);
-    box-shadow: var(--shadow-xl);
-}
-
-#page-library .library-create-dashed-card .card-info {
-    padding: 0;
 }
 
 #page-library .library-create-dashed-card .card-title {
-    margin-bottom: 0;
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+#page-library .folder-empty-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--secondary);
+    color: var(--muted-foreground);
+    border-radius: var(--radius);
 }
 
 #page-library .card-grid {
@@ -6970,10 +6961,6 @@ img[src=''] {
         flex-wrap: wrap;
     }
 
-    #page-library .library-create-dashed-card {
-        margin: 0 !important;
-    }
-
     .detail-header {
         flex-direction: row;
         gap: var(--spacing-md);
@@ -7373,10 +7360,6 @@ img[src=''] {
         margin-bottom: var(--spacing-sm);
     }
 
-    #page-library .library-create-dashed-card {
-        margin: 0 !important;
-    }
-
     .detail-header-info .title {
         font-size: 1.25rem;
     }
@@ -7664,104 +7647,6 @@ body:has(#fullscreen-cover-overlay:not([style*='display: none'])) .now-playing-b
     overflow: hidden;
     text-overflow: ellipsis;
     will-change: transform, opacity;
-}
-
-/* Genius i love genius brah!! */
-.genius-annotation-modal {
-    position: fixed;
-    inset: 0;
-    z-index: 10002;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgb(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
-    animation: fade-in 0.2s ease;
-}
-
-.genius-annotation-modal .genius-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 2px solid #ffff64;
-}
-
-.genius-annotation-modal .genius-line {
-    font-style: italic;
-    color: #ffff64;
-    font-weight: 600;
-    margin-right: 1rem;
-}
-
-.genius-annotation-modal .close-genius {
-    background: none;
-    border: none;
-    color: var(--foreground);
-    font-size: 1.5rem;
-    cursor: pointer;
-    line-height: 1;
-}
-
-.genius-modal-content {
-    background: var(--card);
-    padding: 1.5rem;
-    border-radius: var(--radius);
-    max-width: 500px;
-    width: 90%;
-    max-height: 80vh;
-    display: flex;
-    flex-direction: column;
-    box-shadow: var(--shadow-xl);
-    border: 1px solid var(--border);
-}
-
-.genius-annotation-modal .genius-body {
-    overflow-y: auto;
-}
-
-.annotation-item {
-    margin-bottom: 1.5rem;
-}
-
-.annotation-fragment {
-    font-size: 0.8rem;
-    color: var(--muted-foreground);
-    margin-bottom: 0.5rem;
-}
-
-.annotation-text {
-    line-height: 1.6;
-}
-
-.active-genius svg path:first-child {
-    fill: #ffff64;
-}
-
-.genius-annotated {
-    background-color: rgb(255, 255, 100, 0.1);
-    cursor: pointer;
-    border-radius: var(--radius-sm);
-    transition: background-color 0.2s;
-}
-
-.genius-annotated:hover {
-    background-color: rgb(255, 255, 100, 0.2);
-}
-
-.genius-multi-start {
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-}
-
-.genius-multi-mid {
-    border-radius: 0;
-}
-
-.genius-multi-end {
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
 }
 
 @media (min-width: 769px) {

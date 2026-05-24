@@ -1841,61 +1841,6 @@ export const sidebarSettings = {
     },
 };
 
-export const listenBrainzSettings = {
-    ENABLED_KEY: 'listenbrainz-enabled',
-    TOKEN_KEY: 'listenbrainz-token',
-    CUSTOM_URL_KEY: 'listenbrainz-custom-url',
-    LOVE_ON_LIKE_KEY: 'listenbrainz-love-on-like',
-
-    isEnabled() {
-        try {
-            return localStorage.getItem(this.ENABLED_KEY) === 'true';
-        } catch {
-            return false;
-        }
-    },
-
-    setEnabled(enabled) {
-        localStorage.setItem(this.ENABLED_KEY, enabled ? 'true' : 'false');
-    },
-
-    getToken() {
-        try {
-            return localStorage.getItem(this.TOKEN_KEY) || '';
-        } catch {
-            return '';
-        }
-    },
-
-    setToken(token) {
-        localStorage.setItem(this.TOKEN_KEY, token);
-    },
-
-    getCustomUrl() {
-        try {
-            return localStorage.getItem(this.CUSTOM_URL_KEY) || '';
-        } catch {
-            return '';
-        }
-    },
-
-    setCustomUrl(url) {
-        localStorage.setItem(this.CUSTOM_URL_KEY, url);
-    },
-
-    shouldLoveOnLike() {
-        try {
-            return localStorage.getItem(this.LOVE_ON_LIKE_KEY) === 'true';
-        } catch {
-            return false;
-        }
-    },
-
-    setLoveOnLike(enabled) {
-        localStorage.setItem(this.LOVE_ON_LIKE_KEY, enabled ? 'true' : 'false');
-    },
-};
-
 export const malojaSettings = {
     ENABLED_KEY: 'maloja-enabled',
     TOKEN_KEY: 'maloja-token',

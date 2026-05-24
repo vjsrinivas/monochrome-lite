@@ -1,14 +1,6 @@
 //js/lyrics.js
 import { getTrackTitle, getTrackArtists, buildTrackFilename } from './utils.js';
-import {
-    SVG_CLOSE,
-    SVG_GENIUS_ACTIVE,
-    SVG_GENIUS_INACTIVE,
-    SVG_MINUS,
-    SVG_PLUS,
-    SVG_RESET,
-    SVG_GLOBE,
-} from './icons.js';
+import { SVG_CLOSE, SVG_MINUS, SVG_PLUS, SVG_RESET, SVG_GLOBE } from './icons.js';
 import { sidePanelManager } from './side-panel.js';
 
 const loadAmLyrics = () => {
@@ -64,131 +56,6 @@ function trackIsJapanese(track) {
     return containsJapaneseKana(title) || containsJapaneseKana(artist);
 }
 
-function cleanTrackerSearch(text) {
-    if (!text) return '';
-    // chud emojis will NOT be tolerated in my precious genius lyrics worker
-    let cleaned = text.replace(
-        /[\p{Extended_Pictographic}\p{Emoji_Component}\p{Emoji_Presentation}\p{Emoji_Modifier}\p{Emoji_Modifier_Base}\p{Symbol}]/gu,
-        ''
-    );
-
-    cleaned = cleaned.replace(/[\u2600-\u27BF\u2B50\u2B06\u2194\u21AA\u2934\u203C\u2049\u3030\u303D\u3297\u3299]/g, '');
-
-    cleaned = cleaned.replace(/\[v\s*\d+\s*\]/gi, '');
-
-    cleaned = cleaned.replace(/\s+/g, ' ');
-
-    return cleaned.trim();
-}
-
-class GeniusManager {
-    constructor() {
-        this.cache = new Map();
-        this.loading = false;
-    }
-
-    // idgaf anymore im js hardcoding this lmaooo
-    getToken() {
-        const hostname = window.location.hostname;
-        if (hostname.endsWith('monochrome.tf') || hostname === 'monochrome.tf') {
-            return 'OpITG-h86oehKYuJJ5QVY5F-HxUWXb31EwGKarx2Tle3W9rBUVnMaUL9qo_Oh9Q7';
-        }
-        return 'QmS9OvsS-7ifRBKx_ochIPQU7oejIS9Eo_z5iWHmCPyhwLVQID3pYTHJmJTa6z8z';
-    }
-
-    async searchTrack(title, artist) {
-        const cleanTitle = title.split('(')[0].split('-')[0].trim();
-        const query = encodeURIComponent(`${cleanTitle} ${artist}`);
-        const token = this.getToken();
-
-        const url = `https://api.genius.com/search?q=${query}&access_token=${token}`;
-        const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
-
-        if (!response.ok) throw new Error('Failed to search Genius');
-
-        const data = await response.json();
-        if (data.response.hits.length === 0) return null;
-
-        const normalize = (str) => str.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
-        const targetArtist = normalize(artist);
-
-        const hit = data.response.hits.find((h) => {
-            const hitArtist = normalize(h.result.primary_artist.name);
-            return hitArtist.includes(targetArtist) || targetArtist.includes(hitArtist);
-        });
-
-        return hit ? hit.result : data.response.hits[0].result;
-    }
-
-    async getReferents(songId) {
-        const token = this.getToken();
-        const url = `https://api.genius.com/referents?song_id=${songId}&text_format=plain&per_page=50&access_token=${token}`;
-        const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
-
-        if (!response.ok) throw new Error('Failed to fetch annotations');
-
-        const data = await response.json();
-        return data.response.referents;
-    }
-
-    async getDataForTrack(track) {
-        if (this.cache.has(track.id)) return this.cache.get(track.id);
-
-        try {
-            this.loading = true;
-            const artist = Array.isArray(track.artists) ? track.artists[0].name : track.artist.name;
-            const song = await this.searchTrack(track.title, artist);
-
-            if (!song) {
-                this.loading = false;
-                return null;
-            }
-
-            const referents = await this.getReferents(song.id);
-            const result = { song, referents };
-
-            this.cache.set(track.id, result);
-            this.loading = false;
-            return result;
-        } catch (error) {
-            console.error('Genius Error:', error);
-            this.loading = false;
-            throw error;
-        }
-    }
-
-    findAnnotations(lineText, referents) {
-        if (!referents || !lineText) return [];
-
-        const normalize = (str) =>
-            str
-                .toLowerCase()
-                .replace(/[^\p{L}\p{N}\s]/gu, '')
-                .replace(/\s+/g, ' ')
-                .trim();
-        const normLine = normalize(lineText);
-
-        const getWordSet = (str) => new Set(str.split(' ').filter((w) => w.length > 0));
-        const lineWords = getWordSet(normLine);
-
-        return referents.filter((ref) => {
-            const normFragment = normalize(ref.fragment);
-
-            if (normLine.includes(normFragment) || normFragment.includes(normLine)) return true;
-
-            const fragmentWords = getWordSet(normFragment);
-            if (fragmentWords.size === 0 || lineWords.size === 0) return false;
-
-            let matchCount = 0;
-            fragmentWords.forEach((w) => {
-                if (lineWords.has(w)) matchCount++;
-            });
-
-            return matchCount / Math.min(fragmentWords.size, lineWords.size) > 0.6;
-        });
-    }
-}
-
 export class LyricsManager {
     static #instance = null;
 
@@ -217,9 +84,6 @@ export class LyricsManager {
         this.kuroshiroLoading = false;
         this.romajiTextCache = new Map(); // Cache: originalText -> convertedRomaji
         this.convertedTracksCache = new Set(); // Track IDs that have been fully converted
-        this.geniusManager = new GeniusManager();
-        this.isGeniusMode = false;
-        this.currentGeniusData = null;
         this.timingOffset = 0; // Offset in milliseconds (positive = delay lyrics, negative = advance lyrics)
     }
 
@@ -576,27 +440,9 @@ export class LyricsManager {
         const observeRoot = amLyricsElement.shadowRoot || amLyricsElement;
 
         this.romajiObserver = new MutationObserver((mutations) => {
-            // Check if any relevant mutation occurred
             const hasRelevantChange = mutations.some((mutation) => {
                 if (mutation.type === 'childList') {
-                    let relevant = false;
-                    if (mutation.addedNodes.length > 0) {
-                        for (const node of mutation.addedNodes) {
-                            if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains('genius-indicator'))
-                                continue;
-                            relevant = true;
-                            break;
-                        }
-                    }
-                    if (!relevant && mutation.removedNodes.length > 0) {
-                        for (const node of mutation.removedNodes) {
-                            if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains('genius-indicator'))
-                                continue;
-                            relevant = true;
-                            break;
-                        }
-                    }
-                    return relevant;
+                    return mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0;
                 }
                 if (mutation.type === 'characterData') return true;
                 return false;
@@ -606,7 +452,6 @@ export class LyricsManager {
                 return;
             }
 
-            // Debounce mutations
             if (this.observerTimeout) {
                 clearTimeout(this.observerTimeout);
             }
@@ -617,9 +462,6 @@ export class LyricsManager {
                 }
                 if (this.isRomajiMode) {
                     await this.convertLyricsContent(amLyricsElement);
-                }
-                if (this.isGeniusMode && this.currentGeniusData) {
-                    await this.applyGeniusAnnotations(amLyricsElement, this.currentGeniusData.referents);
                 }
             }, 100);
         });
@@ -642,9 +484,6 @@ export class LyricsManager {
         // Initial conversion if Romaji mode is enabled - single attempt, no periodic polling
         if (this.isRomajiMode) {
             await this.convertLyricsContent(amLyricsElement);
-        }
-        if (this.isGeniusMode && this.currentGeniusData) {
-            await this.applyGeniusAnnotations(amLyricsElement, this.currentGeniusData.referents);
         }
     }
 
@@ -753,83 +592,6 @@ export class LyricsManager {
 
         return this.isRomajiMode;
     }
-
-    async applyGeniusAnnotations(amLyricsElement, referents) {
-        if (!amLyricsElement || !referents) return;
-
-        const root = amLyricsElement.shadowRoot || amLyricsElement;
-
-        const lineElements = Array.from(root.querySelectorAll('p, .line, .lyric-line, .lrc-line'));
-
-        if (lineElements.length === 0) return;
-
-        lineElements.forEach((el) => {
-            el.classList.remove('genius-annotated', 'genius-multi-start', 'genius-multi-end', 'genius-multi-mid');
-            delete el.__geniusAnnotations;
-        });
-
-        const normalize = (str) =>
-            str
-                .toLowerCase()
-                .replace(/[^\p{L}\p{N}\s]/gu, '')
-                .replace(/\s+/g, ' ')
-                .trim();
-
-        referents.forEach((ref) => {
-            const fragment = normalize(ref.fragment);
-            if (!fragment) return;
-
-            for (let i = 0; i < lineElements.length; i++) {
-                let combinedText = '';
-                let currentLines = [];
-
-                for (let j = i; j < lineElements.length; j++) {
-                    const line = lineElements[j];
-
-                    const lineClone = line.cloneNode(true);
-                    lineClone
-                        .querySelectorAll('.time, .timestamp, [class*="time"], .genius-indicator')
-                        .forEach((n) => n.remove());
-                    const text = normalize(lineClone.textContent || '');
-
-                    if (!text) continue;
-
-                    if (currentLines.length > 0) combinedText += ' ';
-                    combinedText += text;
-                    currentLines.push(line);
-
-                    if (combinedText.includes(fragment)) {
-                        currentLines.forEach((el, idx) => {
-                            el.classList.add('genius-annotated');
-                            if (!el.__geniusAnnotations) el.__geniusAnnotations = [];
-
-                            if (!el.__geniusAnnotations.some((a) => a.id === ref.id)) {
-                                el.__geniusAnnotations.push(ref);
-                            }
-
-                            if (currentLines.length > 1) {
-                                if (idx === 0) el.classList.add('genius-multi-start');
-                                else if (idx === currentLines.length - 1) el.classList.add('genius-multi-end');
-                                else el.classList.add('genius-multi-mid');
-                            }
-
-                            if (!el.querySelector('.genius-indicator')) {
-                                const smiley = document.createElement('span');
-                                smiley.className = 'genius-indicator';
-                                smiley.textContent = ' ☺';
-                                smiley.style.color = '#ffff64';
-                                smiley.style.marginLeft = '0.5em';
-                                el.appendChild(smiley);
-                            }
-                        });
-                        break;
-                    }
-
-                    if (combinedText.length > fragment.length + 50) break;
-                }
-            }
-        });
-    }
 }
 
 export function openLyricsPanel(track, audioPlayer, lyricsManager, forceOpen = false) {
@@ -849,7 +611,6 @@ export function openLyricsPanel(track, audioPlayer, lyricsManager, forceOpen = f
     const renderControls = (container) => {
         const isRomajiMode = manager.getRomajiMode();
         manager.isRomajiMode = isRomajiMode;
-        const isGeniusMode = manager.isGeniusMode;
         const offsetDisplay = manager.getOffsetDisplayString(manager.timingOffset);
 
         container.innerHTML = `
@@ -867,9 +628,6 @@ export function openLyricsPanel(track, audioPlayer, lyricsManager, forceOpen = f
             </div>
             <button id="romaji-toggle-btn" class="btn-icon" title="Toggle Romaji (Japanese to Latin)" data-enabled="${isRomajiMode}" style="color: ${isRomajiMode ? 'var(--primary)' : ''}">
                 ${SVG_GLOBE(20)}
-            </button>
-            <button id="genius-toggle-btn" class="btn-icon ${isGeniusMode ? 'active-genius' : ''}" title="Genius Mode" style="${isGeniusMode ? 'color: #ffff64;' : ''}">
-                ${isGeniusMode ? SVG_GENIUS_ACTIVE(20) : SVG_GENIUS_INACTIVE(20)}
             </button>
             <button id="close-side-panel-btn" class="btn-icon" title="Close">
                 ${SVG_CLOSE(20)}
@@ -922,57 +680,6 @@ export function openLyricsPanel(track, audioPlayer, lyricsManager, forceOpen = f
                 if (amLyrics) {
                     await manager.toggleRomajiMode(amLyrics);
                     updateRomajiBtn();
-                }
-            });
-        }
-
-        // Genius toggle
-        const geniusBtn = container.querySelector('#genius-toggle-btn');
-        if (geniusBtn) {
-            geniusBtn.addEventListener('click', async () => {
-                manager.isGeniusMode = !manager.isGeniusMode;
-                const enabled = manager.isGeniusMode;
-
-                geniusBtn.classList.toggle('active-genius', enabled);
-                geniusBtn.style.color = enabled ? '#ffff64' : '';
-                geniusBtn.innerHTML = enabled ? SVG_GENIUS_ACTIVE(20) : SVG_GENIUS_INACTIVE(20);
-
-                if (enabled) {
-                    try {
-                        geniusBtn.style.opacity = '0.5';
-                        await manager.geniusManager.getDataForTrack(track);
-                        manager.currentGeniusData = manager.geniusManager.cache.get(track.id);
-                        const amLyrics = sidePanelManager.panel.querySelector('am-lyrics');
-                        if (amLyrics)
-                            manager.applyGeniusAnnotations(
-                                amLyrics,
-                                manager.geniusManager.cache.get(track.id)?.referents
-                            );
-                    } catch (e) {
-                        alert(e.message);
-                        manager.isGeniusMode = false;
-                        geniusBtn.classList.remove('active-genius');
-                        geniusBtn.style.color = '';
-                    } finally {
-                        geniusBtn.style.opacity = '1';
-                    }
-                } else {
-                    const amLyrics = sidePanelManager.panel.querySelector('am-lyrics');
-                    if (amLyrics) {
-                        const root = amLyrics.shadowRoot || amLyrics;
-                        const lineElements = Array.from(root.querySelectorAll('.genius-annotated'));
-                        lineElements.forEach((el) => {
-                            el.classList.remove(
-                                'genius-annotated',
-                                'genius-multi-start',
-                                'genius-multi-end',
-                                'genius-multi-mid'
-                            );
-                            delete el.__geniusAnnotations;
-                        });
-                    }
-                    const modal = document.querySelector('.genius-annotation-modal');
-                    if (modal) modal.remove();
                 }
             });
         }
@@ -1142,22 +849,7 @@ async function renderLyricsComponent(container, track, audioPlayer, lyricsManage
             await lyricsManager.loadKuroshiro();
         }
 
-        lyricsManager
-            .fetchLyrics(track.id, track)
-            .then(async () => {
-                if (lyricsManager.isGeniusMode) {
-                    try {
-                        const data = await lyricsManager.geniusManager.getDataForTrack(track);
-                        if (data) {
-                            lyricsManager.currentGeniusData = data;
-                            lyricsManager.applyGeniusAnnotations(amLyrics, data.referents);
-                        }
-                    } catch (e) {
-                        console.warn('Genius auto-load failed', e);
-                    }
-                }
-            })
-            .catch((e) => console.warn('Background lyrics fetch failed', e));
+        lyricsManager.fetchLyrics(track.id, track).catch((e) => console.warn('Background lyrics fetch failed', e));
 
         // Wait for lyrics to appear, then do an immediate conversion
         const waitForLyrics = () => {
@@ -1196,10 +888,6 @@ async function renderLyricsComponent(container, track, audioPlayer, lyricsManage
             await lyricsManager.convertLyricsContent(amLyrics);
             // One retry after 500ms in case more lyrics load
             setTimeout(() => lyricsManager.convertLyricsContent(amLyrics), 500);
-        }
-
-        if (lyricsManager.isGeniusMode && lyricsManager.currentGeniusData) {
-            lyricsManager.applyGeniusAnnotations(amLyrics, lyricsManager.currentGeniusData.referents);
         }
 
         const cleanup = setupSync(track, audioPlayer, amLyrics, lyricsManager);
@@ -1260,27 +948,6 @@ function setupSync(track, audioPlayer, amLyrics, lyricsManager) {
 
     const onLineClick = (e) => {
         if (e.detail && e.detail.timestamp !== undefined) {
-            const manager = lyricsManager || sidePanelManager.panel.lyricsManager;
-            if (manager && manager.isGeniusMode) {
-                const timestampSeconds = e.detail.timestamp / 1000;
-
-                const lyricsData = manager.lyricsCache.get(track.id);
-                if (lyricsData && lyricsData.subtitles) {
-                    const parsed = manager.parseSyncedLyrics(lyricsData.subtitles);
-
-                    const line = parsed.find((l) => Math.abs(l.time - timestampSeconds) < 1.0);
-
-                    if (line && line.text && manager.currentGeniusData) {
-                        const annotations = manager.geniusManager.findAnnotations(
-                            line.text,
-                            manager.currentGeniusData.referents
-                        );
-                        showGeniusAnnotations(annotations, line.text);
-                    }
-                }
-                return;
-            }
-
             audioPlayer.currentTime = e.detail.timestamp / 1000;
             audioPlayer.play();
         }
@@ -1306,51 +973,6 @@ function setupSync(track, audioPlayer, amLyrics, lyricsManager) {
         audioPlayer.removeEventListener('seeked', updateTime);
         amLyrics.removeEventListener('line-click', onLineClick);
     };
-}
-
-function showGeniusAnnotations(annotations, lineText) {
-    const existing = document.querySelector('.genius-annotation-modal');
-    if (existing) existing.remove();
-
-    const modal = document.createElement('div');
-    modal.className = 'genius-annotation-modal';
-
-    let contentHtml = `
-        <div class="genius-modal-content">
-            <div class="genius-header">
-                <span class="genius-line">"${lineText}"</span>
-                <button class="close-genius">×</button>
-            </div>
-            <div class="genius-body">
-    `;
-
-    if (annotations.length === 0) {
-        contentHtml += `
-            <div class="annotation-item">
-                <div class="annotation-text" style="color: var(--muted-foreground); font-style: italic;">No Genius annotation found for this line.</div>
-            </div>
-        `;
-    } else {
-        annotations.forEach((ann) => {
-            const body = ann.annotations[0].body.plain;
-            contentHtml += `
-                <div class="annotation-item">
-                    <div class="annotation-text">${body.replace(/\n/g, '<br>')}</div>
-                </div>
-            `;
-        });
-    }
-
-    contentHtml += `</div></div>`;
-    modal.innerHTML = contentHtml;
-
-    document.body.appendChild(modal);
-
-    modal.querySelector('.close-genius').addEventListener('click', () => modal.remove());
-
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) modal.remove();
-    });
 }
 
 export async function renderLyricsInFullscreen(track, audioPlayer, lyricsManager, container) {

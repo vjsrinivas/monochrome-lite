@@ -18,7 +18,6 @@ import {
     visualizerSettings,
     playlistSettings,
     equalizerSettings,
-    listenBrainzSettings,
     malojaSettings,
     homePageSettings,
     sidebarSectionSettings,
@@ -193,56 +192,6 @@ export async function initializeSettings(scrobbler, player, api, ui) {
             } catch {
                 /* ignore */
             }
-        });
-    }
-
-    // ========================================
-    // ListenBrainz Settings
-    // ========================================
-    const lbToggle = document.getElementById('listenbrainz-enabled-toggle');
-    const lbTokenSetting = document.getElementById('listenbrainz-token-setting');
-    const lbCustomUrlSetting = document.getElementById('listenbrainz-custom-url-setting');
-    const lbLoveSetting = document.getElementById('listenbrainz-love-setting');
-    const lbLoveToggle = document.getElementById('listenbrainz-love-toggle');
-    const lbTokenInput = document.getElementById('listenbrainz-token-input');
-    const lbCustomUrlInput = document.getElementById('listenbrainz-custom-url-input');
-
-    const updateListenBrainzUI = () => {
-        const isEnabled = listenBrainzSettings.isEnabled();
-        if (lbToggle) lbToggle.checked = isEnabled;
-        if (lbTokenSetting) lbTokenSetting.style.display = isEnabled ? 'flex' : 'none';
-        if (lbCustomUrlSetting) lbCustomUrlSetting.style.display = isEnabled ? 'flex' : 'none';
-        if (lbLoveSetting) lbLoveSetting.style.display = isEnabled ? 'flex' : 'none';
-        if (lbTokenInput) lbTokenInput.value = listenBrainzSettings.getToken();
-        if (lbCustomUrlInput) lbCustomUrlInput.value = listenBrainzSettings.getCustomUrl();
-        if (lbLoveToggle) lbLoveToggle.checked = listenBrainzSettings.shouldLoveOnLike();
-    };
-
-    updateListenBrainzUI();
-
-    if (lbToggle) {
-        lbToggle.addEventListener('change', (e) => {
-            const enabled = e.target.checked;
-            listenBrainzSettings.setEnabled(enabled);
-            updateListenBrainzUI();
-        });
-    }
-
-    if (lbTokenInput) {
-        lbTokenInput.addEventListener('change', (e) => {
-            listenBrainzSettings.setToken(e.target.value.trim());
-        });
-    }
-
-    if (lbCustomUrlInput) {
-        lbCustomUrlInput.addEventListener('change', (e) => {
-            listenBrainzSettings.setCustomUrl(e.target.value.trim());
-        });
-    }
-
-    if (lbLoveToggle) {
-        lbLoveToggle.addEventListener('change', (e) => {
-            listenBrainzSettings.setLoveOnLike(e.target.checked);
         });
     }
 
@@ -6032,19 +5981,6 @@ export async function initializeSettings(scrobbler, player, api, ui) {
         }
     });
 
-    document.getElementById('auth-clear-cloud-btn')?.addEventListener('click', async () => {
-        if (confirm('Are you sure you want to delete ALL your data from the cloud? This cannot be undone.')) {
-            try {
-                await syncManager.clearCloudData();
-                alert('Cloud data cleared successfully.');
-                await authManager.signOut();
-            } catch (error) {
-                console.error('Failed to clear cloud data:', error);
-                alert('Failed to clear cloud data: ' + error.message);
-            }
-        }
-    });
-
     // Backup & Restore
     document.getElementById('export-library-btn')?.addEventListener('click', async () => {
         const data = await db.exportData();
@@ -6139,39 +6075,24 @@ export async function initializeSettings(scrobbler, player, api, ui) {
     const customDbBtn = document.getElementById('custom-db-btn');
     const customDbModal = document.getElementById('custom-db-modal');
     const customPbUrlInput = document.getElementById('custom-pb-url');
-    const customAppwriteEndpointInput = document.getElementById('custom-appwrite-endpoint');
-    const customAppwriteProjectInput = document.getElementById('custom-appwrite-project');
     const customDbSaveBtn = document.getElementById('custom-db-save');
     const customDbResetBtn = document.getElementById('custom-db-reset');
     const customDbCancelBtn = document.getElementById('custom-db-cancel');
 
     if (customDbBtn && customDbModal) {
-        const appwriteFromEnv = !!(window.__APPWRITE_ENDPOINT__ || window.__APPWRITE_PROJECT_ID__);
         const pbFromEnv = !!window.__POCKETBASE_URL__;
 
-        // Hide entire setting if both are server-configured
-        if (appwriteFromEnv && pbFromEnv) {
+        if (pbFromEnv) {
             const settingItem = customDbBtn.closest('.setting-item');
             if (settingItem) settingItem.style.display = 'none';
         }
 
-        // Hide individual fields in the modal
         if (pbFromEnv && customPbUrlInput) customPbUrlInput.closest('div[style]').style.display = 'none';
-        if (appwriteFromEnv) {
-            if (customAppwriteEndpointInput) customAppwriteEndpointInput.closest('div[style]').style.display = 'none';
-            if (customAppwriteProjectInput) customAppwriteProjectInput.closest('div[style]').style.display = 'none';
-        }
 
         customDbBtn.addEventListener('click', () => {
             const pbUrl = localStorage.getItem('monochrome-pocketbase-url') || '';
-            const appwriteEndpoint = localStorage.getItem('monochrome-appwrite-endpoint') || '';
-            const appwriteProject = localStorage.getItem('monochrome-appwrite-project') || '';
 
             if (!pbFromEnv && customPbUrlInput) customPbUrlInput.value = pbUrl;
-            if (!appwriteFromEnv) {
-                if (customAppwriteEndpointInput) customAppwriteEndpointInput.value = appwriteEndpoint;
-                if (customAppwriteProjectInput) customAppwriteProjectInput.value = appwriteProject;
-            }
 
             customDbModal.classList.add('active');
         });
@@ -6193,23 +6114,6 @@ export async function initializeSettings(scrobbler, player, api, ui) {
                 }
             }
 
-            if (!appwriteFromEnv) {
-                const endpoint = customAppwriteEndpointInput?.value.trim();
-                const project = customAppwriteProjectInput?.value.trim();
-
-                if (endpoint) {
-                    localStorage.setItem('monochrome-appwrite-endpoint', endpoint);
-                } else {
-                    localStorage.removeItem('monochrome-appwrite-endpoint');
-                }
-
-                if (project) {
-                    localStorage.setItem('monochrome-appwrite-project', project);
-                } else {
-                    localStorage.removeItem('monochrome-appwrite-project');
-                }
-            }
-
             alert('Settings saved. Reloading...');
             window.location.reload();
         });
@@ -6217,8 +6121,6 @@ export async function initializeSettings(scrobbler, player, api, ui) {
         customDbResetBtn.addEventListener('click', () => {
             if (confirm('Reset custom database settings to default?')) {
                 localStorage.removeItem('monochrome-pocketbase-url');
-                localStorage.removeItem('monochrome-appwrite-endpoint');
-                localStorage.removeItem('monochrome-appwrite-project');
                 alert('Settings reset. Reloading...');
                 window.location.reload();
             }

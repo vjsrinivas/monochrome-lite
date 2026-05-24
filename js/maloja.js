@@ -124,7 +124,7 @@ export class MalojaScrobbler {
         }
         this.clearScrobbleTimer();
 
-        // Maloja doesn't have a separate "now playing" endpoint like Last.fm
+        // Maloja doesn't have a separate "now playing" endpoint
         // It just scrobbles when the track is actually played
         // We'll set up the timer to scrobble after the threshold
 

@@ -85,6 +85,7 @@ import {
     SVG_RIGHT_ARROW,
     SVG_CLOCK,
     SVG_CHECKBOX,
+    SVG_FOLDER,
 } from './icons.js';
 
 const setFullscreenUIToggleIcon = (button, visualizerOnlyMode) => {
@@ -648,18 +649,25 @@ export class UIRenderer {
     }
 
     createFolderCardHTML(folder) {
-        const imageSrc = folder.cover || 'assets/folder.png';
-        const isCompact = cardSettings.isCompactAlbum();
+        const isFolderEmpty = !folder.playlists || folder.playlists.length === 0;
+        let imageHTML;
+
+        if (isFolderEmpty) {
+            imageHTML = `<div class="card-image folder-empty-placeholder">${SVG_FOLDER(48)}</div>`;
+        } else {
+            const imageSrc = folder.cover || 'assets/folder.png';
+            imageHTML = `<img src="${imageSrc}" alt="${escapeHtml(folder.name)}" class="card-image" loading="lazy" onerror="this.src='/assets/folder.png'">`;
+        }
 
         return this.createBaseCardHTML({
+            isCompact: false,
             type: 'folder',
             id: folder.id,
             href: `/folder/${folder.id}`,
             title: escapeHtml(folder.name),
             subtitle: `${folder.playlists ? folder.playlists.length : 0} playlists`,
-            imageHTML: `<img src="${imageSrc}" alt="${escapeHtml(folder.name)}" class="card-image" loading="lazy" onerror="this.src='/assets/folder.png'">`,
+            imageHTML,
             actionButtonsHTML: '',
-            isCompact,
         });
     }
 
@@ -2456,7 +2464,6 @@ export class UIRenderer {
         const albumsContainer = document.getElementById('library-albums-container');
         const artistsContainer = document.getElementById('library-artists-container');
         const playlistsContainer = document.getElementById('library-playlists-container');
-        const localContainer = document.getElementById('library-local-container');
         const foldersContainer = document.getElementById('my-folders-container');
         const myPlaylistsContainer = document.getElementById('my-playlists-container');
 

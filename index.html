@@ -1098,7 +1098,7 @@
                     </button>
                 </div>
                 <p style="font-size: 0.9rem; color: var(--muted-foreground); margin-bottom: 1rem">
-                    Configure custom PocketBase and Appwrite instances. Leave empty to use defaults.
+                    Configure a custom PocketBase instance. Leave empty to use defaults.
                     <br />
                     A Guide To Set This Up Can Be Found
                     <a
@@ -1110,24 +1110,6 @@
                 <div style="margin-bottom: 1rem">
                     <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem">PocketBase URL</label>
                     <input type="url" id="custom-pb-url" class="template-input" placeholder="https://data.samidy.xyz" />
-                </div>
-                <div style="margin-bottom: 1rem">
-                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem">Appwrite Endpoint</label>
-                    <input
-                        type="url"
-                        id="custom-appwrite-endpoint"
-                        class="template-input"
-                        placeholder="https://auth.samidy.com/v1"
-                    />
-                </div>
-                <div style="margin-bottom: 1rem">
-                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem">Appwrite Project ID</label>
-                    <input
-                        type="text"
-                        id="custom-appwrite-project"
-                        class="template-input"
-                        placeholder="auth-for-monochrome"
-                    />
                 </div>
                 <div class="modal-actions">
                     <button id="custom-db-cancel" class="btn-secondary">Cancel</button>
@@ -1788,43 +1770,31 @@
                         <div class="library-header">
                             <h2>My Playlists</h2>
                         </div>
-                        <div class="card-grid" id="my-folders-container"></div>
-                        <div class="card-grid" id="my-playlists-container">
-                            <button
-                                type="button"
-                                class="card library-create-dashed-card"
-                                id="library-create-playlist-card"
-                            >
+                        <div class="card-grid" id="my-library-create-actions">
+                            <button type="button" class="library-create-dashed-card" id="library-create-playlist-card">
                                 <div class="library-create-dashed-art">
-                                    <use svg="!lucide/list-music.svg" size="28" />
+                                    <use svg="!lucide/list-music.svg" size="20" />
                                 </div>
-                                <div class="card-info">
-                                    <h4 class="card-title">Create playlist</h4>
-                                </div>
+                                <h4 class="card-title">Create playlist</h4>
                             </button>
-                            <button
-                                type="button"
-                                class="card library-create-dashed-card"
-                                id="library-create-folder-card"
-                            >
+                            <button type="button" class="library-create-dashed-card" id="library-create-folder-card">
                                 <div class="library-create-dashed-art">
-                                    <use svg="!lucide/folder-plus.svg" size="28" />
+                                    <use svg="!lucide/folder-plus.svg" size="20" />
                                 </div>
-                                <div class="card-info">
-                                    <h4 class="card-title">Create folder</h4>
-                                </div>
+                                <h4 class="card-title">Create folder</h4>
                             </button>
                         </div>
+                        <div class="card-grid" id="my-folders-container"></div>
+                        <div class="card-grid" id="my-playlists-container"></div>
                     </section>
 
                     <section class="content-section">
                         <h2 class="section-title">Favorites</h2>
                         <div class="search-tabs">
-                            <button class="search-tab active" data-tab="tracks">Liked Tracks</button>
+                            <button class="search-tab active" data-tab="tracks">Tracks</button>
                             <button class="search-tab" data-tab="albums">Albums</button>
                             <button class="search-tab" data-tab="artists">Artists</button>
-                            <button class="search-tab" data-tab="playlists">Playlists and Mixes</button>
-                            <button class="search-tab" data-tab="local">Local Files</button>
+                            <button class="search-tab" data-tab="playlists">Playlists</button>
                         </div>
                         <div class="search-tab-content active" id="library-tab-tracks">
                             <div
@@ -1838,7 +1808,7 @@
                                         type="search"
                                         id="library-liked-tracks-search"
                                         class="track-list-search-input"
-                                        placeholder="Search liked tracks..."
+                                        placeholder="Search tracks..."
                                         autocomplete="off"
                                         autocorrect="off"
                                         autocapitalize="off"
@@ -1881,7 +1851,7 @@
                                             justify-content: center;
                                             border-radius: 50%;
                                         "
-                                        title="Shuffle Liked Tracks"
+                                        title="Shuffle Tracks"
                                     >
                                         <use svg="!lucide/shuffle.svg" size="16" />
                                     </button>
@@ -1896,7 +1866,7 @@
                                             justify-content: center;
                                             border-radius: 50%;
                                         "
-                                        title="Download Liked Tracks"
+                                        title="Download Tracks"
                                     >
                                         <use svg="!lucide/download.svg" size="16" />
                                     </button>
@@ -1912,45 +1882,6 @@
                         </div>
                         <div class="search-tab-content" id="library-tab-playlists">
                             <div class="card-grid" id="library-playlists-container"></div>
-                        </div>
-                        <div class="search-tab-content" id="library-tab-local">
-                            <div class="track-list" id="library-local-container">
-                                <div id="local-files-intro" style="padding: 20px; text-align: center">
-                                    <button id="select-local-folder-btn" class="btn-secondary">
-                                        <use svg="!lucide/folder.svg" size="20" />
-                                        <span id="select-local-folder-text">Select Music Folder</span>
-                                    </button>
-                                    <p
-                                        id="local-browser-warning"
-                                        style="display: none; color: #ef4444; margin-top: 10px; font-size: 0.9rem"
-                                    >
-                                        Please use Google Chrome or Microsoft Edge to play local files.
-                                    </p>
-                                    <p style="margin-top: 10px; font-size: 0.9rem; color: var(--muted-foreground)">
-                                        Select a folder on your device to play local files. <br />
-                                        Note: Metadata reading is basic (FLAC/MP3 tags).
-                                    </p>
-                                </div>
-                                <div
-                                    id="local-files-header"
-                                    style="
-                                        display: none;
-                                        justify-content: space-between;
-                                        align-items: center;
-                                        padding: 10px 20px;
-                                    "
-                                >
-                                    <h3>Local Files</h3>
-                                    <button
-                                        id="change-local-folder-btn"
-                                        class="btn-secondary"
-                                        style="font-size: 0.8rem; padding: 4px 8px"
-                                    >
-                                        Change Folder
-                                    </button>
-                                </div>
-                                <div id="local-files-list"></div>
-                            </div>
                         </div>
                     </section>
                 </div>
@@ -3145,59 +3076,6 @@
                     </div>
                     <div class="settings-tab-content" id="settings-tab-scrobbling">
                         <div class="settings-list">
-                            <div class="settings-group">
-                                <div class="setting-item">
-                                    <div class="info">
-                                        <span class="label">ListenBrainz Scrobbling</span>
-                                        <span class="description"
-                                            >Submit listens to ListenBrainz (requires User Token)</span
-                                        >
-                                    </div>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="listenbrainz-enabled-toggle" />
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                                <div class="setting-item" id="listenbrainz-token-setting" style="display: none">
-                                    <div class="info">
-                                        <span class="label">User Token</span>
-                                        <span class="description">Found on your ListenBrainz profile page</span>
-                                    </div>
-                                    <input
-                                        type="password"
-                                        id="listenbrainz-token-input"
-                                        placeholder="Enter Token"
-                                        class="template-input"
-                                        style="width: 250px"
-                                    />
-                                </div>
-                                <div class="setting-item" id="listenbrainz-custom-url-setting" style="display: none">
-                                    <div class="info">
-                                        <span class="label">Custom API URL (Optional)</span>
-                                        <span class="description">Leave empty to use official ListenBrainz server</span>
-                                    </div>
-                                    <input
-                                        type="url"
-                                        id="listenbrainz-custom-url-input"
-                                        placeholder="https://api.listenbrainz.org"
-                                        class="template-input"
-                                        style="width: 250px"
-                                    />
-                                </div>
-                                <div class="setting-item" id="listenbrainz-love-setting" style="display: none">
-                                    <div class="info">
-                                        <span class="label">Love on Like</span>
-                                        <span class="description"
-                                            >Automatically 'love' tracks on ListenBrainz when you like them</span
-                                        >
-                                    </div>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="listenbrainz-love-toggle" />
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                            </div>
-
                             <div class="settings-group">
                                 <div class="setting-item">
                                     <div class="info">
@@ -4840,17 +4718,6 @@
                                         >
                                     </div>
                                     <button id="reset-local-data-btn" class="btn-secondary danger">Reset</button>
-                                </div>
-                                <div class="setting-item">
-                                    <div class="info">
-                                        <span class="label">Clear Cloud Data</span>
-                                        <span class="description"
-                                            >Delete all your data from the cloud (cannot be undone)</span
-                                        >
-                                    </div>
-                                    <button id="auth-clear-cloud-btn" class="btn-secondary danger">
-                                        Clear Cloud Data
-                                    </button>
                                 </div>
                             </div>
 

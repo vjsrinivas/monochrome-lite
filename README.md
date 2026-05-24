@@ -72,7 +72,7 @@
 ### Lyrics & Metadata
 
 - Lyrics support with karaoke mode
-- Genius integration for lyrics
+- Lyrics support with karaoke mode
 - Track downloads with automatic metadata embedding
 
 ### Integrations
@@ -80,7 +80,7 @@
 - Account system for cross-device syncing
 - Customizable & Public Profiles
 - Real-time Listening Parties for synced playback with friends
-- Last.fm and ListenBrainz integration for scrobbling
+- Maloja integration for scrobbling
 - OAuth support (Google, Discord, GitHub, Spotify)
 - Dynamic Discord Embeds
 - Artist Biography + Social Links for learning more about your favorite artists
@@ -106,9 +106,7 @@ For alternative instances, check [INSTANCES.md](INSTANCES.md).
 
 ## Self-Hosting
 
-NOTE: Accounts will not work on self-hosted instances. Our Appwrite authentication system only allows authorized domains.
-
-We had to heavily customize the authentication system and write several custom scripts to support features like SMTP and Google OAuth (which are currently bugged in Appwrite). Because of this, we can no longer provide a self-hostable accounts system.
+Accounts require a PocketBase instance for data sync. Self-hosted instances need to set the `POCKETBASE_URL` environment variable.
 
 ### Option 1: Docker (Recommended)
 

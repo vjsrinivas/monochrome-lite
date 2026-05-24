@@ -15,7 +15,7 @@ import {
 } from './storage.js';
 import { UIRenderer } from './ui.js';
 import { Player } from './player.js';
-import { MultiScrobbler } from './multi-scrobbler.js';
+import { MalojaScrobbler } from './maloja.js';
 import { LyricsManager, openLyricsPanel, clearLyricsPanelSync } from './lyrics.js';
 import { createRouter, updateTabTitle, navigate } from './router.js';
 import { initializePlayerEvents, initializeTrackInteractions, handleTrackAction } from './events.js';
@@ -342,26 +342,6 @@ function hideOfflineNotification() {
     }
 }
 
-async function disablePwaForAuthGate() {
-    if (!('serviceWorker' in navigator)) return;
-
-    try {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(registrations.map((registration) => registration.unregister()));
-    } catch (error) {
-        console.warn('Failed to unregister service workers:', error);
-    }
-
-    if ('caches' in window) {
-        try {
-            const cacheKeys = await caches.keys();
-            await Promise.all(cacheKeys.map((key) => caches.delete(key)));
-        } catch (error) {
-            console.warn('Failed to clear caches:', error);
-        }
-    }
-}
-
 document.addEventListener('DOMContentLoaded', async () => {
     await modernSettings.waitPending();
 
@@ -528,7 +508,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // yet granted.
     scanLocalMediaFolder().catch(console.error);
 
-    const scrobbler = new MultiScrobbler();
+    const scrobbler = new MalojaScrobbler();
     window.monochromeScrobbler = scrobbler;
 
     const lyricsManager = await LyricsManager.initialize(MusicAPI.instance);
@@ -2462,26 +2442,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // PWA Update Logic
-    if (window.__AUTH_GATE__) {
-        await disablePwaForAuthGate().catch(console.error);
-    } else {
-        const updateSW = registerSW({
-            onNeedRefresh() {
-                if (pwaUpdateSettings.isAutoUpdateEnabled()) {
-                    // Auto-update: immediately activate the new service worker
+    const updateSW = registerSW({
+        onNeedRefresh() {
+            if (pwaUpdateSettings.isAutoUpdateEnabled()) {
+                // Auto-update: immediately activate the new service worker
+                updateSW(true);
+            } else {
+                // Show notification with Update button and dismiss option
+                showUpdateNotification(() => {
                     updateSW(true);
-                } else {
-                    // Show notification with Update button and dismiss option
-                    showUpdateNotification(() => {
-                        updateSW(true);
-                    });
-                }
-            },
-            onOfflineReady() {
-                console.log('App ready to work offline');
-            },
-        });
-    }
+                });
+            }
+        },
+        onOfflineReady() {
+            console.log('App ready to work offline');
+        },
+    });
 
     document.getElementById('show-shortcuts-btn')?.addEventListener('click', () => {
         showKeyboardShortcuts();

@@ -544,7 +544,7 @@ export class ThemeStore {
             if (userId.length !== ThemeStore.EXPECTED_USER_ID_LENGTH) {
                 throw new Error(
                     `Your user ID is corrupted (${userId.length} chars, expected ${ThemeStore.EXPECTED_USER_ID_LENGTH}). ` +
-                        `Please go to Settings > System > Clear Cloud Data, then log out and back in.`
+                        `Please go to Settings > System > Reset Local Data, then log out and back in.`
                 );
             }
 
