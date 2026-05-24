@@ -8,13 +8,7 @@ import {
     getShareUrl,
     escapeHtml,
 } from './utils.js';
-import {
-    lastFMStorage,
-    libreFmSettings,
-    listenBrainzSettings,
-    waveformSettings,
-    keyboardShortcuts,
-} from './storage.js';
+import { listenBrainzSettings, waveformSettings, keyboardShortcuts } from './storage.js';
 import { showNotification, downloadTrackWithMetadata, downloadAlbum, downloadPlaylist } from './downloads.js';
 import { downloadQualitySettings } from './storage.js';
 import { updateTabTitle, navigate } from './router.js';
@@ -254,7 +248,6 @@ const nextBtn = document.getElementById('next-btn');
 const prevBtn = document.getElementById('prev-btn');
 const shuffleBtn = document.getElementById('shuffle-btn');
 const repeatBtn = document.getElementById('repeat-btn');
-const homeStartRadioBtn = document.getElementById('home-start-infinite-radio-btn');
 const sleepTimerBtnDesktop = document.getElementById('sleep-timer-btn-desktop');
 
 const _volumeBar = document.getElementById('volume-bar');
@@ -375,17 +368,9 @@ async function handleSelectionAction(action) {
 }
 
 export async function initializePlayerEvents(player, audioPlayer, scrobbler, ui) {
-    if (homeStartRadioBtn) {
-        homeStartRadioBtn.addEventListener('click', async () => {
-            await player.enableRadio();
-        });
-    }
-
     const sleepTimerBtnMobile = document.getElementById('sleep-timer-btn');
 
     let historyLoggedTrackId = null;
-
-    const { listeningTracker } = await import('./listening-tracker.js');
 
     let _previousTrackId = null;
     let _trackPlayStartTime = null;
@@ -408,21 +393,7 @@ export async function initializePlayerEvents(player, audioPlayer, scrobbler, ui)
             if (player.currentTrack) {
                 const currentId = player.currentTrack.id;
                 if (currentId !== _previousTrackId) {
-                    if (_previousTrackId !== null) {
-                        const prevSignal = listeningTracker.getSessionSignals();
-                        const prevPlayTime = prevSignal.accumulatedPlayTime || 0;
-                        const prevDuration = prevSignal.trackDuration || 0;
-                        listeningTracker.onSkip();
-                        const prevTrack =
-                            player.getCurrentQueue()[player.currentQueueIndex - 1] ||
-                            player.getCurrentQueue().find((t) => t.id === _previousTrackId);
-                        if (prevTrack && prevPlayTime > 0) {
-                            listeningTracker.updateArtistAffinity(prevTrack, prevPlayTime, prevDuration, true);
-                        }
-                        listeningTracker.forceFlush();
-                    }
                     _previousTrackId = currentId;
-                    listeningTracker.onTrackStart(player.currentTrack);
                     _trackPlayStartTime = Date.now();
                 }
 
@@ -454,14 +425,6 @@ export async function initializePlayerEvents(player, audioPlayer, scrobbler, ui)
 
         element.addEventListener('ended', () => {
             if (player.activeElement !== element) return;
-            const elapsedPlayTime = listeningTracker.getSessionSignals().accumulatedPlayTime || 0;
-            const trackDur = listeningTracker.getSessionSignals().trackDuration || 0;
-            listeningTracker.onTrackEnd();
-            if (player.currentTrack) {
-                const effectivePlayTime = elapsedPlayTime || (Date.now() - _trackPlayStartTime) / 1000;
-                listeningTracker.updateArtistAffinity(player.currentTrack, effectivePlayTime, trackDur, false);
-            }
-            listeningTracker.forceFlush();
             _previousTrackId = null;
             void player.playNext(0, { preserveGestureToken: true });
         });
@@ -475,8 +438,6 @@ export async function initializePlayerEvents(player, audioPlayer, scrobbler, ui)
                 const currentTimeEl = document.getElementById('current-time');
                 progressFill.style.width = `${(currentTime / duration) * 100}%`;
                 currentTimeEl.textContent = formatTime(currentTime);
-
-                listeningTracker.onTimeUpdate(currentTime, duration);
 
                 if (currentTime >= 10 && player.currentTrack && player.currentTrack.id !== historyLoggedTrackId) {
                     historyLoggedTrackId = player.currentTrack.id;
@@ -583,12 +544,6 @@ export async function initializePlayerEvents(player, audioPlayer, scrobbler, ui)
         repeatBtn.classList.toggle('repeat-one', mode === REPEAT_MODE.ONE);
         repeatBtn.title =
             mode === REPEAT_MODE.OFF ? 'Repeat' : mode === REPEAT_MODE.ALL ? 'Repeat Queue' : 'Repeat One';
-    });
-
-    window.addEventListener('radio-state-changed', (e) => {
-        if (e.detail && e.detail.enabled) {
-            showNotification('Infinite Radio Enabled');
-        }
     });
 
     // Sleep Timer for desktop
@@ -1139,44 +1094,9 @@ export async function handleTrackAction(
     if (!item) return;
 
     // Actions not allowed for unavailable tracks
-    const forbiddenForUnavailable = [
-        'add-to-queue',
-        'play-next',
-        'track-mix',
-        'download',
-        'start-radio',
-        'start-infinite-radio',
-    ];
+    const forbiddenForUnavailable = ['add-to-queue', 'play-next', 'track-mix', 'download'];
     if (item.isUnavailable && forbiddenForUnavailable.includes(action)) {
         showNotification('This track is unavailable.');
-        return;
-    }
-
-    if (action === 'start-radio' || action === 'start-infinite-radio') {
-        let tracks = [];
-        if (type === 'track') {
-            tracks = [item];
-        } else if (item.tracks) {
-            tracks = item.tracks;
-        } else if (type === 'album') {
-            const data = await api.getAlbum(item.id);
-            tracks = data.tracks;
-        } else if (type === 'playlist') {
-            const data = await api.getPlaylist(item.uuid);
-            tracks = data.tracks;
-        } else if (type === 'user-playlist') {
-            const playlist = await db.getPlaylist(item.id);
-            tracks = playlist ? playlist.tracks : [];
-        }
-
-        if (tracks.length > 0) {
-            player.setQueue(tracks, 0);
-            player.playAtIndex(0);
-            player.enableRadio(tracks);
-            showNotification(`Started radio based on ${type}: ${item.title || item.name}`);
-        } else {
-            showNotification('Could not start infinite radio: No tracks found');
-        }
         return;
     }
 
@@ -1212,14 +1132,7 @@ export async function handleTrackAction(
                 tracks = data.tracks;
                 collectionItem = data.playlist || item;
             } else if (type === 'user-playlist') {
-                let playlist = await db.getPlaylist(item.id);
-                if (!playlist) {
-                    try {
-                        playlist = await syncManager.getPublicPlaylist(item.id);
-                    } catch {
-                        /* ignore */
-                    }
-                }
+                const playlist = await db.getPlaylist(item.id);
                 tracks = playlist ? playlist.tracks : item.tracks || [];
                 collectionItem = playlist || item;
             } else if (type === 'mix') {
@@ -1354,12 +1267,6 @@ export async function handleTrackAction(
         await syncManager.syncLibraryItem(type, item, added);
 
         if (added && type === 'track' && scrobbler) {
-            if (lastFMStorage.isEnabled() && lastFMStorage.shouldLoveOnLike()) {
-                scrobbler.loveTrack(item);
-            }
-            if (libreFmSettings.isEnabled() && libreFmSettings.shouldLoveOnLike()) {
-                scrobbler.loveTrack(item);
-            }
             if (listenBrainzSettings.isEnabled() && listenBrainzSettings.shouldLoveOnLike()) {
                 scrobbler.loveTrack(item);
             }
@@ -2079,21 +1986,7 @@ export function initializeTrackInteractions(player, api, mainContent, contextMen
                         document.getElementById('shuffle-btn').classList.remove('active');
                         player.playTrackFromQueue();
 
-                        const { autoplaySettings } = await import('./storage.js');
-                        const fetchRecs = autoplaySettings.isSmartRecsEnabled()
-                            ? (async () => {
-                                  const { smartRecommendations } = await import('./smart-recommendations.js');
-                                  const recs = await api.getTrackRecommendations(clickedTrack.id);
-                                  if (recs && recs.length > 0) {
-                                      const filtered = smartRecommendations.filterRecommendations(recs);
-                                      const ranked = smartRecommendations.rankRecommendations(filtered);
-                                      return ranked;
-                                  }
-                                  return [];
-                              })()
-                            : api.getTrackRecommendations(clickedTrack.id);
-
-                        fetchRecs.then((recs) => {
+                        api.getTrackRecommendations(clickedTrack.id).then((recs) => {
                             if (recs && recs.length > 0) {
                                 player.addToQueue(recs);
                             }

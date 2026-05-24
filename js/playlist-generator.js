@@ -320,7 +320,6 @@ export function generateFullJSON(playlist, tracks) {
             name: playlist.name || playlist.title || null,
             description: playlist.description || null,
             cover: playlist.cover || null,
-            isPublic: !!playlist.isPublic,
             createdAt: playlist.createdAt
                 ? typeof playlist.createdAt === 'number'
                     ? new Date(playlist.createdAt).toISOString()

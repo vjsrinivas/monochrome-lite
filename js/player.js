@@ -15,8 +15,6 @@ import {
     trackDateSettings,
     exponentialVolumeSettings,
     audioEffectsSettings,
-    radioSettings,
-    autoplaySettings,
     binauralDspSettings,
     contentBlockingSettings,
 } from './storage.js';
@@ -79,6 +77,8 @@ export class Player {
             isFetching: false,
             hasMore: true,
         };
+        this._recentlyPlayedIds = [];
+        this._maxRecentlyPlayed = 100;
     }
 
     static async initialize(audioElement, api, quality) {
@@ -168,15 +168,6 @@ export class Player {
         this.loadQueueState();
         await this.setupMediaSession();
 
-        this.radioEnabled = radioSettings.isEnabled();
-        this.radioSeeds = [];
-        this.isFetchingRadio = false;
-        this.radioFetchPromise = null;
-
-        this.autoplayEnabled = autoplaySettings.isEnabled();
-        this.autoplaySeeds = [];
-        this.isFetchingAutoplay = false;
-        this.autoplayFetchPromise = null;
         this._recentlyPlayedIds = [];
         this._maxRecentlyPlayed = 100;
 
@@ -184,12 +175,6 @@ export class Player {
 
         window.addEventListener('beforeunload', async () => {
             await this.saveQueueState();
-            import('./listening-tracker.js')
-                .then(({ listeningTracker }) => {
-                    listeningTracker.onTrackEnd();
-                    listeningTracker.forceFlush();
-                })
-                .catch(() => {});
         });
 
         // Handle visibility change - AudioContext can be suspended when backgrounded
@@ -666,7 +651,6 @@ export class Player {
 
     shouldFetchMoreArtistPopularTracks(currentQueue = this.getCurrentQueue()) {
         return (
-            !this.radioEnabled &&
             this.artistPopularTracksState.artistId &&
             this.artistPopularTracksState.hasMore &&
             !this.artistPopularTracksState.isFetching &&
@@ -986,7 +970,6 @@ export class Player {
 
         // Proactively fetch more artist tracks when the last track starts playing
         console.log('[playTrackFromQueue] Check for fetch:', {
-            radioEnabled: this.radioEnabled,
             artistId: this.artistPopularTracksState.artistId,
             hasMore: this.artistPopularTracksState.hasMore,
             isFetching: this.artistPopularTracksState.isFetching,
@@ -1464,15 +1447,6 @@ export class Player {
             const isLastTrack = this.currentQueueIndex >= currentQueue.length - 1;
 
             if (recursiveCount > currentQueue.length) {
-                if (this.radioEnabled && isLastTrack) {
-                    this.fetchRadioRecommendations().then(async () => {
-                        const updatedQueue = this.getCurrentQueue();
-                        if (this.currentQueueIndex < updatedQueue.length - 1) {
-                            await this.playNext(0, options);
-                        }
-                    });
-                    return;
-                }
                 if (this.autoplayEnabled && isLastTrack) {
                     this.fetchAutoplayRecommendations().then(async () => {
                         const updatedQueue = this.getCurrentQueue();
@@ -1511,14 +1485,6 @@ export class Player {
                 if (track?.isUnavailable || contentBlockingSettings.shouldHideTrack(track)) {
                     return this.playNext(recursiveCount + 1, options);
                 }
-            } else if (this.radioEnabled) {
-                this.fetchRadioRecommendations().then(async () => {
-                    const updatedQueue = this.getCurrentQueue();
-                    if (this.currentQueueIndex < updatedQueue.length - 1) {
-                        await this.playNext(0, options);
-                    }
-                });
-                return;
             } else if (this.autoplayEnabled) {
                 this.fetchAutoplayRecommendations().then(async () => {
                     const updatedQueue = this.getCurrentQueue();
@@ -1561,184 +1527,6 @@ export class Player {
         }
     }
 
-    async enableRadio(seeds = []) {
-        this.radioEnabled = true;
-        radioSettings.setEnabled(true);
-
-        if (seeds.length === 0) {
-            await this.wipeQueue();
-            const pickedSeeds = await this.pickRadioSeeds();
-            if (pickedSeeds.length > 0) {
-                this.radioSeeds = pickedSeeds;
-                const initialQueue = [...pickedSeeds].sort(() => 0.5 - Math.random()).slice(0, 5);
-                await this.setQueue(initialQueue, 0, true);
-                await this.playAtIndex(0);
-            }
-        } else {
-            this.radioSeeds = Array.isArray(seeds) ? seeds : [seeds];
-            await this.wipeQueue();
-            const initialQueue = Array.isArray(seeds) ? seeds.slice(0, 5) : [seeds];
-            await this.setQueue(initialQueue, 0, true);
-            await this.playAtIndex(0);
-        }
-
-        const currentQueue = this.getCurrentQueue();
-        if (this.currentQueueIndex >= currentQueue.length - 2) {
-            await this.fetchRadioRecommendations();
-        }
-
-        window.dispatchEvent(new CustomEvent('radio-state-changed', { detail: { enabled: true } }));
-    }
-
-    disableRadio() {
-        if (!this.radioEnabled) return;
-        this.radioEnabled = false;
-        radioSettings.setEnabled(false);
-        window.dispatchEvent(new CustomEvent('radio-state-changed', { detail: { enabled: false } }));
-    }
-
-    fetchRadioRecommendations() {
-        if (this.isFetchingRadio) return this.radioFetchPromise || Promise.resolve();
-        this.isFetchingRadio = true;
-
-        this.showRadioLoading(true);
-
-        this.radioFetchPromise = (async () => {
-            try {
-                if (this.radioSeeds.length === 0) {
-                    this.radioSeeds = await this.pickRadioSeeds();
-                }
-
-                const shuffledSeeds = [...this.radioSeeds].sort(() => 0.5 - Math.random());
-                const seeds =
-                    shuffledSeeds.length > 0 ? shuffledSeeds.slice(0, 5) : this.currentTrack ? [this.currentTrack] : [];
-
-                if (seeds.length === 0) {
-                    return;
-                }
-
-                const [favorites, userPlaylists, history] = await Promise.all([
-                    db.getFavorites('track'),
-                    db.getAll('user_playlists'),
-                    db.getHistory(),
-                ]);
-
-                const knownTrackIds = new Set([
-                    ...favorites.map((t) => t.id),
-                    ...userPlaylists.flatMap((p) => (p.tracks || []).map((t) => t.id)),
-                    ...history.map((t) => t.id),
-                    ...this._recentlyPlayedIds,
-                ]);
-
-                let recommendations = await this.api.getRecommendedTracksForPlaylist(seeds, 20, {
-                    knownTrackIds: knownTrackIds,
-                });
-
-                const { autoplaySettings: _autoplaySettings } = await import('./storage.js');
-                if (_autoplaySettings.isSmartRecsEnabled()) {
-                    const { smartRecommendations } = await import('./smart-recommendations.js');
-                    recommendations = smartRecommendations.filterRecommendations(recommendations);
-                    recommendations = smartRecommendations.rankRecommendations(recommendations);
-                }
-
-                if (recommendations && recommendations.length > 0) {
-                    const currentQueueIds = new Set(this.getCurrentQueue().map((t) => t.id));
-
-                    let newTracks = recommendations.filter((t) => {
-                        return !currentQueueIds.has(t.id);
-                    });
-
-                    if (newTracks.length > 0) {
-                        const tracksToAdd = newTracks.sort(() => 0.5 - Math.random()).slice(0, 5);
-                        await this.addToQueue(tracksToAdd);
-                    }
-                }
-            } catch (error) {
-                console.error('Failed to fetch radio recommendations:', error);
-            } finally {
-                this.isFetchingRadio = false;
-                this.radioFetchPromise = null;
-                setTimeout(() => this.showRadioLoading(false), 500);
-            }
-        })();
-
-        return this.radioFetchPromise;
-    }
-
-    async pickRadioSeeds() {
-        try {
-            const { smartRecommendations } = await import('./smart-recommendations.js');
-            const smartSeeds = await smartRecommendations.getSmartSeeds(50);
-            if (smartSeeds.length > 0) return smartSeeds;
-        } catch (e) {
-            console.warn('Smart seeds failed, falling back to basic seed selection:', e);
-        }
-
-        try {
-            const [history, favorites, userPlaylists] = await Promise.all([
-                db.getHistory(),
-                db.getFavorites('track'),
-                db.getAll('user_playlists'),
-            ]);
-
-            let potentialSeeds = [];
-
-            if (history && history.length > 0) {
-                const frequencyMap = new Map();
-                history.forEach((t) => {
-                    frequencyMap.set(t.id, (frequencyMap.get(t.id) || 0) + 1);
-                });
-
-                const historyTracks = Array.from(new Set(history.map((t) => t.id)))
-                    .map((id) => history.find((t) => t.id === id))
-                    .sort((a, b) => frequencyMap.get(b.id) - frequencyMap.get(a.id));
-
-                potentialSeeds.push(...historyTracks.slice(0, 20));
-            }
-
-            if (favorites && favorites.length > 0) {
-                potentialSeeds.push(...favorites);
-            }
-
-            if (userPlaylists && userPlaylists.length > 0) {
-                userPlaylists.forEach((p) => {
-                    if (p.tracks && p.tracks.length > 0) {
-                        const randomTracks = p.tracks.sort(() => 0.5 - Math.random()).slice(0, 5);
-                        potentialSeeds.push(...randomTracks);
-                    }
-                });
-            }
-
-            if (potentialSeeds.length === 0) return [];
-
-            const uniqueSeeds = Array.from(new Set(potentialSeeds.map((s) => s.id))).map((id) =>
-                potentialSeeds.find((s) => s.id === id)
-            );
-
-            return uniqueSeeds.sort(() => 0.5 - Math.random()).slice(0, 50);
-        } catch (error) {
-            console.error('Failed to pick radio seeds:', error);
-            return this.currentTrack ? [this.currentTrack] : [];
-        }
-    }
-
-    showRadioLoading(show) {
-        const loadingEl = document.getElementById('radio-loading-indicator');
-        if (loadingEl) {
-            loadingEl.style.display = show ? 'flex' : 'none';
-        }
-    }
-
-    enableAutoplay() {
-        this.autoplayEnabled = true;
-        autoplaySettings.setEnabled(true);
-    }
-
-    disableAutoplay() {
-        this.autoplayEnabled = false;
-        autoplaySettings.setEnabled(false);
-    }
-
     addToRecentlyPlayed(trackId) {
         if (!trackId) return;
         this._recentlyPlayedIds = this._recentlyPlayedIds.filter((id) => id !== trackId);
@@ -1746,78 +1534,6 @@ export class Player {
         if (this._recentlyPlayedIds.length > this._maxRecentlyPlayed) {
             this._recentlyPlayedIds = this._recentlyPlayedIds.slice(-this._maxRecentlyPlayed);
         }
-    }
-
-    fetchAutoplayRecommendations() {
-        if (this.isFetchingAutoplay) return this.autoplayFetchPromise || Promise.resolve();
-        this.isFetchingAutoplay = true;
-
-        this.showRadioLoading(true);
-
-        this.autoplayFetchPromise = (async () => {
-            try {
-                const { smartRecommendations } = await import('./smart-recommendations.js');
-                const { autoplaySettings: _autoplaySettings } = await import('./storage.js');
-
-                const currentQueue = this.getCurrentQueue();
-                const recentQueueTracks = currentQueue.slice(
-                    Math.max(0, this.currentQueueIndex - 10),
-                    this.currentQueueIndex + 1
-                );
-
-                const seeds = await smartRecommendations.getAdaptiveQueueSeeds(
-                    recentQueueTracks,
-                    this._recentlyPlayedIds,
-                    5
-                );
-
-                if (seeds.length === 0) {
-                    if (this.currentTrack) seeds.push(this.currentTrack);
-                    else return;
-                }
-
-                const [favorites, userPlaylists, history] = await Promise.all([
-                    db.getFavorites('track'),
-                    db.getAll('user_playlists'),
-                    db.getHistory(),
-                ]);
-
-                const knownTrackIds = new Set([
-                    ...favorites.map((t) => t.id),
-                    ...userPlaylists.flatMap((p) => (p.tracks || []).map((t) => t.id)),
-                    ...history.map((t) => t.id),
-                    ...this._recentlyPlayedIds,
-                    ...currentQueue.map((t) => t.id),
-                ]);
-
-                let recommendations = await this.api.getRecommendedTracksForPlaylist(seeds, 20, {
-                    knownTrackIds: knownTrackIds,
-                });
-
-                if (_autoplaySettings.isSmartRecsEnabled()) {
-                    recommendations = smartRecommendations.filterRecommendations(recommendations);
-                    recommendations = smartRecommendations.rankRecommendations(recommendations);
-                }
-
-                if (recommendations && recommendations.length > 0) {
-                    const currentQueueIds = new Set(currentQueue.map((t) => t.id));
-                    let newTracks = recommendations.filter((t) => !currentQueueIds.has(t.id));
-
-                    if (newTracks.length > 0) {
-                        const tracksToAdd = newTracks.slice(0, 5);
-                        await this.addToQueue(tracksToAdd);
-                    }
-                }
-            } catch (error) {
-                console.error('Failed to fetch autoplay recommendations:', error);
-            } finally {
-                this.isFetchingAutoplay = false;
-                this.autoplayFetchPromise = null;
-                setTimeout(() => this.showRadioLoading(false), 500);
-            }
-        })();
-
-        return this.autoplayFetchPromise;
     }
 
     playPrev(recursiveCount = 0) {
@@ -1841,12 +1557,6 @@ export class Player {
                     if (track?.isUnavailable || contentBlockingSettings.shouldHideTrack(track)) {
                         return this.playPrev(recursiveCount + 1);
                     }
-                    import('./listening-tracker.js')
-                        .then(({ listeningTracker }) => {
-                            listeningTracker.onSkip();
-                            listeningTracker.forceFlush();
-                        })
-                        .catch(() => {});
                     await this.playTrackFromQueue(0, recursiveCount);
                 })
                 .catch(console.error);
@@ -1938,10 +1648,7 @@ export class Player {
         return this.repeatMode;
     }
 
-    async setQueue(tracks, startIndex = 0, isRadio = false) {
-        if (!isRadio) {
-            this.disableRadio();
-        }
+    async setQueue(tracks, startIndex = 0) {
         this.queue = tracks;
         this.currentQueueIndex = startIndex;
         this.shuffleActive = false;

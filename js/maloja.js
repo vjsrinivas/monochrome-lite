@@ -1,5 +1,5 @@
 import { malojaSettings } from './storage.js';
-import { lastFMStorage } from './storage.js';
+import { scrobblePercentage } from './storage.js';
 
 export class MalojaScrobbler {
     constructor() {
@@ -128,8 +128,8 @@ export class MalojaScrobbler {
         // It just scrobbles when the track is actually played
         // We'll set up the timer to scrobble after the threshold
 
-        const scrobblePercentage = lastFMStorage.getScrobblePercentage() / 100;
-        this.scrobbleThreshold = Math.min(track.duration * scrobblePercentage, 240);
+        const scrobblePct = scrobblePercentage.get() / 100;
+        this.scrobbleThreshold = Math.min(track.duration * scrobblePct, 240);
         this.scheduleScrobble(this.scrobbleThreshold * 1000);
     }
 

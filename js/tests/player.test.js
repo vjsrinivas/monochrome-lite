@@ -27,8 +27,6 @@ vi.mock('../storage.js', () => ({
         isPreservePitchEnabled: vi.fn(() => true),
         setPreservePitch: vi.fn(),
     },
-    radioSettings: { isEnabled: vi.fn(() => false) },
-    autoplaySettings: { isEnabled: vi.fn(() => false), isSmartRecsEnabled: vi.fn(() => false) },
     binauralDspSettings: {
         isEnabled: vi.fn(() => false),
         getCrossfeedStrength: vi.fn(() => 0),
@@ -44,7 +42,7 @@ vi.mock('../storage.js', () => ({
     coverArtSizeSettings: { getSize: vi.fn(() => '1280') },
     recentActivityManager: { addArtist: vi.fn(), addAlbum: vi.fn() },
     themeManager: { getTheme: vi.fn(() => 'dark'), setTheme: vi.fn() },
-    lastFMStorage: { isEnabled: vi.fn(() => false) },
+    scrobblePercentage: { get: vi.fn(() => 75) },
     nowPlayingSettings: { getMode: vi.fn(() => 'cover') },
     gaplessPlaybackSettings: { isEnabled: vi.fn(() => true) },
 }));
@@ -117,6 +115,7 @@ describe('Player', () => {
             getCoverUrl: vi.fn((id) => `url-${id}`),
             getCoverSrcset: vi.fn(),
             getStreamUrl: vi.fn(),
+            getVideoArtwork: vi.fn(() => Promise.resolve()),
         };
 
         Player._instance = null;

@@ -1,4 +1,4 @@
-import { listenBrainzSettings, lastFMStorage } from './storage.js';
+import { listenBrainzSettings, scrobblePercentage } from './storage.js';
 
 export class ListenBrainzScrobbler {
     constructor() {
@@ -202,8 +202,8 @@ export class ListenBrainzScrobbler {
         this.clearScrobbleTimer();
         await this.submitListen('playing_now', track);
 
-        const scrobblePercentage = lastFMStorage.getScrobblePercentage() / 100;
-        this.scrobbleThreshold = Math.min(track.duration * scrobblePercentage, 240);
+        const scrobblePct = scrobblePercentage.get() / 100;
+        this.scrobbleThreshold = Math.min(track.duration * scrobblePct, 240);
         this.scheduleScrobble(this.scrobbleThreshold * 1000);
     }
 

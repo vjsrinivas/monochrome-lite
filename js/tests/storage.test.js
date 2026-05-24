@@ -2,7 +2,7 @@ import { expect, test, describe, beforeEach, vi } from 'vitest';
 import {
     recentActivityManager,
     themeManager,
-    lastFMStorage,
+    scrobblePercentage,
     nowPlayingSettings,
     gaplessPlaybackSettings,
     exponentialVolumeSettings,
@@ -55,19 +55,21 @@ describe('storage.js', () => {
         });
     });
 
-    describe('lastFMStorage', () => {
-        test('handles enabled state', () => {
-            lastFMStorage.setEnabled(true);
-            expect(lastFMStorage.isEnabled()).toBe(true);
-            lastFMStorage.setEnabled(false);
-            expect(lastFMStorage.isEnabled()).toBe(false);
+    describe('scrobblePercentage', () => {
+        test('defaults to 75', () => {
+            expect(scrobblePercentage.get()).toBe(75);
         });
 
-        test('obfuscates sensitive data', () => {
-            const key = 'test-api-key';
-            lastFMStorage.setCustomApiKey(key);
-            expect(localStorage.getItem(lastFMStorage.CUSTOM_API_KEY)).not.toBe(key);
-            expect(lastFMStorage.getCustomApiKey()).toBe(key);
+        test('sets and gets percentage', () => {
+            scrobblePercentage.set(50);
+            expect(scrobblePercentage.get()).toBe(50);
+        });
+
+        test('clamps to valid range', () => {
+            scrobblePercentage.set(200);
+            expect(scrobblePercentage.get()).toBe(100);
+            scrobblePercentage.set(-1);
+            expect(scrobblePercentage.get()).toBe(1);
         });
     });
 

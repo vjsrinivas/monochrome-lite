@@ -5293,12 +5293,6 @@ input:checked + .slider::before {
     color: var(--foreground) !important;
 }
 
-#lastfm-controls {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
 .desktop-only {
     display: flex;
 }

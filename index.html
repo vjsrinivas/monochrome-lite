@@ -74,7 +74,6 @@
         <meta name="google-site-verification" content="ChAPlKFJ5Dk2YbWhiUfnH5sHgCC8SnNdCBtjVcahArY" />
 
         <!-- Preconnect to critical third-party origins -->
-        <link rel="preconnect" href="https://resources.tidal.com" crossorigin />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
@@ -153,9 +152,6 @@
             <ul>
                 <li data-action="shuffle-play-card" data-type-filter="album,playlist,mix,user-playlist">
                     Shuffle play
-                </li>
-                <li data-action="start-infinite-radio" data-type-filter="track,album,playlist,user-playlist">
-                    Start Infinite Radio
                 </li>
                 <li data-action="start-mix" data-type-filter="album,track,video">Start mix</li>
                 <li data-action="play-next">Play next</li>
@@ -700,22 +696,7 @@
                     </p>
                 </div>
 
-                <div
-                    class="setting-item"
-                    style="margin-bottom: 1rem; padding: 0; border: none; background: transparent"
-                >
-                    <div class="info">
-                        <span class="label">Public Playlist</span>
-                        <span class="description">Visible to anyone with the link.</span>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="playlist-public-toggle" />
-                        <span class="slider"></span>
-                    </label>
-                </div>
-
                 <div class="modal-actions">
-                    <button id="playlist-share-btn" class="btn-secondary" style="display: none">Share</button>
                     <button id="playlist-modal-cancel" class="btn-secondary">Cancel</button>
                     <button id="playlist-modal-save" class="btn-primary">Save</button>
                 </div>
@@ -854,27 +835,11 @@
                     <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem">Website</label>
                     <input type="url" id="edit-profile-website" class="template-input" placeholder="https://..." />
                 </div>
-                <div style="margin-bottom: 1rem">
-                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem">Last.fm Username</label>
-                    <input type="text" id="edit-profile-lastfm" class="template-input" placeholder="Last.fm Username" />
-                    <p style="font-size: 0.8rem; color: var(--muted-foreground); margin-top: 0.5rem; line-height: 1.5">
-                        Integrating Last.fm enables recent activity and top stats on your profile. Authorize it in
-                        <strong>Settings &gt; Scrobbling</strong>. Note: Last.fm authorization is stored locally and
-                        must be repeated on each device.
-                    </p>
-                </div>
-
                 <h4 style="margin-top: 1.5rem; margin-bottom: 1rem; font-size: 1rem">Privacy</h4>
                 <div class="setting-item" style="padding: 0.5rem 0; border: none">
                     <div class="info"><span class="label">Public Playlists</span></div>
                     <label class="toggle-switch"
                         ><input type="checkbox" id="privacy-playlists-toggle" checked /><span class="slider"></span
-                    ></label>
-                </div>
-                <div class="setting-item" style="padding: 0.5rem 0; border: none">
-                    <div class="info"><span class="label">Show Last.fm Link & Stats</span></div>
-                    <label class="toggle-switch"
-                        ><input type="checkbox" id="privacy-lastfm-toggle" checked /><span class="slider"></span
                     ></label>
                 </div>
 
@@ -1653,7 +1618,7 @@
 
                                     <li class="nav-item" id="sidebar-nav-githubbtn" style="display: none">
                                         <a href="https://github.com/monochrome-music/monochrome" target="_blank">
-                                            <use svg="./images/github.svg" size="24" />
+                                            <use svg="!lucide/external-link.svg" size="24" />
                                             <span>GitHub</span>
                                         </a>
                                     </li>
@@ -1727,11 +1692,6 @@
                 </header>
 
                 <div id="page-home" class="page">
-                    <div class="home-header-tabs">
-                        <button class="home-tab active" data-tab="for-you">Home</button>
-                        <button class="home-tab" data-tab="explore">Hot & New</button>
-                    </div>
-
                     <div id="home-view-for-you" class="home-view active">
                         <div id="home-welcome" style="display: none; text-align: center; padding: 4rem 2rem">
                             <h2 style="margin-bottom: 1rem">Welcome to Monochrome</h2>
@@ -1759,79 +1719,6 @@
                         </section>
 
                         <div id="home-content" style="display: none">
-                            <section class="content-section">
-                                <div class="section-header-row">
-                                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap">
-                                        <h2 class="section-title">Recommended Songs</h2>
-                                        <button
-                                            class="btn-primary"
-                                            id="home-start-infinite-radio-btn"
-                                            title="Start Infinite Radio"
-                                            style="
-                                                display: flex;
-                                                align-items: center;
-                                                gap: 8px;
-                                                padding: 6px 12px;
-                                                font-size: 0.85rem;
-                                            "
-                                        >
-                                            <use svg="!lucide/radio.svg" size="16" />
-                                            Start Infinite Radio
-                                        </button>
-                                    </div>
-                                    <button
-                                        class="btn-secondary"
-                                        id="refresh-songs-btn"
-                                        title="Refresh"
-                                        style="padding: 4px 8px"
-                                    >
-                                        <use svg="!lucide/rotate-cw.svg" size="16" />
-                                    </button>
-                                </div>
-                                <div class="track-list" id="home-recommended-songs"></div>
-                            </section>
-                            <section class="content-section">
-                                <div
-                                    style="
-                                        display: flex;
-                                        align-items: center;
-                                        justify-content: space-between;
-                                        margin-bottom: 1rem;
-                                    "
-                                >
-                                    <h2 class="section-title" style="margin-bottom: 0">Recommended Albums</h2>
-                                    <button
-                                        class="btn-secondary"
-                                        id="refresh-albums-btn"
-                                        title="Refresh"
-                                        style="padding: 4px 8px"
-                                    >
-                                        <use svg="!lucide/rotate-cw.svg" size="16" />
-                                    </button>
-                                </div>
-                                <div class="card-grid" id="home-recommended-albums"></div>
-                            </section>
-                            <section class="content-section">
-                                <div
-                                    style="
-                                        display: flex;
-                                        align-items: center;
-                                        justify-content: space-between;
-                                        margin-bottom: 1rem;
-                                    "
-                                >
-                                    <h2 class="section-title" style="margin-bottom: 0">Recommended Artists</h2>
-                                    <button
-                                        class="btn-secondary"
-                                        id="refresh-artists-btn"
-                                        title="Refresh"
-                                        style="padding: 4px 8px"
-                                    >
-                                        <use svg="!lucide/rotate-cw.svg" size="16" />
-                                    </button>
-                                </div>
-                                <div class="card-grid" id="home-recommended-artists"></div>
-                            </section>
                             <section class="content-section">
                                 <div
                                     style="
@@ -1866,12 +1753,6 @@
                                 </div>
                                 <div class="card-grid" id="home-editors-picks"></div>
                             </section>
-                        </div>
-                    </div>
-
-                    <div id="home-view-explore" class="home-view" style="display: none">
-                        <div id="explore-content">
-                            <div class="card-grid" id="explore-grid"></div>
                         </div>
                     </div>
                 </div>
@@ -2373,8 +2254,6 @@
                         <div class="detail-header-info">
                             <h1 class="title" id="artist-detail-name"></h1>
                             <div class="meta" id="artist-detail-meta"></div>
-                            <div id="artist-detail-socials" class="artist-socials"></div>
-                            <div id="artist-detail-bio" class="artist-bio"></div>
                             <div class="detail-header-actions">
                                 <button id="play-artist-radio-btn" class="btn-primary" title="Artist Radio">
                                     <use svg="!lucide/volume-1.svg" size="20" />
@@ -2527,14 +2406,6 @@
                                         style="display: none"
                                         >Website</a
                                     >
-                                    <a
-                                        id="profile-lastfm"
-                                        href="#"
-                                        target="_blank"
-                                        class="profile-link"
-                                        style="display: none"
-                                        >Last.fm</a
-                                    >
                                 </div>
                             </div>
                             <div class="profile-actions">
@@ -2550,27 +2421,6 @@
                         <div id="profile-favorite-albums-section" style="display: none; margin-top: 3rem">
                             <h2 class="section-title">Favorite Albums of All Time</h2>
                             <div id="profile-favorite-albums-container"></div>
-                        </div>
-                        <div id="profile-recent-scrobbles-section" style="display: none; margin-top: 3rem">
-                            <div style="display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1rem">
-                                <h2 class="section-title" style="margin-bottom: 0">Recent Scrobbling</h2>
-                                <span style="font-size: 0.8rem; color: var(--muted-foreground)"
-                                    >Powered by Last.fm</span
-                                >
-                            </div>
-                            <div class="track-list" id="profile-recent-scrobbles-container"></div>
-                        </div>
-                        <div id="profile-top-artists-section" style="display: none; margin-top: 3rem">
-                            <h2 class="section-title">Top Artists</h2>
-                            <div class="card-grid" id="profile-top-artists-container"></div>
-                        </div>
-                        <div id="profile-top-albums-section" style="display: none; margin-top: 3rem">
-                            <h2 class="section-title">Top Albums</h2>
-                            <div class="card-grid" id="profile-top-albums-container"></div>
-                        </div>
-                        <div id="profile-top-tracks-section" style="display: none; margin-top: 3rem">
-                            <h2 class="section-title">Top Tracks</h2>
-                            <div class="track-list" id="profile-top-tracks-container"></div>
                         </div>
                     </div>
                 </div>
@@ -3063,36 +2913,6 @@
                             <div class="settings-group">
                                 <div class="setting-item">
                                     <div class="info">
-                                        <span class="label">Show Recommended Songs</span>
-                                        <span class="description">Display recommended songs on the home page</span>
-                                    </div>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="show-recommended-songs-toggle" checked />
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                                <div class="setting-item">
-                                    <div class="info">
-                                        <span class="label">Show Recommended Albums</span>
-                                        <span class="description">Display recommended albums on the home page</span>
-                                    </div>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="show-recommended-albums-toggle" checked />
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                                <div class="setting-item">
-                                    <div class="info">
-                                        <span class="label">Show Recommended Artists</span>
-                                        <span class="description">Display recommended artists on the home page</span>
-                                    </div>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="show-recommended-artists-toggle" checked />
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                                <div class="setting-item">
-                                    <div class="info">
                                         <span class="label">Show Jump Back In</span>
                                         <span class="description"
                                             >Display recent albums, playlists, and mixes on the home page</span
@@ -3325,344 +3145,6 @@
                     </div>
                     <div class="settings-tab-content" id="settings-tab-scrobbling">
                         <div class="settings-list">
-                            <div class="settings-group">
-                                <div class="setting-item">
-                                    <div class="info">
-                                        <span class="label">Scrobble Threshold</span>
-                                        <span class="description"
-                                            >Percentage of track to play before scrobbling (1-100%)</span
-                                        >
-                                    </div>
-                                    <div style="display: flex; align-items: center; gap: 10px">
-                                        <input
-                                            type="range"
-                                            id="scrobble-percentage-slider"
-                                            min="1"
-                                            max="100"
-                                            step="1"
-                                            value="75"
-                                            style="width: 100px"
-                                        />
-                                        <input
-                                            type="number"
-                                            id="scrobble-percentage-input"
-                                            min="1"
-                                            max="100"
-                                            value="75"
-                                            style="
-                                                width: 50px;
-                                                font-size: 0.9rem;
-                                                text-align: center;
-                                                padding: 4px;
-                                                border: 1px solid var(--border-color);
-                                                border-radius: 4px;
-                                                background: var(--input-bg);
-                                                color: var(--text-color);
-                                            "
-                                        />
-                                        <span style="font-size: 0.9rem">%</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="settings-group">
-                                <div class="setting-item">
-                                    <div class="info">
-                                        <span class="label">Last.fm Scrobbling</span>
-                                        <span class="description" id="lastfm-status"
-                                            >Connect your Last.fm account to scrobble tracks</span
-                                        >
-                                    </div>
-                                    <div id="lastfm-controls">
-                                        <button id="lastfm-connect-btn" class="btn-secondary">Connect Last.fm</button>
-                                    </div>
-                                    <div id="lastfm-credential-auth" style="display: none; margin-top: 12px">
-                                        <div id="lastfm-credential-form" style="display: none">
-                                            <p style="margin: 0 0 8px 0; font-size: 0.85rem; color: var(--muted)">
-                                                Enter your Last.fm credentials:
-                                            </p>
-                                            <input
-                                                type="text"
-                                                id="lastfm-username"
-                                                placeholder="Username"
-                                                style="
-                                                    padding: 8px;
-                                                    border-radius: 4px;
-                                                    border: 1px solid var(--border);
-                                                    background: var(--background);
-                                                    color: var(--foreground);
-                                                    width: 100%;
-                                                    margin-bottom: 8px;
-                                                "
-                                            />
-                                            <input
-                                                type="password"
-                                                id="lastfm-password"
-                                                placeholder="Password"
-                                                style="
-                                                    padding: 8px;
-                                                    border-radius: 4px;
-                                                    border: 1px solid var(--border);
-                                                    background: var(--background);
-                                                    color: var(--foreground);
-                                                    width: 100%;
-                                                    margin-bottom: 8px;
-                                                "
-                                            />
-                                            <div style="display: flex; gap: 8px">
-                                                <button
-                                                    id="lastfm-login-credentials"
-                                                    class="btn-secondary"
-                                                    style="padding: 6px 12px; font-size: 0.85rem; flex: 1"
-                                                >
-                                                    Login
-                                                </button>
-                                                <button
-                                                    id="lastfm-use-oauth"
-                                                    class="btn-secondary"
-                                                    style="padding: 6px 12px; font-size: 0.85rem; flex: 1"
-                                                >
-                                                    Use OAuth Instead
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div id="lastfm-credential-auth-secondary" style="display: none; margin-top: 12px">
-                                        <div style="display: flex; flex-direction: column; gap: 8px">
-                                            <div id="lastfm-credential-toggle-container-secondary">
-                                                <button
-                                                    id="lastfm-show-credential-auth-secondary"
-                                                    class="btn-secondary"
-                                                    style="padding: 6px 12px; font-size: 0.85rem; width: 100%"
-                                                >
-                                                    Login with Username/Password
-                                                </button>
-                                            </div>
-                                            <div id="lastfm-credential-form-secondary" style="display: none">
-                                                <input
-                                                    type="text"
-                                                    id="lastfm-username-secondary"
-                                                    placeholder="Last.fm Username"
-                                                    style="
-                                                        padding: 8px;
-                                                        border-radius: 4px;
-                                                        border: 1px solid var(--border);
-                                                        background: var(--background);
-                                                        color: var(--foreground);
-                                                        width: 100%;
-                                                        margin-bottom: 8px;
-                                                    "
-                                                />
-                                                <input
-                                                    type="password"
-                                                    id="lastfm-password-secondary"
-                                                    placeholder="Last.fm Password"
-                                                    style="
-                                                        padding: 8px;
-                                                        border-radius: 4px;
-                                                        border: 1px solid var(--border);
-                                                        background: var(--background);
-                                                        color: var(--foreground);
-                                                        width: 100%;
-                                                        margin-bottom: 8px;
-                                                    "
-                                                />
-                                                <div style="display: flex; gap: 8px">
-                                                    <button
-                                                        id="lastfm-login-credentials-secondary"
-                                                        class="btn-secondary"
-                                                        style="padding: 6px 12px; font-size: 0.85rem; flex: 1"
-                                                    >
-                                                        Login
-                                                    </button>
-                                                    <button
-                                                        id="lastfm-use-oauth-secondary"
-                                                        class="btn-secondary"
-                                                        style="padding: 6px 12px; font-size: 0.85rem; flex: 1"
-                                                    >
-                                                        Use OAuth
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div id="lastfm-credential-auth-alt" style="margin-top: 12px; display: none">
-                                        <div style="display: flex; flex-direction: column; gap: 8px">
-                                            <input
-                                                type="text"
-                                                id="lastfm-username-alt"
-                                                placeholder="Last.fm Username"
-                                                style="
-                                                    padding: 8px;
-                                                    border-radius: 4px;
-                                                    border: 1px solid var(--border);
-                                                    background: var(--background);
-                                                    color: var(--foreground);
-                                                "
-                                            />
-                                            <input
-                                                type="password"
-                                                id="lastfm-password-alt"
-                                                placeholder="Last.fm Password"
-                                                style="
-                                                    padding: 8px;
-                                                    border-radius: 4px;
-                                                    border: 1px solid var(--border);
-                                                    background: var(--background);
-                                                    color: var(--foreground);
-                                                "
-                                            />
-                                            <div style="display: flex; gap: 8px; margin-top: 4px">
-                                                <button
-                                                    id="lastfm-login-credentials-alt"
-                                                    class="btn-secondary"
-                                                    style="padding: 6px 12px; font-size: 0.85rem"
-                                                >
-                                                    Login with Credentials
-                                                </button>
-                                                <button
-                                                    id="lastfm-use-oauth-alt"
-                                                    class="btn-secondary"
-                                                    style="padding: 6px 12px; font-size: 0.85rem"
-                                                >
-                                                    Use OAuth Instead
-                                                </button>
-                                            </div>
-                                            <div style="display: flex; gap: 8px; margin-top: 4px">
-                                                <button
-                                                    id="lastfm-show-credential-auth-alt"
-                                                    class="btn-secondary"
-                                                    style="padding: 6px 12px; font-size: 0.85rem"
-                                                >
-                                                    Login with Username/Password
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="setting-item" id="lastfm-toggle-setting" style="display: none">
-                                    <div class="info">
-                                        <span class="label">Enable Scrobbling</span>
-                                        <span class="description">Automatically scrobble played tracks</span>
-                                    </div>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="lastfm-toggle" />
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-
-                                <div class="setting-item" id="lastfm-love-setting" style="display: none">
-                                    <div class="info">
-                                        <span class="label">Love on Like</span>
-                                        <span class="description"
-                                            >Automatically 'love' tracks on Last.fm when you like them</span
-                                        >
-                                    </div>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="lastfm-love-toggle" />
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-
-                                <div class="setting-item" id="lastfm-custom-creds-toggle-setting" style="display: none">
-                                    <div class="info">
-                                        <span class="label">Use Custom API Credentials</span>
-                                        <span class="description">Use your own Last.fm API key and secret</span>
-                                    </div>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="lastfm-custom-creds-toggle" />
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-
-                                <div class="setting-item" id="lastfm-custom-creds-setting" style="display: none">
-                                    <div class="info" style="flex: 1; min-width: 0">
-                                        <span class="label">Custom API Credentials</span>
-                                        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px">
-                                            <input
-                                                type="text"
-                                                id="lastfm-custom-api-key"
-                                                placeholder="API Key"
-                                                style="
-                                                    padding: 8px;
-                                                    border-radius: 4px;
-                                                    border: 1px solid var(--border);
-                                                    background: var(--background);
-                                                    color: var(--foreground);
-                                                "
-                                            />
-                                            <input
-                                                type="password"
-                                                id="lastfm-custom-api-secret"
-                                                placeholder="API Secret"
-                                                style="
-                                                    padding: 8px;
-                                                    border-radius: 4px;
-                                                    border: 1px solid var(--border);
-                                                    background: var(--background);
-                                                    color: var(--foreground);
-                                                "
-                                            />
-                                            <div style="display: flex; gap: 8px; margin-top: 4px">
-                                                <button
-                                                    id="lastfm-save-custom-creds"
-                                                    class="btn-secondary"
-                                                    style="padding: 6px 12px; font-size: 0.85rem"
-                                                >
-                                                    Save Credentials
-                                                </button>
-                                                <button
-                                                    id="lastfm-clear-custom-creds"
-                                                    class="btn-secondary danger"
-                                                    style="padding: 6px 12px; font-size: 0.85rem; display: none"
-                                                >
-                                                    Clear
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="settings-group">
-                                <div class="setting-item">
-                                    <div class="info">
-                                        <span class="label">Libre.fm Scrobbling</span>
-                                        <span class="description" id="librefm-status"
-                                            >Connect your Libre.fm account to scrobble tracks</span
-                                        >
-                                    </div>
-                                    <div id="librefm-controls">
-                                        <button id="librefm-connect-btn" class="btn-secondary">Connect Libre.fm</button>
-                                    </div>
-                                </div>
-
-                                <div class="setting-item" id="librefm-toggle-setting" style="display: none">
-                                    <div class="info">
-                                        <span class="label">Enable Scrobbling</span>
-                                        <span class="description">Automatically scrobble played tracks</span>
-                                    </div>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="librefm-toggle" />
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-
-                                <div class="setting-item" id="librefm-love-setting" style="display: none">
-                                    <div class="info">
-                                        <span class="label">Love on Like</span>
-                                        <span class="description"
-                                            >Automatically 'love' tracks on Libre.fm when you like them</span
-                                        >
-                                    </div>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="librefm-love-toggle" />
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                            </div>
-
                             <div class="settings-group">
                                 <div class="setting-item">
                                     <div class="info">
@@ -5347,18 +4829,6 @@
                                         <span class="slider"></span>
                                     </label>
                                 </div>
-                                <div class="setting-item">
-                                    <div class="info">
-                                        <span class="label">Analytics</span>
-                                        <span class="description"
-                                            >Send anonymous usage data to help improve the app</span
-                                        >
-                                    </div>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="analytics-toggle" checked />
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
                             </div>
 
                             <div class="settings-group">
@@ -5568,9 +5038,7 @@
                                 flex-wrap: wrap;
                             "
                         >
-                            <button id="auth-connect-btn" class="btn-secondary">Connect with Google</button>
-                            <button id="auth-github-btn" class="btn-secondary">Connect with GitHub</button>
-                            <button id="auth-discord-btn" class="btn-secondary">Connect with Discord</button>
+                            <button id="auth-connect-btn" class="btn-secondary">Sign In</button>
                             <button id="toggle-email-auth-btn" class="btn-secondary">Connect with Email</button>
                             <button id="view-my-profile-btn" class="btn-secondary" style="display: none">
                                 View My Profile
@@ -5581,8 +5049,7 @@
                             Sync your library across devices
                         </p>
                         <p style="padding-top: 50px; text-align: center; color: #8b8b93">
-                            We only store music data and a randomized ID to find out which Google/Email account is
-                            which.
+                            We only store music data and a randomized ID to find out which Email account is which.
                             <br />
                             All data is anonymous. We do not store anything like emails, usernames, or anything
                             sensitive. <br />
@@ -5725,10 +5192,6 @@
                     </div>
                 </div>
                 <div class="player-controls">
-                    <div id="radio-loading-indicator">
-                        <div class="animate-spin"></div>
-                        <span>Finding more songs for you...</span>
-                    </div>
                     <div class="buttons">
                         <button id="shuffle-btn" title="Shuffle">
                             <use svg="!lucide/shuffle.svg" size="24" />

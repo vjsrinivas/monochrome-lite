@@ -3,7 +3,6 @@ import PocketBase from 'pocketbase';
 import { db } from '../db.js';
 import { authManager } from './auth.js';
 
-const PUBLIC_COLLECTION = 'public_playlists';
 const DEFAULT_POCKETBASE_URL = 'https://data.samidy.xyz';
 const POCKETBASE_URL =
     window.__POCKETBASE_URL__ || localStorage.getItem('monochrome-pocketbase-url') || DEFAULT_POCKETBASE_URL;
@@ -102,8 +101,7 @@ const syncManager = {
             status: record.status,
             about: record.about,
             website: record.website,
-            privacy: this.safeParseInternal(record.privacy, 'privacy', { playlists: 'public', lastfm: 'public' }),
-            lastfm_username: record.lastfm_username,
+            privacy: this.safeParseInternal(record.privacy, 'privacy', { playlists: 'public' }),
             favorite_albums: favoriteAlbums,
         };
 
@@ -328,7 +326,6 @@ const syncManager = {
 
         if (action === 'delete') {
             delete userPlaylists[playlist.id];
-            await this.unpublishPlaylist(playlist.id);
         } else {
             userPlaylists[playlist.id] = {
                 id: playlist.id,
@@ -339,12 +336,7 @@ const syncManager = {
                 updatedAt: playlist.updatedAt || Date.now(),
                 numberOfTracks: playlist.tracks ? playlist.tracks.length : 0,
                 images: playlist.images || [],
-                isPublic: playlist.isPublic || false,
             };
-
-            if (playlist.isPublic) {
-                await this.publishPlaylist(playlist);
-            }
         }
 
         await this._updateUserJSON(user.$id, 'user_playlists', userPlaylists);
@@ -375,141 +367,14 @@ const syncManager = {
         await this._updateUserJSON(user.$id, 'user_folders', userFolders);
     },
 
-    async getPublicPlaylist(uuid) {
-        try {
-            const record = await this.pb
-                .collection(PUBLIC_COLLECTION)
-                .getFirstListItem(`uuid="${uuid}"`, { p_id: uuid });
-
-            let rawCover = record.image || record.cover || record.playlist_cover || '';
-            let extraData = this.safeParseInternal(record.data, 'data', {});
-
-            if (!rawCover && extraData && typeof extraData === 'object') {
-                rawCover = extraData.cover || extraData.image || '';
-            }
-
-            let finalCover = rawCover;
-            if (rawCover && !rawCover.startsWith('http') && !rawCover.startsWith('data:')) {
-                finalCover = this.pb.files.getUrl(record, rawCover);
-            }
-
-            let images = [];
-            let tracks = this.safeParseInternal(record.tracks, 'tracks', []);
-
-            if (!finalCover && tracks && tracks.length > 0) {
-                const uniqueCovers = [];
-                const seenCovers = new Set();
-                for (const track of tracks) {
-                    const c = track.album?.cover;
-                    if (c && !seenCovers.has(c)) {
-                        seenCovers.add(c);
-                        uniqueCovers.push(c);
-                        if (uniqueCovers.length >= 4) break;
-                    }
-                }
-                images = uniqueCovers;
-            }
-
-            let finalTitle = record.title || record.name || record.playlist_name;
-            if (!finalTitle && extraData && typeof extraData === 'object') {
-                finalTitle = extraData.title || extraData.name;
-            }
-            if (!finalTitle) finalTitle = 'Untitled Playlist';
-
-            let finalDescription = record.description || '';
-            if (!finalDescription && extraData && typeof extraData === 'object') {
-                finalDescription = extraData.description || '';
-            }
-
-            return {
-                ...record,
-                id: record.uuid,
-                name: finalTitle,
-                title: finalTitle,
-                description: finalDescription,
-                cover: finalCover,
-                image: finalCover,
-                tracks: tracks,
-                images: images,
-                numberOfTracks: tracks.length,
-                type: 'user-playlist',
-                isPublic: true,
-                user: { name: 'Community Playlist' },
-            };
-        } catch (error) {
-            if (error.status === 404) return null;
-            console.error('Failed to fetch public playlist:', error);
-            throw error;
-        }
-    },
-
-    async publishPlaylist(playlist) {
-        if (!playlist || !playlist.id) return;
-        const uid = authManager.user?.$id;
-        if (!uid) return;
-
-        const data = {
-            uuid: playlist.id,
-            uid: uid,
-            firebase_id: uid,
-            title: playlist.name,
-            name: playlist.name,
-            playlist_name: playlist.name,
-            image: playlist.cover,
-            cover: playlist.cover,
-            playlist_cover: playlist.cover,
-            description: playlist.description || '',
-            tracks: JSON.stringify(playlist.tracks || []),
-            isPublic: true,
-            data: {
-                title: playlist.name,
-                cover: playlist.cover,
-                description: playlist.description || '',
-            },
-        };
-
-        try {
-            const existing = await this.pb.collection(PUBLIC_COLLECTION).getList(1, 1, {
-                filter: `uuid="${playlist.id}"`,
-                p_id: playlist.id,
-            });
-
-            if (existing.items.length > 0) {
-                await this.pb.collection(PUBLIC_COLLECTION).update(existing.items[0].id, data, { f_id: uid });
-            } else {
-                await this.pb.collection(PUBLIC_COLLECTION).create(data, { f_id: uid });
-            }
-        } catch (error) {
-            console.error('Failed to publish playlist:', error);
-        }
-    },
-
-    async unpublishPlaylist(uuid) {
-        const uid = authManager.user?.$id;
-        if (!uid) return;
-
-        try {
-            const existing = await this.pb.collection(PUBLIC_COLLECTION).getList(1, 1, {
-                filter: `uuid="${uuid}"`,
-                p_id: uuid,
-            });
-
-            if (existing.items && existing.items.length > 0) {
-                await this.pb.collection(PUBLIC_COLLECTION).delete(existing.items[0].id, { p_id: uuid, f_id: uid });
-            }
-        } catch (error) {
-            console.error('Failed to unpublish playlist:', error);
-        }
-    },
-
     async getProfile(username) {
         try {
             const record = await this.pb.collection('DB_users').getFirstListItem(`username="${username}"`, {
-                fields: 'username,display_name,avatar_url,banner,status,about,website,lastfm_username,privacy,user_playlists,favorite_albums',
+                fields: 'username,display_name,avatar_url,banner,status,about,website,privacy,user_playlists,favorite_albums',
             });
             return {
                 ...record,
-                privacy: this.safeParseInternal(record.privacy, 'privacy', { playlists: 'public', lastfm: 'public' }),
+                privacy: this.safeParseInternal(record.privacy, 'privacy', { playlists: 'public' }),
                 user_playlists: this.safeParseInternal(record.user_playlists, 'user_playlists', {}),
                 favorite_albums: this.safeParseInternal(record.favorite_albums, 'favorite_albums', []),
             };
@@ -619,7 +484,6 @@ const syncManager = {
                                 updatedAt: playlist.updatedAt || Date.now(),
                                 numberOfTracks: playlist.tracks ? playlist.tracks.length : 0,
                                 images: playlist.images || [],
-                                isPublic: playlist.isPublic || false,
                             };
                             needsUpdate = true;
                         }

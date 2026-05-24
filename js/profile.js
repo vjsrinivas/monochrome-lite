@@ -27,9 +27,7 @@ const editFavoriteAlbumsSearch = document.getElementById('edit-favorite-albums-s
 const editFavoriteAlbumsResults = document.getElementById('edit-favorite-albums-results');
 const editAbout = document.getElementById('edit-profile-about');
 const editWebsite = document.getElementById('edit-profile-website');
-const editLastfm = document.getElementById('edit-profile-lastfm');
 const privacyPlaylists = document.getElementById('privacy-playlists-toggle');
-const privacyLastfm = document.getElementById('privacy-lastfm-toggle');
 const saveProfileBtn = document.getElementById('edit-profile-save');
 const cancelProfileBtn = document.getElementById('edit-profile-cancel');
 const usernameError = document.getElementById('username-error');
@@ -48,7 +46,7 @@ export async function loadProfile(username) {
     document.getElementById('profile-status').style.display = 'none';
     document.getElementById('profile-about').textContent = '';
     document.getElementById('profile-website').style.display = 'none';
-    document.getElementById('profile-lastfm').style.display = 'none';
+
     document.getElementById('profile-playlists-container').innerHTML = '';
 
     const favAlbumsSection = document.getElementById('profile-favorite-albums-section');
@@ -161,222 +159,6 @@ export async function loadProfile(username) {
         }
     }
 
-    if (profile.lastfm_username && profile.privacy?.lastfm !== 'private') {
-        const lfmEl = document.getElementById('profile-lastfm');
-        lfmEl.href = `https://last.fm/user/${profile.lastfm_username}`;
-        lfmEl.style.display = 'inline-block';
-    }
-
-    if (profile.lastfm_username && profile.privacy?.lastfm !== 'private') {
-        fetchLastFmRecentTracks(profile.lastfm_username)
-            .then(async (tracks) => {
-                if (tracks.length > 0) {
-                    recentSection.style.display = 'block';
-                    recentContainer.innerHTML = tracks
-                        .map((track, index) => {
-                            const isNowPlaying = track['@attr']?.nowplaying === 'true';
-                            let image = getLastFmImage(track.image);
-                            const hasImage = !!image;
-                            if (!image) image = '/assets/appicon.png';
-
-                            track._imgId = `scrobble-img-${index}`;
-                            track._needsCover = !hasImage;
-
-                            let dateDisplay = '';
-                            if (isNowPlaying) dateDisplay = 'Scrobbling now';
-                            else if (track.date) {
-                                const date = new Date(track.date.uts * 1000);
-                                dateDisplay =
-                                    date.toLocaleDateString() +
-                                    ' ' +
-                                    date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                            }
-
-                            return `
-                        <div class="track-item lastfm-track" data-title="${escapeHtml(track.name)}" data-artist="${escapeHtml(track.artist?.['#text'] || track.artist?.name || '')}" style="grid-template-columns: 40px 1fr auto; cursor: pointer;">
-                            <img id="${track._imgId}" src="${image}" class="track-item-cover" style="width: 40px; height: 40px; border-radius: 4px;" loading="lazy" onerror="this.src='/assets/appicon.png'">
-                            <div class="track-item-info">
-                                <div class="track-item-details">
-                                    <div class="title">${track.name}</div>
-                                    <div class="artist">${track.artist?.['#text'] || track.artist?.name || track.artist || 'Unknown Artist'}</div>
-                                </div>
-                            </div>
-                            <div class="track-item-duration" style="font-size: 0.8rem; min-width: auto;">${dateDisplay}</div>
-                        </div>
-                    `;
-                        })
-                        .join('');
-
-                    recentContainer.querySelectorAll('.track-item').forEach((item) => {
-                        item.addEventListener('click', () => handleTrackClick(item.dataset.title, item.dataset.artist));
-                        item.addEventListener('contextmenu', (e) => {
-                            e.preventDefault();
-                            return false;
-                        });
-                    });
-
-                    for (const track of tracks) {
-                        if (track._needsCover) {
-                            await fetchFallbackCover(
-                                track.name,
-                                track.artist?.['#text'] || track.artist?.name,
-                                track._imgId
-                            );
-                        }
-                    }
-                }
-            })
-            .catch(console.error);
-
-        fetchLastFmTopArtists(profile.lastfm_username)
-            .then(async (artists) => {
-                if (artists.length > 0 && topArtistsSection && topArtistsContainer) {
-                    topArtistsSection.style.display = 'block';
-                    topArtistsContainer.innerHTML = artists
-                        .map((artist, index) => {
-                            let image = getLastFmImage(artist.image);
-                            const hasImage = !!image;
-                            if (!image) image = '/assets/appicon.png';
-
-                            const imgId = `top-artist-img-${index}`;
-                            artist._imgId = imgId;
-                            artist._needsCover = !hasImage;
-
-                            return `
-                        <div class="card artist lastfm-card" data-name="${escapeHtml(artist.name)}" style="cursor: pointer;">
-                            <div class="card-image-wrapper">
-                                <img id="${imgId}" src="${image}" class="card-image" loading="lazy" onerror="this.src='/assets/appicon.png'">
-                            </div>
-                            <div class="card-info">
-                                <div class="card-title">${artist.name}</div>
-                                <div class="card-subtitle">${parseInt(artist.playcount).toLocaleString()} plays</div>
-                            </div>
-                        </div>
-                    `;
-                        })
-                        .join('');
-
-                    topArtistsContainer.querySelectorAll('.card').forEach((card) => {
-                        card.addEventListener('click', () => handleArtistClick(card.dataset.name));
-                        card.addEventListener('contextmenu', (e) => {
-                            e.preventDefault();
-                            return false;
-                        });
-                    });
-
-                    for (const artist of artists) {
-                        if (artist._needsCover) {
-                            await fetchFallbackArtistImage(artist.name, artist._imgId);
-                        }
-                    }
-                }
-            })
-            .catch(console.error);
-
-        fetchLastFmTopAlbums(profile.lastfm_username)
-            .then(async (albums) => {
-                if (albums.length > 0 && topAlbumsSection && topAlbumsContainer) {
-                    topAlbumsSection.style.display = 'block';
-                    topAlbumsContainer.innerHTML = albums
-                        .map((album, index) => {
-                            let image = getLastFmImage(album.image);
-                            const hasImage = !!image;
-                            if (!image) image = '/assets/appicon.png';
-
-                            const imgId = `top-album-img-${index}`;
-                            album._imgId = imgId;
-                            album._needsCover = !hasImage;
-
-                            const artistName =
-                                album.artist?.name ||
-                                album.artist?.['#text'] ||
-                                (typeof album.artist === 'string' ? album.artist : 'Unknown Artist');
-                            album._artistName = artistName;
-
-                            return `
-                        <div class="card lastfm-card" data-name="${escapeHtml(album.name)}" data-artist="${escapeHtml(artistName)}" style="cursor: pointer;">
-                            <div class="card-image-wrapper">
-                                <img id="${imgId}" src="${image}" class="card-image" loading="lazy" onerror="this.src='/assets/appicon.png'">
-                            </div>
-                            <div class="card-info">
-                                <div class="card-title">${album.name}</div>
-                                <div class="card-subtitle">${artistName}</div>
-                            </div>
-                        </div>
-                    `;
-                        })
-                        .join('');
-
-                    topAlbumsContainer.querySelectorAll('.card').forEach((card) => {
-                        card.addEventListener('click', () => handleAlbumClick(card.dataset.name, card.dataset.artist));
-                        card.addEventListener('contextmenu', (e) => {
-                            e.preventDefault();
-                            return false;
-                        });
-                    });
-
-                    for (const album of albums) {
-                        if (album._needsCover) {
-                            await fetchFallbackAlbumCover(album.name, album._artistName, album._imgId);
-                        }
-                    }
-                }
-            })
-            .catch(console.error);
-
-        fetchLastFmTopTracks(profile.lastfm_username)
-            .then(async (tracks) => {
-                if (tracks.length > 0 && topTracksSection && topTracksContainer) {
-                    topTracksSection.style.display = 'block';
-                    topTracksContainer.innerHTML = tracks
-                        .map((track, index) => {
-                            let image = getLastFmImage(track.image);
-                            const hasImage = !!image;
-                            if (!image) image = '/assets/appicon.png';
-
-                            const imgId = `top-track-img-${index}`;
-                            track._imgId = imgId;
-                            track._needsCover = !hasImage;
-
-                            const artistName =
-                                track.artist?.name ||
-                                track.artist?.['#text'] ||
-                                (typeof track.artist === 'string' ? track.artist : 'Unknown Artist');
-                            track._artistName = artistName;
-
-                            return `
-                        <div class="track-item lastfm-track" data-title="${escapeHtml(track.name)}" data-artist="${escapeHtml(artistName)}" style="grid-template-columns: 40px 1fr auto; cursor: pointer;">
-                            <img id="${imgId}" src="${image}" class="track-item-cover" style="width: 40px; height: 40px; border-radius: 4px;" loading="lazy" onerror="this.src='/assets/appicon.png'">
-                            <div class="track-item-info">
-                                <div class="track-item-details">
-                                    <div class="title">${track.name}</div>
-                                    <div class="artist">${artistName}</div>
-                                </div>
-                            </div>
-                            <div class="track-item-duration" style="font-size: 0.8rem; min-width: auto;">${parseInt(track.playcount).toLocaleString()} plays</div>
-                        </div>
-                    `;
-                        })
-                        .join('');
-
-                    topTracksContainer.querySelectorAll('.track-item').forEach((item) => {
-                        item.addEventListener('click', () => handleTrackClick(item.dataset.title, item.dataset.artist));
-                        item.addEventListener('contextmenu', (e) => {
-                            e.preventDefault();
-                            return false;
-                        });
-                    });
-
-                    for (const track of tracks) {
-                        if (track._needsCover) {
-                            await fetchFallbackCover(track.name, track._artistName, track._imgId);
-                        }
-                    }
-                }
-            })
-            .catch(console.error);
-    }
-
     const currentUser = await syncManager.getUserData();
     const isOwner = currentUser && currentUser.profile && currentUser.profile.username === username;
 
@@ -389,8 +171,6 @@ export async function loadProfile(username) {
         const playlists = profile.user_playlists || {};
 
         Object.values(playlists).forEach((playlist) => {
-            if (!playlist.isPublic && !isOwner) return;
-
             const card = document.createElement('div');
             card.className = 'card';
             card.innerHTML = `
@@ -453,10 +233,8 @@ export async function openEditProfile() {
 
         editAbout.value = p.about || '';
         editWebsite.value = p.website || '';
-        editLastfm.value = p.lastfm_username || '';
 
         privacyPlaylists.checked = p.privacy?.playlists !== 'private';
-        privacyLastfm.checked = p.privacy?.lastfm !== 'private';
 
         editProfileModal.classList.add('active');
     });
@@ -493,10 +271,9 @@ async function saveProfile() {
         about: editAbout.value.trim(),
         website: editWebsite.value.trim(),
         favorite_albums: currentFavoriteAlbums,
-        lastfm_username: editLastfm.value.trim(),
+
         privacy: {
             playlists: privacyPlaylists.checked ? 'public' : 'private',
-            lastfm: privacyLastfm.checked ? 'public' : 'private',
         },
     };
 
@@ -711,27 +488,6 @@ const performFavoriteAlbumSearch = debounce(async (query) => {
 
 editFavoriteAlbumsSearch.addEventListener('input', (e) => performFavoriteAlbumSearch(e.target.value.trim()));
 
-function getLastFmImage(images) {
-    if (!images) return null;
-    const imgArray = Array.isArray(images) ? images : [images];
-    const sizes = ['extralarge', 'large', 'medium', 'small'];
-
-    const placeholders = ['2a96cbd8b46e442fc41c2b86b821562f', 'c6f59c1e5e7240a4c0d427abd71f3dbb'];
-
-    const isValidUrl = (url) => {
-        if (!url) return false;
-        return !placeholders.some((ph) => url.includes(ph));
-    };
-
-    for (const size of sizes) {
-        const img = imgArray.find((i) => i.size === size);
-        if (img && img['#text'] && isValidUrl(img['#text'])) return img['#text'];
-    }
-    const anyImg = imgArray.find((i) => i['#text'] && isValidUrl(i['#text']));
-    if (anyImg) return anyImg['#text'];
-    return null;
-}
-
 async function handleArtistClick(name) {
     try {
         const results = await api.searchArtists(name, { limit: 1 });
@@ -845,59 +601,5 @@ async function fetchFallbackArtistImage(artistName, imgId) {
         }
     } catch {
         // Silently ignore errors
-    }
-}
-
-async function fetchLastFmRecentTracks(username) {
-    const apiKey = '85214f5abbc730e78770f27784b9bdf7';
-    const url = `https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=${encodeURIComponent(username)}&api_key=${apiKey}&format=json&limit=5`;
-    try {
-        const res = await fetch(url);
-        const data = await res.json();
-        const tracks = data.recenttracks?.track;
-        if (!tracks) return [];
-        return Array.isArray(tracks) ? tracks : [tracks];
-    } catch (e) {
-        console.error('Failed to fetch Last.fm recent tracks', e);
-        return [];
-    }
-}
-
-async function fetchLastFmTopArtists(username) {
-    const apiKey = '85214f5abbc730e78770f27784b9bdf7';
-    const url = `https://ws.audioscrobbler.com/2.0/?method=user.gettopartists&user=${encodeURIComponent(username)}&api_key=${apiKey}&format=json&limit=6`;
-    try {
-        const res = await fetch(url);
-        const data = await res.json();
-        return data.topartists?.artist || [];
-    } catch (e) {
-        console.error('Failed to fetch Last.fm top artists', e);
-        return [];
-    }
-}
-
-async function fetchLastFmTopAlbums(username) {
-    const apiKey = '85214f5abbc730e78770f27784b9bdf7';
-    const url = `https://ws.audioscrobbler.com/2.0/?method=user.gettopalbums&user=${encodeURIComponent(username)}&api_key=${apiKey}&format=json&limit=6`;
-    try {
-        const res = await fetch(url);
-        const data = await res.json();
-        return data.topalbums?.album || [];
-    } catch (e) {
-        console.error('Failed to fetch Last.fm top albums', e);
-        return [];
-    }
-}
-
-async function fetchLastFmTopTracks(username) {
-    const apiKey = '85214f5abbc730e78770f27784b9bdf7';
-    const url = `https://ws.audioscrobbler.com/2.0/?method=user.gettoptracks&user=${encodeURIComponent(username)}&api_key=${apiKey}&format=json&limit=5`;
-    try {
-        const res = await fetch(url);
-        const data = await res.json();
-        return data.toptracks?.track || [];
-    } catch (e) {
-        console.error('Failed to fetch Last.fm top tracks', e);
-        return [];
     }
 }

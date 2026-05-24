@@ -174,95 +174,22 @@ function decodeSensitiveData(encoded) {
     }
 }
 
-export const lastFMStorage = {
-    STORAGE_KEY: 'lastfm-enabled',
-    LOVE_ON_LIKE_KEY: 'lastfm-love-on-like',
-    SCROBBLE_PERCENTAGE_KEY: 'lastfm-scrobble-percentage',
-    CUSTOM_API_KEY: 'lastfm-custom-api-key',
-    CUSTOM_API_SECRET: 'lastfm-custom-api-secret',
-    USE_CUSTOM_CREDENTIALS_KEY: 'lastfm-use-custom-credentials',
+export const scrobblePercentage = {
+    STORAGE_KEY: 'scrobble-percentage',
 
-    isEnabled() {
+    get() {
         try {
-            return localStorage.getItem(this.STORAGE_KEY) === 'true';
-        } catch {
-            return false;
-        }
-    },
-
-    setEnabled(enabled) {
-        localStorage.setItem(this.STORAGE_KEY, enabled ? 'true' : 'false');
-    },
-
-    shouldLoveOnLike() {
-        try {
-            return localStorage.getItem(this.LOVE_ON_LIKE_KEY) === 'true';
-        } catch {
-            return false;
-        }
-    },
-
-    setLoveOnLike(enabled) {
-        localStorage.setItem(this.LOVE_ON_LIKE_KEY, enabled ? 'true' : 'false');
-    },
-
-    getScrobblePercentage() {
-        try {
-            const value = localStorage.getItem(this.SCROBBLE_PERCENTAGE_KEY);
+            const value = localStorage.getItem(this.STORAGE_KEY);
             return value ? parseInt(value, 10) : 75;
         } catch {
             return 75;
         }
     },
 
-    setScrobblePercentage(percentage) {
+    set(percentage) {
         const parsed = parseInt(percentage, 10);
-        const validPercentage = Math.max(1, Math.min(100, isNaN(parsed) ? 75 : parsed));
-        localStorage.setItem(this.SCROBBLE_PERCENTAGE_KEY, validPercentage.toString());
-    },
-
-    useCustomCredentials() {
-        try {
-            return localStorage.getItem(this.USE_CUSTOM_CREDENTIALS_KEY) === 'true';
-        } catch {
-            return false;
-        }
-    },
-
-    setUseCustomCredentials(enabled) {
-        localStorage.setItem(this.USE_CUSTOM_CREDENTIALS_KEY, enabled ? 'true' : 'false');
-    },
-
-    getCustomApiKey() {
-        try {
-            const stored = localStorage.getItem(this.CUSTOM_API_KEY);
-            return decodeSensitiveData(stored) || '';
-        } catch {
-            return '';
-        }
-    },
-
-    setCustomApiKey(key) {
-        localStorage.setItem(this.CUSTOM_API_KEY, encodeSensitiveData(key));
-    },
-
-    getCustomApiSecret() {
-        try {
-            const stored = localStorage.getItem(this.CUSTOM_API_SECRET);
-            return decodeSensitiveData(stored) || '';
-        } catch {
-            return '';
-        }
-    },
-
-    setCustomApiSecret(secret) {
-        localStorage.setItem(this.CUSTOM_API_SECRET, encodeSensitiveData(secret));
-    },
-
-    clearCustomCredentials() {
-        localStorage.removeItem(this.CUSTOM_API_KEY);
-        localStorage.removeItem(this.CUSTOM_API_SECRET);
-        localStorage.removeItem(this.USE_CUSTOM_CREDENTIALS_KEY);
+        const valid = Math.max(1, Math.min(100, isNaN(parsed) ? 75 : parsed));
+        localStorage.setItem(this.STORAGE_KEY, valid.toString());
     },
 };
 
@@ -2011,79 +1938,8 @@ export const malojaSettings = {
     },
 };
 
-export const libreFmSettings = {
-    ENABLED_KEY: 'librefm-enabled',
-    LOVE_ON_LIKE_KEY: 'librefm-love-on-like',
-
-    isEnabled() {
-        try {
-            return localStorage.getItem(this.ENABLED_KEY) === 'true';
-        } catch {
-            return false;
-        }
-    },
-
-    setEnabled(enabled) {
-        localStorage.setItem(this.ENABLED_KEY, enabled ? 'true' : 'false');
-    },
-
-    shouldLoveOnLike() {
-        try {
-            return localStorage.getItem(this.LOVE_ON_LIKE_KEY) === 'true';
-        } catch {
-            return false;
-        }
-    },
-
-    setLoveOnLike(enabled) {
-        localStorage.setItem(this.LOVE_ON_LIKE_KEY, enabled ? 'true' : 'false');
-    },
-};
-
 export const homePageSettings = {
-    SHOW_RECOMMENDED_SONGS_KEY: 'home-show-recommended-songs',
-    SHOW_RECOMMENDED_ALBUMS_KEY: 'home-show-recommended-albums',
-    SHOW_RECOMMENDED_ARTISTS_KEY: 'home-show-recommended-artists',
     SHOW_JUMP_BACK_IN_KEY: 'home-show-jump-back-in',
-
-    shouldShowRecommendedSongs() {
-        try {
-            const val = localStorage.getItem(this.SHOW_RECOMMENDED_SONGS_KEY);
-            return val === null ? true : val === 'true';
-        } catch {
-            return true;
-        }
-    },
-
-    setShowRecommendedSongs(enabled) {
-        localStorage.setItem(this.SHOW_RECOMMENDED_SONGS_KEY, enabled ? 'true' : 'false');
-    },
-
-    shouldShowRecommendedAlbums() {
-        try {
-            const val = localStorage.getItem(this.SHOW_RECOMMENDED_ALBUMS_KEY);
-            return val === null ? true : val === 'true';
-        } catch {
-            return true;
-        }
-    },
-
-    setShowRecommendedAlbums(enabled) {
-        localStorage.setItem(this.SHOW_RECOMMENDED_ALBUMS_KEY, enabled ? 'true' : 'false');
-    },
-
-    shouldShowRecommendedArtists() {
-        try {
-            const val = localStorage.getItem(this.SHOW_RECOMMENDED_ARTISTS_KEY);
-            return val === null ? true : val === 'true';
-        } catch {
-            return true;
-        }
-    },
-
-    setShowRecommendedArtists(enabled) {
-        localStorage.setItem(this.SHOW_RECOMMENDED_ARTISTS_KEY, enabled ? 'true' : 'false');
-    },
 
     shouldShowJumpBackIn() {
         try {
@@ -2140,79 +1996,6 @@ export const homePageSettings = {
 
     setEditorsPicksSource(source) {
         localStorage.setItem(this.EDITORS_PICKS_SOURCE_KEY, source);
-    },
-};
-
-export const radioSettings = {
-    ENABLED_KEY: 'radio-enabled',
-
-    isEnabled() {
-        try {
-            return localStorage.getItem(this.ENABLED_KEY) === 'true';
-        } catch {
-            return false;
-        }
-    },
-
-    setEnabled(enabled) {
-        localStorage.setItem(this.ENABLED_KEY, enabled ? 'true' : 'false');
-    },
-};
-
-// fuck you binimum for adding this bullshit
-
-try {
-    const RESET_FLAG = 'autoplay-enabled-reset-v1';
-    if (!localStorage.getItem(RESET_FLAG)) {
-        localStorage.removeItem('autoplay-enabled');
-        localStorage.setItem(RESET_FLAG, '1');
-    }
-} catch {}
-
-export const autoplaySettings = {
-    ENABLED_KEY: 'autoplay-enabled',
-    SMART_RECS_KEY: 'smart-recommendations-enabled',
-
-    isEnabled() {
-        try {
-            return localStorage.getItem(this.ENABLED_KEY) === 'true';
-        } catch {
-            return false;
-        }
-    },
-
-    setEnabled(enabled) {
-        localStorage.setItem(this.ENABLED_KEY, enabled ? 'true' : 'false');
-    },
-
-    isSmartRecsEnabled() {
-        try {
-            const val = localStorage.getItem(this.SMART_RECS_KEY);
-            return val === null ? true : val === 'true';
-        } catch {
-            return true;
-        }
-    },
-
-    setSmartRecsEnabled(enabled) {
-        localStorage.setItem(this.SMART_RECS_KEY, enabled ? 'true' : 'false');
-    },
-};
-
-export const analyticsSettings = {
-    ENABLED_KEY: 'analytics-enabled',
-
-    isEnabled() {
-        try {
-            const val = localStorage.getItem(this.ENABLED_KEY);
-            return val === null ? true : val === 'true';
-        } catch {
-            return true;
-        }
-    },
-
-    setEnabled(enabled) {
-        localStorage.setItem(this.ENABLED_KEY, enabled ? 'true' : 'false');
     },
 };
 

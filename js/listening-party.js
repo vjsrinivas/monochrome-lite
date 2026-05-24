@@ -282,7 +282,7 @@ export class ListeningPartyManager {
                             const name = modal.querySelector('#guest-name-input').value.trim() || 'Guest';
                             const profile = {
                                 name,
-                                avatar_url: `https://api.dicebear.com/9.x/identicon/svg?seed=${encodeURIComponent(name)}`,
+                                avatar_url: null,
                             };
                             return { profile };
                         },
@@ -448,21 +448,18 @@ export class ListeningPartyManager {
         if (user) {
             if (this._hasProfileName(pbUser)) {
                 const name = pbUser.display_name?.trim() || pbUser.username?.trim();
-                const avatar =
-                    pbUser?.avatar_url || `https://api.dicebear.com/9.x/identicon/svg?seed=${encodeURIComponent(name)}`;
+                const avatar = pbUser?.avatar_url || null;
                 return { name, avatar_url: avatar };
             }
             const stored = this._getStoredUserProfile(user.$id);
             if (stored?.name) return stored;
             return {
                 name: 'Member',
-                avatar_url: pbUser?.avatar_url || `https://api.dicebear.com/9.x/identicon/svg?seed=Member`,
+                avatar_url: pbUser?.avatar_url || null,
             };
         }
         const cached = localStorage.getItem('party_guest_profile');
-        return cached
-            ? JSON.parse(cached)
-            : { name: 'Guest', avatar_url: 'https://api.dicebear.com/9.x/identicon/svg?seed=Guest' };
+        return cached ? JSON.parse(cached) : { name: 'Guest', avatar_url: null };
     }
 
     setupSubscriptions(partyId) {
@@ -685,10 +682,13 @@ export class ListeningPartyManager {
         const list = document.getElementById('party-members-list');
         if (!list) return;
         list.innerHTML = this.members
-            .map(
-                (m) =>
-                    `<div class="member-item" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background: var(--background-secondary); border-radius: var(--radius); border: 1px solid var(--border)"><img src="${m.avatar_url}" style="width: 40px; height: 40px; border-radius: 50%; background: var(--background-modifier-accent)"><div style="flex: 1; overflow: hidden"><div style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${m.name}</div>${m.is_host ? '<div style="color: var(--primary); font-size: 0.7rem; font-weight: bold; text-transform: uppercase;">Host</div>' : '<div style="color: var(--muted-foreground); font-size: 0.7rem">Listening</div>'}</div></div>`
-            )
+            .map((m) => {
+                const initials = (m.name || '?').charAt(0).toUpperCase();
+                const avatarHTML = m.avatar_url
+                    ? `<img src="${m.avatar_url}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">`
+                    : `<div style="width: 40px; height: 40px; border-radius: 50%; background: var(--background-modifier-accent); display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 600; color: var(--text-primary); flex-shrink: 0;">${initials}</div>`;
+                return `<div class="member-item" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background: var(--background-secondary); border-radius: var(--radius); border: 1px solid var(--border)">${avatarHTML}<div style="flex: 1; overflow: hidden"><div style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${m.name}</div>${m.is_host ? '<div style="color: var(--primary); font-size: 0.7rem; font-weight: bold; text-transform: uppercase;">Host</div>' : '<div style="color: var(--muted-foreground); font-size: 0.7rem">Listening</div>'}</div></div>`;
+            })
             .join('');
     }
 

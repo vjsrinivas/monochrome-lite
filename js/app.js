@@ -1,8 +1,4 @@
 //js/app.js
-import discordSvg from '../images/discord.svg?svg&size=22';
-import googleSvg from '../images/google.svg?svg&size=22';
-import githubSvg from '../images/github.svg?svg&size=22';
-import spotifySvg from '../images/spotify.svg?svg&size=22';
 import { isIos, isSafari } from './platform-detection.js';
 import { hapticLight } from './haptics.js';
 import { MusicAPI } from './music-api.js';
@@ -34,7 +30,6 @@ import { registerSW } from 'virtual:pwa-register';
 import { openEditProfile } from './profile.js';
 import { ThemeStore } from './themeStore.js';
 import './commandPalette.js';
-import { initAnalytics } from './analytics.js';
 import {
     parseCSV,
     parseJSPF,
@@ -65,24 +60,6 @@ if (typeof window !== 'undefined') {
             return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
         },
     });
-
-    // analytics
-    const plausibleScript = document.createElement('script');
-    plausibleScript.async = true;
-    plausibleScript.src = 'https://plausible.canine.tools/js/pa-dCMvQpiD1-AJmi8o3xviO.js';
-    document.head.appendChild(plausibleScript);
-
-    window.plausible =
-        window.plausible ||
-        function () {
-            (window.plausible.q = window.plausible.q || []).push(arguments);
-        };
-    window.plausible.init =
-        window.plausible.init ||
-        function (i) {
-            window.plausible.o = i || {};
-        };
-    window.plausible.init();
 }
 
 // Lazy-loaded modules
@@ -407,9 +384,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Haptic feedback on every click
     document.addEventListener('click', () => hapticLight(), { capture: true });
 
-    // Initialize analytics
-    initAnalytics();
-
     // Populate commit info
     {
         const repo = 'https://github.com/monochrome-music/monochrome';
@@ -667,12 +641,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Toggle Share Button visibility on switch change
-    document.getElementById('playlist-public-toggle')?.addEventListener('change', (e) => {
-        const shareBtn = document.getElementById('playlist-share-btn');
-        if (shareBtn) shareBtn.style.display = e.target.checked ? 'flex' : 'none';
-    });
-
     document.getElementById('close-fullscreen-cover-btn')?.addEventListener('click', async () => {
         await closeFullscreenOverlay();
     });
@@ -871,27 +839,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // Show uploading status
         coverUploadStatus.style.display = 'block';
-        coverUploadText.textContent = 'Uploading...';
+        coverUploadText.textContent = 'File selected: ' + file.name;
+        coverUploadText.style.color = 'var(--muted-foreground)';
         coverUploadBtn.disabled = true;
 
-        try {
-            const publicUrl = await uploadCoverImage(file);
-            coverUrlInput.value = publicUrl;
-            coverUploadText.textContent = 'Done!';
-            coverUploadText.style.color = 'var(--success)';
-
-            setTimeout(() => {
-                coverUploadStatus.style.display = 'none';
-            }, 2000);
-        } catch (error) {
-            coverUploadText.textContent = 'Failed - try URL';
-            coverUploadText.style.color = 'var(--error)';
-            console.error('Upload failed:', error);
-        } finally {
+        setTimeout(() => {
+            coverUploadStatus.style.display = 'none';
             coverUploadBtn.disabled = false;
-        }
+        }, 2000);
     });
 
     coverToggleUrlBtn?.addEventListener('click', () => {
@@ -1189,14 +1145,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 let playlist, tracks;
                 let userPlaylist = await db.getPlaylist(playlistId);
 
-                if (!userPlaylist) {
-                    try {
-                        userPlaylist = await syncManager.getPublicPlaylist(playlistId);
-                    } catch {
-                        // Not a public playlist
-                    }
-                }
-
                 if (userPlaylist) {
                     playlist = { ...userPlaylist, title: userPlaylist.name || userPlaylist.title };
                     tracks = userPlaylist.tracks || [];
@@ -1249,12 +1197,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('xspf-import-panel').style.display = 'none';
             document.getElementById('xml-import-panel').style.display = 'none';
             document.getElementById('m3u-import-panel').style.display = 'none';
-
-            // Reset Public Toggle
-            const publicToggle = document.getElementById('playlist-public-toggle');
-            const shareBtn = document.getElementById('playlist-share-btn');
-            if (publicToggle) publicToggle.checked = false;
-            if (shareBtn) shareBtn.style.display = 'none';
 
             // Reset cover upload state
             const coverUploadBtn = document.getElementById('playlist-cover-upload-btn');
@@ -1328,31 +1270,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.target.closest('#playlist-modal-save')) {
             let name = document.getElementById('playlist-name-input').value.trim();
             let description = document.getElementById('playlist-description-input').value.trim();
-            const isPublic = document.getElementById('playlist-public-toggle')?.checked;
             const isStrictAlbumMatch = document.getElementById('strict-album-match-toggle')?.checked;
 
             if (name) {
                 const modal = document.getElementById('playlist-modal');
                 const editingId = modal.dataset.editingId;
-
-                const handlePublicStatus = async (playlist) => {
-                    playlist.isPublic = isPublic;
-                    if (isPublic) {
-                        try {
-                            await syncManager.publishPlaylist(playlist);
-                        } catch (e) {
-                            console.error('Failed to publish playlist:', e);
-                            alert('Failed to publish playlist. Please ensure you are logged in.');
-                        }
-                    } else {
-                        try {
-                            await syncManager.unpublishPlaylist(playlist.id);
-                        } catch {
-                            // Ignore error if it wasn't public
-                        }
-                    }
-                    return playlist;
-                };
 
                 if (editingId) {
                     // Edit
@@ -1362,7 +1284,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                             playlist.name = name;
                             playlist.cover = cover;
                             playlist.description = description;
-                            await handlePublicStatus(playlist);
                             await db.performTransaction('user_playlists', 'readwrite', (store) => store.put(playlist));
                             await syncManager.syncUserPlaylist(playlist, 'update');
                             UIRenderer.instance.renderLibraryPage();
@@ -1871,8 +1792,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
 
                     await db.createPlaylist(name, tracks, cover, description).then(async (playlist) => {
-                        await handlePublicStatus(playlist);
-                        // Update DB again with isPublic flag
                         await db.performTransaction('user_playlists', 'readwrite', (store) => store.put(playlist));
                         await syncManager.syncUserPlaylist(playlist, 'create');
                         UIRenderer.instance.renderLibraryPage();
@@ -1898,25 +1817,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     document.getElementById('playlist-name-input').value = playlist.name;
                     document.getElementById('playlist-cover-input').value = playlist.cover || '';
                     document.getElementById('playlist-description-input').value = playlist.description || '';
-
-                    // Set Public Toggle
-                    const publicToggle = document.getElementById('playlist-public-toggle');
-                    const shareBtn = document.getElementById('playlist-share-btn');
-
-                    // Check if actually public in Pocketbase to be sure (async) or trust local flag
-                    // We trust local flag for UI speed, but could verify.
-                    if (publicToggle) publicToggle.checked = !!playlist.isPublic;
-
-                    if (shareBtn) {
-                        shareBtn.style.display = playlist.isPublic ? 'flex' : 'none';
-                        shareBtn.onclick = () => {
-                            const url = getShareUrl(`/userplaylist/${playlist.id}`);
-                            navigator.clipboard
-                                .writeText(url)
-                                .then(() => alert('Link copied to clipboard!'))
-                                .catch(console.error);
-                        };
-                    }
 
                     // Set cover upload state - show URL input if there's an existing cover
                     const coverUploadBtn = document.getElementById('playlist-cover-upload-btn');
@@ -1981,21 +1881,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         document.getElementById('playlist-name-input').value = playlist.name;
                         document.getElementById('playlist-cover-input').value = playlist.cover || '';
                         document.getElementById('playlist-description-input').value = playlist.description || '';
-
-                        const publicToggle = document.getElementById('playlist-public-toggle');
-                        const shareBtn = document.getElementById('playlist-share-btn');
-
-                        if (publicToggle) publicToggle.checked = !!playlist.isPublic;
-                        if (shareBtn) {
-                            shareBtn.style.display = playlist.isPublic ? 'flex' : 'none';
-                            shareBtn.onclick = async () => {
-                                const url = getShareUrl(`/userplaylist/${playlist.id}`);
-                                await navigator.clipboard
-                                    .writeText(url)
-                                    .then(() => alert('Link copied to clipboard!'))
-                                    .catch(console.error);
-                            };
-                        }
 
                         // Set cover upload state - show URL input if there's an existing cover
                         const coverUploadBtn = document.getElementById('playlist-cover-upload-btn');
@@ -2092,18 +1977,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (userPlaylist) {
                     tracks = userPlaylist.tracks;
                 } else {
-                    // Try API, if fail, try Public Pocketbase
-                    try {
-                        const { tracks: apiTracks } = await MusicAPI.instance.getPlaylist(playlistId);
-                        tracks = apiTracks;
-                    } catch (e) {
-                        const publicPlaylist = await syncManager.getPublicPlaylist(playlistId);
-                        if (publicPlaylist) {
-                            tracks = publicPlaylist.tracks;
-                        } else {
-                            throw e;
-                        }
-                    }
+                    const { tracks: apiTracks } = await MusicAPI.instance.getPlaylist(playlistId);
+                    tracks = apiTracks;
                 }
                 if (tracks.length > 0) {
                     Player.instance.setQueue(tracks, 0);

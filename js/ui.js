@@ -78,7 +78,6 @@ import {
     SVG_PAUSE_LARGE,
     SVG_MINUS,
     SVG_SQUARE_PEN,
-    SVG_SHARE,
     SVG_UPLOAD,
     SVG_SHUFFLE,
     SVG_VIDEO,
@@ -574,9 +573,8 @@ export class UIRenderer {
         ) {
             const formattedId = String(cover).replace(/-/g, '/');
             const tidalUrl = `https://resources.tidal.com/images/${formattedId}/320x320.jpg`;
-            const wsrvUrl = `https://wsrv.nl/?url=${encodeURIComponent(tidalUrl)}&w=250&h=250&output=webp`;
             const fetchPriorityAttr = loading === 'eager' ? ' fetchpriority="high"' : '';
-            return `<img src="${wsrvUrl}" class="${className}" alt="${alt}" loading="${loading}"${fetchPriorityAttr}>`;
+            return `<img src="${tidalUrl}" class="${className}" alt="${alt}" loading="${loading}"${fetchPriorityAttr}>`;
         }
 
         return `<img src="${imageUrl}" class="${className}" alt="${alt}" loading="${loading}">`;
@@ -2654,8 +2652,6 @@ export class UIRenderer {
 
         try {
             await this.showPage('home');
-            await this.setupHomeTabs();
-
             const welcomeEl = document.getElementById('home-welcome');
             const contentEl = document.getElementById('home-content');
             const editorsPicksSectionEmpty = document.getElementById('home-editors-picks-section-empty');
@@ -2694,14 +2690,8 @@ export class UIRenderer {
             if (welcomeEl) welcomeEl.style.display = 'none';
             if (contentEl) contentEl.style.display = 'block';
 
-            const refreshSongsBtn = document.getElementById('refresh-songs-btn');
-            const refreshAlbumsBtn = document.getElementById('refresh-albums-btn');
-            const refreshArtistsBtn = document.getElementById('refresh-artists-btn');
             const clearRecentBtn = document.getElementById('clear-recent-btn');
 
-            if (refreshSongsBtn) refreshSongsBtn.onclick = () => this.renderHomeSongs(true);
-            if (refreshAlbumsBtn) refreshAlbumsBtn.onclick = () => this.renderHomeAlbums(true);
-            if (refreshArtistsBtn) refreshArtistsBtn.onclick = () => this.renderHomeArtists(true);
             if (clearRecentBtn)
                 clearRecentBtn.onclick = async () => {
                     if (confirm('Clear recent activity?')) {
@@ -2711,400 +2701,9 @@ export class UIRenderer {
                 };
 
             await this.renderHomeRecent();
-
-            // Load dynamic sections in parallel with pre-fetched seeds
-            const seeds = await this.getSeeds();
-            await Promise.all([
-                this.renderHomeSongs(false, seeds),
-                this.renderHomeAlbums(false, seeds),
-                this.renderHomeArtists(false, seeds),
-            ]);
+            await this.renderHomeEditorsPicks();
         } finally {
             this.renderLock = false;
-        }
-    }
-
-    async setupHomeTabs() {
-        const tabs = document.querySelectorAll('.home-tab');
-        if (tabs.length === 0) return;
-
-        if (tabs[0].dataset.initialized) return;
-
-        for (const tab of tabs) {
-            tab.dataset.initialized = 'true';
-            tab.addEventListener('click', async () => {
-                document.querySelectorAll('.home-tab').forEach((t) => t.classList.remove('active'));
-                document.querySelectorAll('.home-view').forEach((v) => {
-                    v.style.display = 'none';
-                    v.classList.remove('active');
-                });
-
-                tab.classList.add('active');
-                const viewId = `home-view-${tab.dataset.tab}`;
-                const view = document.getElementById(viewId);
-                if (view) {
-                    view.style.display = 'block';
-                    view.classList.add('active');
-                }
-
-                if (tab.dataset.tab === 'explore') {
-                    await this.renderExplorePage();
-                }
-            });
-        }
-    }
-
-    async renderExplorePage() {
-        const container = document.getElementById('explore-grid');
-        if (!container) return;
-
-        if (container.children.length > 0) return;
-
-        container.classList.remove('card-grid');
-
-        container.innerHTML = `<div class="card-grid">${this.createSkeletonCards(12)}</div>`;
-
-        try {
-            const response = await fetch('https://hot.monochrome.tf/');
-            if (!response.ok) throw new Error('Failed to load explore data');
-            const data = await response.json();
-
-            container.innerHTML = '';
-
-            const GENRES = [
-                { id: 'hip_hop', name: 'Hip-Hop' },
-                { id: 'rnb', name: 'R&B / Soul' },
-                { id: 'blues', name: 'Blues' },
-                { id: 'classical', name: 'Classical' },
-                { id: 'country', name: 'Country' },
-                { id: 'dance_electronic', name: 'Dance & Electronic' },
-                { id: 'americana', name: 'Folk / Americana' },
-                { id: 'world', name: 'Global' },
-                { id: 'gospel', name: 'Gospel / Christian' },
-                { id: 'jazz', name: 'Jazz' },
-                { id: 'kpop', name: 'K-Pop' },
-                { id: 'kids', name: 'Kids' },
-                { id: 'latin', name: 'Latin' },
-                { id: 'metal', name: 'Metal' },
-                { id: 'pop', name: 'Pop' },
-                { id: 'reggae', name: 'Reggae / Dancehall' },
-                { id: 'retro', name: 'Legacy' },
-                { id: 'indierock', name: 'Rock / Indie' },
-            ];
-
-            if (GENRES.length > 0) {
-                const genresSection = document.createElement('section');
-                genresSection.className = 'content-section';
-                genresSection.innerHTML = `<h2 class="section-title">Genres</h2>`;
-
-                const genresGrid = document.createElement('div');
-                genresGrid.style.display = 'flex';
-                genresGrid.style.flexWrap = 'wrap';
-                genresGrid.style.gap = '0.5rem';
-                genresGrid.innerHTML = GENRES.map(
-                    (genre) => `
-                    <div class="card genre-card" data-genre-id="${genre.id}" data-genre-name="${escapeHtml(genre.name)}" style="cursor: pointer; background: var(--secondary); padding: 0.6rem 1rem; border-radius: var(--radius); border: 1px solid var(--border);">
-                        <h3 style="margin: 0; font-size: 0.875rem; font-weight: 600;">${escapeHtml(genre.name)}</h3>
-                    </div>
-                `
-                ).join('');
-
-                genresSection.appendChild(genresGrid);
-                container.appendChild(genresSection);
-
-                for (const card of genresGrid.querySelectorAll('.genre-card')) {
-                    card.addEventListener('click', async () => {
-                        await this.renderGenrePage(card.dataset.genreId, card.dataset.genreName);
-                    });
-                }
-            }
-
-            if (data.featured_playlists && data.featured_playlists.length > 0) {
-                await this.renderExploreSection(container, 'Featured Playlists', data.featured_playlists, 'playlist');
-            }
-
-            if (data.sections && data.sections.length > 0) {
-                for (const section of data.sections) {
-                    if (section.items && section.items.length > 0) {
-                        let type = null;
-                        if (section.type === 'ALBUM_LIST') type = 'album';
-                        else if (section.type === 'TRACK_LIST') type = 'track';
-                        else if (section.type === 'PLAYLIST_LIST') type = 'playlist';
-
-                        if (type) {
-                            await this.renderExploreSection(container, section.title, section.items, type);
-                        }
-                    }
-                }
-            }
-
-            if (container.children.length === 0) {
-                container.innerHTML = createPlaceholder('No explore content available.');
-            }
-        } catch (e) {
-            console.error(e);
-            container.innerHTML = createPlaceholder('Failed to load explore content.');
-        }
-    }
-
-    async renderExploreSection(container, title, items, type) {
-        const section = document.createElement('section');
-        section.className = 'content-section';
-        section.innerHTML = `<h2 class="section-title">${title}</h2>`;
-
-        if (type === 'track') {
-            const list = document.createElement('div');
-            list.className = 'track-list';
-            await this.renderListWithTracks(list, items, true);
-            section.appendChild(list);
-        } else {
-            const grid = document.createElement('div');
-            grid.className = 'card-grid';
-            grid.innerHTML = items
-                .map((item) => {
-                    if (type === 'album') return this.createAlbumCardHTML(item);
-                    if (type === 'playlist') return this.createPlaylistCardHTML(item);
-                    return '';
-                })
-                .join('');
-
-            for (const item of items) {
-                let selector;
-                if (type === 'album') selector = `[data-album-id="${item.id}"]`;
-                if (type === 'playlist') selector = `[data-playlist-id="${item.uuid}"]`;
-
-                if (selector) {
-                    const el = grid.querySelector(selector);
-                    if (el) {
-                        trackDataStore.set(el, item);
-                        if (type === 'album') await this.updateLikeState(el, 'album', item.id);
-                        if (type === 'playlist') await this.updateLikeState(el, 'playlist', item.uuid);
-                    }
-                }
-            }
-            section.appendChild(grid);
-        }
-        container.appendChild(section);
-    }
-
-    async renderGenrePage(genreId, genreName) {
-        const container = document.getElementById('explore-grid');
-        if (!container) return;
-
-        container.classList.remove('card-grid');
-
-        container.innerHTML = `
-            <div style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem;">
-                <button class="btn-secondary explore-back-btn" style="display: flex; align-items: center; gap: 0.5rem;">
-                    ${SVG_LEFT_ARROW(20)}
-                    Back
-                </button>
-                <h2 class="section-title" style="margin: 0;">${escapeHtml(genreName)}</h2>
-            </div>
-            <div class="card-grid">${this.createSkeletonCards(12)}</div>
-        `;
-
-        container.querySelector('.explore-back-btn').addEventListener('click', async () => {
-            container.innerHTML = '';
-            await this.renderExplorePage();
-        });
-
-        try {
-            const response = await fetch(`https://hot.monochrome.tf/explore/genre/?id=${genreId}`);
-            if (!response.ok) throw new Error('Failed to load genre data');
-            const data = await response.json();
-
-            const header = container.firstElementChild;
-            container.innerHTML = '';
-            container.appendChild(header);
-
-            const contentContainer = document.createElement('div');
-            container.appendChild(contentContainer);
-
-            if (data.sections && data.sections.length > 0) {
-                for (const section of data.sections) {
-                    if (section.items && section.items.length > 0) {
-                        let type = null;
-                        if (section.type === 'ALBUM_LIST') type = 'album';
-                        else if (section.type === 'TRACK_LIST') type = 'track';
-                        else if (section.type === 'PLAYLIST_LIST') type = 'playlist';
-
-                        if (type) {
-                            await this.renderExploreSection(contentContainer, section.title, section.items, type);
-                        }
-                    }
-                }
-            }
-
-            if (contentContainer.children.length === 0) {
-                contentContainer.innerHTML = createPlaceholder('No content found for this genre.');
-            }
-        } catch (e) {
-            console.error(e);
-            const header = container.firstElementChild;
-            container.innerHTML = '';
-            container.appendChild(header);
-            const errorDiv = document.createElement('div');
-            errorDiv.innerHTML = createPlaceholder('Failed to load genre content.');
-            container.appendChild(errorDiv);
-        }
-    }
-
-    async getSeeds() {
-        try {
-            const { smartRecommendations } = await import('./smart-recommendations.js');
-            const { autoplaySettings } = await import('./storage.js');
-            if (autoplaySettings.isSmartRecsEnabled()) {
-                const smartSeeds = await smartRecommendations.getSmartSeeds(50);
-                if (smartSeeds.length > 0) return smartSeeds;
-            }
-        } catch (e) {
-            console.warn('Smart seeds failed, using basic seeds:', e);
-        }
-
-        const history = await db.getHistory();
-        const favorites = await db.getFavorites('track');
-        const playlists = await db.getPlaylists(true);
-        const playlistTracks = playlists.flatMap((p) => p.tracks || []);
-
-        const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
-
-        const combined = [
-            ...shuffle(playlistTracks).slice(0, 20),
-            ...shuffle(favorites).slice(0, 20),
-            ...shuffle(history).slice(0, 10),
-        ];
-
-        const seenIds = new Set();
-        const seeds = combined.filter((t) => {
-            if (seenIds.has(t.id)) return false;
-            seenIds.add(t.id);
-            return true;
-        });
-
-        return shuffle(seeds);
-    }
-
-    async renderHomeSongs(forceRefresh = false, providedSeeds = null) {
-        const songsContainer = document.getElementById('home-recommended-songs');
-        const section = songsContainer?.closest('.content-section');
-
-        if (!homePageSettings.shouldShowRecommendedSongs()) {
-            if (section) section.style.display = 'none';
-            return;
-        }
-
-        if (section) section.style.display = '';
-
-        if (songsContainer) {
-            if (forceRefresh || songsContainer.children.length === 0) {
-                songsContainer.innerHTML = this.createSkeletonTracks(10, true);
-            } else if (!songsContainer.querySelector('.skeleton')) {
-                return;
-            }
-
-            try {
-                const seeds = providedSeeds || (await this.getSeeds());
-
-                const [favorites, playlists, history] = await Promise.all([
-                    db.getFavorites('track'),
-                    db.getPlaylists(true),
-                    db.getHistory(),
-                ]);
-                const knownTrackIds = new Set([
-                    ...favorites.map((t) => t.id),
-                    ...playlists.flatMap((p) => (p.tracks || []).map((t) => t.id)),
-                    ...history.map((t) => t.id),
-                ]);
-
-                let recommendedTracks = await this.api.getRecommendedTracksForPlaylist(seeds, 20, {
-                    skipCache: forceRefresh,
-                    knownTrackIds: knownTrackIds,
-                });
-
-                try {
-                    const { smartRecommendations } = await import('./smart-recommendations.js');
-                    const { autoplaySettings } = await import('./storage.js');
-                    if (autoplaySettings.isSmartRecsEnabled()) {
-                        recommendedTracks = smartRecommendations.filterRecommendations(recommendedTracks);
-                        recommendedTracks = smartRecommendations.rankRecommendations(recommendedTracks);
-                    }
-                } catch (e) {
-                    console.warn('Smart filtering failed for home songs:', e);
-                }
-
-                const filteredTracks = await this.filterUserContent(recommendedTracks, 'track');
-                this.lastRecommendedTracks = filteredTracks;
-
-                if (filteredTracks.length > 0) {
-                    await this.renderListWithTracks(songsContainer, filteredTracks, true, false, false, true);
-                } else {
-                    songsContainer.innerHTML = createPlaceholder('No song recommendations found.');
-                }
-            } catch (e) {
-                console.error(e);
-                songsContainer.innerHTML = createPlaceholder('Failed to load song recommendations.');
-            }
-        }
-    }
-
-    async renderHomeAlbums(forceRefresh = false, providedSeeds = null, retryCount = 0) {
-        const albumsContainer = document.getElementById('home-recommended-albums');
-        const section = albumsContainer?.closest('.content-section');
-
-        if (!homePageSettings.shouldShowRecommendedAlbums()) {
-            if (section) section.style.display = 'none';
-            return;
-        }
-
-        if (section) section.style.display = '';
-
-        if (albumsContainer) {
-            if (forceRefresh || albumsContainer.children.length === 0) {
-                albumsContainer.innerHTML = this.createSkeletonCards(5);
-            } else if (!albumsContainer.querySelector('.skeleton') && !forceRefresh) {
-                return;
-            }
-
-            try {
-                const seeds = providedSeeds || (await this.getSeeds());
-                const albumSeed = seeds.find((t) => t.album && t.album.id);
-                if (albumSeed) {
-                    const similarAlbums = await this.api.getSimilarAlbums(albumSeed.album.id);
-                    const filteredAlbums = await this.filterUserContent(similarAlbums, 'album');
-
-                    if (filteredAlbums.length > 0) {
-                        albumsContainer.innerHTML = filteredAlbums
-                            .slice(0, 12)
-                            .map((a) => this.createAlbumCardHTML(a))
-                            .join('');
-                        for (const a of filteredAlbums.slice(0, 12)) {
-                            const el = albumsContainer.querySelector(`[data-album-id="${a.id}"]`);
-                            if (el) {
-                                trackDataStore.set(el, a);
-                                await this.updateLikeState(el, 'album', a.id);
-                            }
-                        }
-                    } else if (retryCount < 2) {
-                        await new Promise((resolve) => setTimeout(resolve, 1500));
-                        return this.renderHomeAlbums(forceRefresh, null, retryCount + 1);
-                    } else {
-                        albumsContainer.innerHTML = `<div style="grid-column: 1/-1; padding: 2rem 0;">${createPlaceholder('Tell us more about what you like so we can recommend albums!')}</div>`;
-                    }
-                } else if (retryCount < 2) {
-                    await new Promise((resolve) => setTimeout(resolve, 1500));
-                    return this.renderHomeAlbums(forceRefresh, null, retryCount + 1);
-                } else {
-                    albumsContainer.innerHTML = `<div style="grid-column: 1/-1; padding: 2rem 0;">${createPlaceholder('Tell us more about what you like so we can recommend albums!')}</div>`;
-                }
-            } catch (e) {
-                console.error(e);
-                if (retryCount < 2) {
-                    await new Promise((resolve) => setTimeout(resolve, 1500));
-                    return this.renderHomeAlbums(forceRefresh, null, retryCount + 1);
-                }
-                albumsContainer.innerHTML = createPlaceholder('Failed to load album recommendations.');
-            }
         }
     }
 
@@ -3297,15 +2896,6 @@ export class UIRenderer {
                                 const subtitle = item.username ? `by ${item.username}` : null;
                                 cardsHTML.push(this.createUserPlaylistCardHTML(playlist, subtitle));
                                 itemsToStore.push({ el: null, data: playlist, type: 'user-playlist' });
-                            } else {
-                                const playlist = await syncManager.getPublicPlaylist(item.id);
-                                if (playlist) {
-                                    playlist._lazy = cardsHTML.length >= 6;
-                                    playlist._isEditorsPick = true;
-                                    const subtitle = item.username ? `by ${item.username}` : null;
-                                    cardsHTML.push(this.createUserPlaylistCardHTML(playlist, subtitle));
-                                    itemsToStore.push({ el: null, data: playlist, type: 'user-playlist' });
-                                }
                             }
                         }
                     } catch (e) {
@@ -4256,15 +3846,6 @@ export class UIRenderer {
             if (source === 'user' || (!source && isUUID)) {
                 ownedPlaylist = await db.getPlaylist(playlistId);
                 playlistData = ownedPlaylist;
-
-                // If not in local DB, check if it's a public Pocketbase playlist
-                if (!playlistData) {
-                    try {
-                        playlistData = await syncManager.getPublicPlaylist(playlistId);
-                    } catch (e) {
-                        console.warn('Failed to check public pocketbase playlists:', e);
-                    }
-                }
             }
 
             if (playlistData) {
@@ -4759,8 +4340,6 @@ export class UIRenderer {
         const imageEl = document.getElementById('artist-detail-image');
         const nameEl = document.getElementById('artist-detail-name');
         const metaEl = document.getElementById('artist-detail-meta');
-        const socialsEl = document.getElementById('artist-detail-socials');
-        const bioEl = document.getElementById('artist-detail-bio');
         const tracksContainer = document.getElementById('artist-detail-tracks');
         const albumsContainer = document.getElementById('artist-detail-albums');
         const epsContainer = document.getElementById('artist-detail-eps');
@@ -4776,12 +4355,6 @@ export class UIRenderer {
         imageEl.style.backgroundColor = 'var(--muted)';
         nameEl.innerHTML = '<div class="skeleton" style="height: 48px; width: 300px; max-width: 90%;"></div>';
         metaEl.innerHTML = '<div class="skeleton" style="height: 16px; width: 150px;"></div>';
-        if (socialsEl) socialsEl.innerHTML = '';
-        if (bioEl) {
-            bioEl.style.display = 'none';
-            bioEl.textContent = '';
-            bioEl.classList.remove('expanded');
-        }
         tracksContainer.innerHTML = this.createSkeletonTracks(5, true);
         albumsContainer.innerHTML = this.createSkeletonCards(6, false);
         if (epsContainer) epsContainer.innerHTML = this.createSkeletonCards(6, false);
@@ -4834,163 +4407,6 @@ export class UIRenderer {
                 .catch((e) => {
                     console.warn('Failed to fetch artist banner:', e);
                 });
-
-            // Handle Biography
-            if (bioEl) {
-                // Pre-define regex patterns for better performance
-                const linkTypes = ['artist', 'album', 'track', 'playlist'];
-                const regexCache = {
-                    wimp: linkTypes.reduce((acc, type) => {
-                        acc[type] = new RegExp(`\\[wimpLink ${type}Id="([a-f\\d-]+)"\\](.*?)\\[\\/wimpLink\\]`, 'g');
-                        return acc;
-                    }, {}),
-                    legacy: linkTypes.reduce((acc, type) => {
-                        acc[type] = new RegExp(`\\[${type}:([a-f\\d-]+)\\](.*?)\\[\\/${type}\\]`, 'g');
-                        return acc;
-                    }, {}),
-                    doubleBracket: /\[\[(.*?)\|(.*?)\]\]/g,
-                };
-
-                const parseBio = (text) => {
-                    if (!text) return '';
-
-                    let parsed = text;
-
-                    linkTypes.forEach((type) => {
-                        parsed = parsed.replace(
-                            regexCache.wimp[type],
-                            (_m, id, name) =>
-                                `<span class="bio-link" data-type="${type}" data-id="${id}">${name}</span>`
-                        );
-                        parsed = parsed.replace(
-                            regexCache.legacy[type],
-                            (_m, id, name) =>
-                                `<span class="bio-link" data-type="${type}" data-id="${id}">${name}</span>`
-                        );
-                    });
-
-                    parsed = parsed.replace(
-                        regexCache.doubleBracket,
-                        (_m, name, id) => `<span class="bio-link" data-type="artist" data-id="${id}">${name}</span>`
-                    );
-
-                    return parsed.replace(/\n/g, '<br>');
-                };
-
-                // Helper to strip tags for clean preview
-                const stripBioTags = (text) => {
-                    if (!text) return '';
-                    let clean = text;
-                    linkTypes.forEach((type) => {
-                        // [wimpLink artistId="..."]Name[/wimpLink] -> Name
-                        clean = clean.replace(regexCache.wimp[type], (_m, _id, name) => name);
-                        // [artist:...]Name[/artist] -> Name
-                        clean = clean.replace(regexCache.legacy[type], (_m, _id, name) => name);
-                    });
-                    // [[Name|ID]] -> Name
-                    clean = clean.replace(regexCache.doubleBracket, (_m, name, _id) => name);
-                    return clean;
-                };
-
-                const showBioModal = (bio) => {
-                    const text = typeof bio === 'string' ? bio : bio.text;
-                    const source = typeof bio === 'string' ? null : bio.source;
-
-                    const modal = document.createElement('div');
-                    modal.className = 'modal active bio-modal';
-                    modal.style.zIndex = '9999'; // Ensure it's on top
-                    modal.innerHTML = `
-                        <div class="modal-overlay"></div>
-                        <div class="modal-content extra-wide" style="display: flex; flex-direction: column;">
-                            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem;">
-                                <h3 style="margin: 0;">Artist Biography</h3>
-                                <button class="btn-close" style="background: none; border: none; font-size: 2rem; cursor: pointer; color: var(--foreground); padding: 0.2rem 0.5rem; line-height: 1;">&times;</button>
-                            </div>
-                            <div class="modal-body" style="max-height: 70vh; overflow-y: auto; line-height: 1.8; font-size: 1.1rem; padding-right: 1rem; color: var(--foreground); cursor: default;">
-                                ${parseBio(text)}
-                                ${source ? `<div class="bio-source">Source: ${source}</div>` : ''}
-                            </div>
-                        </div>
-                    `;
-
-                    document.body.appendChild(modal);
-
-                    const close = (e) => {
-                        if (e) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                        }
-                        modal.remove();
-                    };
-
-                    modal.querySelector('.modal-overlay').onclick = close;
-                    modal.querySelector('.btn-close').onclick = close;
-
-                    // Ensure links are clickable by attaching the listener to the modal body
-                    const modalBody = modal.querySelector('.modal-body');
-                    modalBody.addEventListener(
-                        'click',
-                        (e) => {
-                            const link = e.target.closest('.bio-link');
-                            if (link) {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                const { type, id } = link.dataset;
-                                if (type && id) {
-                                    modal.remove();
-                                    navigate(`/${type}/t/${id}`);
-                                }
-                            }
-                        },
-                        true
-                    ); // Use capture phase to ensure it's hit
-                };
-
-                const renderBioPreview = (bio) => {
-                    const text = typeof bio === 'string' ? bio : bio.text;
-                    if (text) {
-                        // Use stripped text for preview to avoid broken tags/links
-                        const cleanText = stripBioTags(text);
-                        const isLong = cleanText.length > 200;
-                        const previewText = isLong ? cleanText.substring(0, 200).trim() + '...' : cleanText;
-
-                        bioEl.innerHTML = previewText.replace(/\n/g, '<br>');
-                        bioEl.style.display = 'block';
-                        bioEl.style.webkitLineClamp = 'unset';
-                        bioEl.style.cursor = 'default';
-                        bioEl.onclick = null;
-
-                        if (isLong) {
-                            bioEl.appendChild(document.createElement('br'));
-                            const readMore = document.createElement('span');
-                            readMore.className = 'bio-read-more';
-                            readMore.textContent = 'Read More';
-                            readMore.onclick = (e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                showBioModal(bio);
-                            };
-                            bioEl.appendChild(readMore);
-                        }
-                    } else {
-                        bioEl.style.display = 'none';
-                    }
-                };
-
-                if (artist.biography) {
-                    renderBioPreview(artist.biography);
-                } else {
-                    // Try to fetch biography asynchronously
-                    this.api
-                        .getArtistBiography(artistId, provider)
-                        .then((bio) => {
-                            if (bio) renderBioPreview(bio);
-                        })
-                        .catch(() => {
-                            /* ignore */
-                        });
-                }
-            }
 
             // Handle Artist Mix Button
             const mixBtn = document.getElementById('artist-mix-btn');
@@ -5056,12 +4472,6 @@ export class UIRenderer {
                         .join('')}
                 </div>
             `;
-
-            this.api.getArtistSocials(artist.name).then((links) => {
-                if (socialsEl && links.length > 0) {
-                    socialsEl.innerHTML = links.map((link) => this.createSocialLinkHTML(link)).join('');
-                }
-            });
 
             artist.tracks = artist.tracks.filter((t) => !_isBlockedCopyright(t.copyright));
             artist.albums = artist.albums.filter((t) => !_isBlockedCopyright(t.copyright));
@@ -5367,40 +4777,6 @@ export class UIRenderer {
         }
     }
 
-    createSocialLinkHTML(link) {
-        const url = link.url;
-
-        if (url.includes('tidal.com')) return '';
-
-        let icon = SVG_GLOBE(24);
-        let title = 'Website';
-
-        if (url.includes('twitter.com') || url.includes('x.com')) {
-            icon = SVG_TWITTER(24);
-            title = 'Twitter';
-        } else if (url.includes('instagram.com')) {
-            icon = SVG_INSTAGRAM(24);
-            title = 'Instagram';
-        } else if (url.includes('facebook.com')) {
-            icon = SVG_FACEBOOK(24);
-            title = 'Facebook';
-        } else if (url.includes('youtube.com')) {
-            icon = SVG_YOUTUBE(24);
-            title = 'YouTube';
-        } else if (url.includes('spotify.com') || url.includes('open.spotify.com')) {
-            icon = SVG_LINK(24);
-            title = 'Spotify';
-        } else if (url.includes('soundcloud.com')) {
-            icon = SVG_SOUNDCLOUD(24);
-            title = 'SoundCloud';
-        } else if (url.includes('apple.com')) {
-            icon = SVG_APPLE(24);
-            title = 'Apple Music';
-        }
-
-        return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="social-link" title="${title}">${icon}</a>`;
-    }
-
     async renderRecentPage() {
         await this.showPage('recent');
         const container = document.getElementById('recent-tracks-container');
@@ -5510,7 +4886,7 @@ export class UIRenderer {
         playlist,
         isOwned,
         tracks,
-        showShare = false,
+        _showShare = false,
         onSort = null,
         getCurrentSort = null
     ) {
@@ -5611,23 +4987,6 @@ export class UIRenderer {
             deleteBtn.className = 'btn-secondary danger';
             deleteBtn.innerHTML = `${SVG_BIN(24)}<span>Delete</span>`;
             fragment.appendChild(deleteBtn);
-        }
-
-        // Share (User Playlists Only)
-        if (showShare || (isOwned && playlist.isPublic)) {
-            const shareBtn = document.createElement('button');
-            shareBtn.id = 'share-playlist-btn';
-            shareBtn.className = 'btn-secondary';
-            shareBtn.innerHTML = `${SVG_SHARE(20)}<span>Share</span>`;
-
-            shareBtn.onclick = () => {
-                const url = getShareUrl(`/userplaylist/${playlist.id || playlist.uuid}`);
-                navigator.clipboard
-                    .writeText(url)
-                    .then(() => alert('Link copied to clipboard!'))
-                    .catch(console.error);
-            };
-            fragment.appendChild(shareBtn);
         }
 
         // Insert buttons in the correct order: Play, Shuffle, Download, Sort, Like, Edit/Delete/Share

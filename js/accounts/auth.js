@@ -38,32 +38,6 @@ export class AuthManager {
         }
     }
 
-    async _signInSocial(provider) {
-        try {
-            await authClient.signIn.social({
-                provider,
-                callbackURL: window.location.origin + '/index.html',
-                errorCallbackURL: window.location.origin + '/login.html',
-            });
-        } catch (error) {
-            console.error('Login failed:', error);
-            alert(`Login failed: ${error.message}`);
-        }
-    }
-
-    async signInWithGoogle() {
-        return this._signInSocial('google');
-    }
-    async signInWithGitHub() {
-        return this._signInSocial('github');
-    }
-    async signInWithDiscord() {
-        return this._signInSocial('discord');
-    }
-    async signInWithSpotify() {
-        return this._signInSocial('spotify');
-    }
-
     async signInWithEmail(email, password) {
         try {
             const { data, error } = await authClient.signIn.email({ email, password });
@@ -152,8 +126,6 @@ export class AuthManager {
         const statusText = document.getElementById('auth-status');
         const emailContainer = document.getElementById('email-auth-container');
         const emailToggleBtn = document.getElementById('toggle-email-auth-btn');
-        const githubBtn = document.getElementById('auth-github-btn');
-        const discordBtn = document.getElementById('auth-discord-btn');
 
         if (!connectBtn) return;
 
@@ -164,8 +136,6 @@ export class AuthManager {
             if (clearDataBtn) clearDataBtn.style.display = 'none';
             if (emailContainer) emailContainer.style.display = 'none';
             if (emailToggleBtn) emailToggleBtn.style.display = 'none';
-            if (githubBtn) githubBtn.style.display = 'none';
-            if (discordBtn) discordBtn.style.display = 'none';
             if (statusText) statusText.textContent = user ? `Signed in as ${user.email}` : 'Signed in';
 
             const accountPage = document.getElementById('page-account');
@@ -199,24 +169,20 @@ export class AuthManager {
             if (clearDataBtn) clearDataBtn.style.display = 'block';
             if (emailContainer) emailContainer.style.display = 'none';
             if (emailToggleBtn) emailToggleBtn.style.display = 'none';
-            if (githubBtn) githubBtn.style.display = 'none';
-            if (discordBtn) discordBtn.style.display = 'none';
             if (statusText) statusText.textContent = `Signed in as ${user.email}`;
         } else {
-            connectBtn.textContent = 'Connect with Google';
+            connectBtn.textContent = 'Sign In';
             connectBtn.classList.remove('danger');
-            connectBtn.onclick = () => this.signInWithGoogle();
+            connectBtn.onclick = () => {
+                if (emailToggleBtn) {
+                    const isVisible = emailContainer && emailContainer.style.display !== 'none';
+                    emailContainer.style.display = isVisible ? 'none' : 'block';
+                    emailToggleBtn.textContent = isVisible ? 'Sign in with Email' : 'Hide Email Sign In';
+                }
+            };
 
             if (clearDataBtn) clearDataBtn.style.display = 'none';
             if (emailToggleBtn) emailToggleBtn.style.display = 'inline-block';
-            if (githubBtn) {
-                githubBtn.style.display = 'inline-block';
-                githubBtn.onclick = () => this.signInWithGitHub();
-            }
-            if (discordBtn) {
-                discordBtn.style.display = 'inline-block';
-                discordBtn.onclick = () => this.signInWithDiscord();
-            }
             if (statusText) statusText.textContent = 'Sync your library across devices';
         }
     }
