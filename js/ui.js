@@ -325,6 +325,8 @@ export class UIRenderer {
         const lyricsBtn = document.getElementById('toggle-lyrics-btn');
         const fsLikeBtn = document.getElementById('fs-like-btn');
         const fsAddPlaylistBtn = document.getElementById('fs-add-playlist-btn');
+        const overflowMenuItems = (id) =>
+            document.querySelectorAll(`#player-overflow-menu button[data-action="${id}"]`);
 
         if (track) {
             const isLocal = track.isLocal;
@@ -361,6 +363,17 @@ export class UIRenderer {
                 else lyricsBtn.style.removeProperty('display');
             }
 
+            // Sync overflow menu item visibility
+            overflowMenuItems('add-to-playlist').forEach((el) => {
+                el.style.display = isLocal ? 'none' : '';
+            });
+            overflowMenuItems('lyrics').forEach((el) => {
+                el.style.display = isLocal ? 'none' : '';
+            });
+            overflowMenuItems('download').forEach((el) => {
+                el.style.display = isLocal ? 'none' : '';
+            });
+
             if (fsLikeBtn) {
                 if (shouldHideLikes) {
                     fsLikeBtn.style.display = 'none';
@@ -380,6 +393,11 @@ export class UIRenderer {
             if (lyricsBtn) lyricsBtn.style.display = 'none';
             if (fsLikeBtn) fsLikeBtn.style.display = 'none';
             if (fsAddPlaylistBtn) fsAddPlaylistBtn.style.display = 'none';
+
+            // Hide all overflow menu items when no track
+            overflowMenuItems('add-to-playlist').forEach((el) => (el.style.display = 'none'));
+            overflowMenuItems('lyrics').forEach((el) => (el.style.display = 'none'));
+            overflowMenuItems('download').forEach((el) => (el.style.display = 'none'));
         }
     }
 

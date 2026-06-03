@@ -126,9 +126,72 @@ export async function initializeSettings(scrobbler, player, api, ui) {
     const authModal = document.getElementById('email-auth-modal');
     const emailInput = document.getElementById('auth-email');
     const passwordInput = document.getElementById('auth-password');
-    const signInBtn = document.getElementById('email-signin-btn');
-    const signUpBtn = document.getElementById('email-signup-btn');
+    const usernameInput = document.getElementById('auth-username');
+    const passwordConfirmInput = document.getElementById('auth-password-confirm');
+    const submitBtn = document.getElementById('email-auth-submit-btn');
     const resetPasswordBtn = document.getElementById('reset-password-btn');
+    const authErrorEl = document.getElementById('auth-error');
+    const authModeSigninBtn = document.getElementById('auth-mode-signin');
+    const authModeSignupBtn = document.getElementById('auth-mode-signup');
+    const authUsernameField = document.getElementById('auth-username-field');
+    const authPasswordConfirmField = document.getElementById('auth-password-confirm-field');
+    const authUsernameStatus = document.getElementById('auth-username-status');
+
+    let authMode = 'signin';
+    let usernameCheckTimeout = null;
+
+    function setAuthMode(mode) {
+        authMode = mode;
+        authManager.mode = mode;
+        if (authModeSigninBtn) authModeSigninBtn.classList.toggle('active', mode === 'signin');
+        if (authModeSignupBtn) authModeSignupBtn.classList.toggle('active', mode === 'signup');
+        if (authUsernameField) authUsernameField.style.display = mode === 'signup' ? '' : 'none';
+        if (authPasswordConfirmField) authPasswordConfirmField.style.display = mode === 'signup' ? '' : 'none';
+        if (authMode === 'signin' && resetPasswordBtn) {
+            resetPasswordBtn.style.display = '';
+        } else if (resetPasswordBtn) {
+            resetPasswordBtn.style.display = 'none';
+        }
+        hideAuthError();
+    }
+
+    function showAuthError(msg) {
+        if (!authErrorEl) return;
+        authErrorEl.textContent = msg;
+        authErrorEl.style.display = '';
+    }
+
+    function hideAuthError() {
+        if (authErrorEl) {
+            authErrorEl.textContent = '';
+            authErrorEl.style.display = 'none';
+        }
+    }
+
+    function setButtonLoading(btn, loading) {
+        if (!btn) return;
+        btn.disabled = loading;
+    }
+
+    function validateEmail(email) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
+    function validatePassword(password) {
+        return password.length >= 8;
+    }
+
+    function validateUsername(username) {
+        return /^[a-zA-Z0-9_]{2,20}$/.test(username);
+    }
+
+    if (authModeSigninBtn) {
+        authModeSigninBtn.addEventListener('click', () => setAuthMode('signin'));
+    }
+
+    if (authModeSignupBtn) {
+        authModeSignupBtn.addEventListener('click', () => setAuthMode('signup'));
+    }
 
     if (toggleEmailBtn && authModal) {
         toggleEmailBtn.addEventListener('click', () => {
@@ -142,58 +205,121 @@ export async function initializeSettings(scrobbler, player, api, ui) {
         authModal.querySelector('.modal-overlay')?.addEventListener('click', closeAuthModal);
     }
 
-    if (signInBtn) {
-        signInBtn.addEventListener('click', async () => {
-            const email = emailInput.value;
-            const password = passwordInput.value;
-            if (!email || !password) {
-                alert('Please enter both email and password.');
+    if (usernameInput) {
+        usernameInput.addEventListener('input', () => {
+            const username = usernameInput.value.trim();
+            if (authMode !== 'signup' || username.length < 2) {
+                if (authUsernameStatus) authUsernameStatus.innerHTML = '';
                 return;
             }
-            try {
-                await authManager.signInWithEmail(email, password);
-                authModal.classList.remove('active');
-                emailInput.value = '';
-                passwordInput.value = '';
-            } catch {
-                // Error handled in authManager
-            }
+            if (authUsernameStatus) authUsernameStatus.innerHTML = '<span class="auth-loading-spinner"></span>';
+            clearTimeout(usernameCheckTimeout);
+            usernameCheckTimeout = setTimeout(async () => {
+                try {
+                    const taken = await syncManager.isUsernameTaken(username);
+                    if (authUsernameStatus) {
+                        if (taken) {
+                            authUsernameStatus.innerHTML =
+                                '<span class="auth-username-status-taken">&#10007; Taken</span>';
+                        } else {
+                            authUsernameStatus.innerHTML =
+                                '<span class="auth-username-status-available">&#10003; Available</span>';
+                        }
+                    }
+                } catch {
+                    if (authUsernameStatus) authUsernameStatus.innerHTML = '';
+                }
+            }, 400);
         });
     }
 
-    if (signUpBtn) {
-        signUpBtn.addEventListener('click', async () => {
-            const email = emailInput.value;
+    if (submitBtn) {
+        submitBtn.addEventListener('click', async () => {
+            hideAuthError();
+            const email = emailInput.value.trim();
             const password = passwordInput.value;
+
             if (!email || !password) {
-                alert('Please enter both email and password.');
+                showAuthError('Please enter both email and password.');
                 return;
             }
+            if (!validateEmail(email)) {
+                showAuthError('Please enter a valid email address.');
+                return;
+            }
+            if (!validatePassword(password)) {
+                showAuthError('Password must be at least 8 characters.');
+                return;
+            }
+
+            setButtonLoading(submitBtn, true);
             try {
-                await authManager.signUpWithEmail(email, password);
+                if (authMode === 'signin') {
+                    await authManager.signInWithEmail(email, password, showAuthError);
+                } else {
+                    const username = usernameInput ? usernameInput.value.trim() : '';
+                    const passwordConfirm = passwordConfirmInput ? passwordConfirmInput.value : '';
+
+                    if (!validateUsername(username)) {
+                        showAuthError('Username must be 2-20 characters (letters, numbers, underscore).');
+                        setButtonLoading(submitBtn, false);
+                        return;
+                    }
+
+                    if (password !== passwordConfirm) {
+                        showAuthError('Passwords do not match.');
+                        setButtonLoading(submitBtn, false);
+                        return;
+                    }
+
+                    await authManager.signUpWithEmail(email, password, username, showAuthError);
+                }
                 authModal.classList.remove('active');
                 emailInput.value = '';
                 passwordInput.value = '';
+                usernameInput && (usernameInput.value = '');
+                passwordConfirmInput && (passwordConfirmInput.value = '');
             } catch {
-                // Error handled in authManager
+                // Error shown via callback
+            } finally {
+                setButtonLoading(submitBtn, false);
             }
+        });
+
+        submitBtn.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') submitBtn.click();
         });
     }
 
     if (resetPasswordBtn) {
         resetPasswordBtn.addEventListener('click', async () => {
-            const email = emailInput.value;
+            hideAuthError();
+            const email = emailInput.value.trim();
             if (!email) {
-                alert('Please enter your email address to reset your password.');
+                showAuthError('Please enter your email address to reset your password.');
+                return;
+            }
+            if (!validateEmail(email)) {
+                showAuthError('Please enter a valid email address.');
                 return;
             }
             try {
-                await authManager.sendPasswordReset(email);
+                await authManager.sendPasswordReset(email, showAuthError);
             } catch {
-                /* ignore */
+                // Error shown via callback
             }
         });
     }
+
+    [emailInput, passwordInput, usernameInput, passwordConfirmInput].forEach((input) => {
+        if (input) {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    submitBtn.click();
+                }
+            });
+        }
+    });
 
     // ========================================
     // Maloja Settings

@@ -2,7 +2,7 @@
 import PocketBase from 'pocketbase';
 import { db } from '../db.js';
 
-const DEFAULT_POCKETBASE_URL = 'https://data.samidy.xyz';
+const DEFAULT_POCKETBASE_URL = 'http://localhost:8090';
 const POCKETBASE_URL =
     window.__POCKETBASE_URL__ || localStorage.getItem('monochrome-pocketbase-url') || DEFAULT_POCKETBASE_URL;
 
@@ -10,6 +10,34 @@ console.log('[PocketBase] Using URL:', POCKETBASE_URL);
 
 const pb = new PocketBase(POCKETBASE_URL);
 pb.autoCancellation(false);
+
+let _healthStatus = 'unknown';
+let _healthCheckPromise = null;
+
+async function checkHealth() {
+    if (_healthCheckPromise) return _healthCheckPromise;
+    _healthCheckPromise = (async () => {
+        try {
+            const resp = await fetch(POCKETBASE_URL + '/api/health', { method: 'GET', mode: 'cors' });
+            if (resp.ok) {
+                _healthStatus = 'connected';
+            } else {
+                _healthStatus = 'error';
+            }
+        } catch {
+            _healthStatus = 'disconnected';
+        }
+        _healthCheckPromise = null;
+        return _healthStatus;
+    })();
+    return _healthCheckPromise;
+}
+
+window.__pocketbaseHealth = {
+    get status() {
+        return _healthStatus;
+    },
+};
 
 const syncManager = {
     pb: pb,
@@ -569,4 +597,8 @@ pb.authStore.onChange((token, model) => {
     syncManager.onAuthStateChanged(model);
 }, true);
 
-export { pb, syncManager };
+export { pb, syncManager, checkHealth, getHealthStatus };
+
+function getHealthStatus() {
+    return _healthStatus;
+}

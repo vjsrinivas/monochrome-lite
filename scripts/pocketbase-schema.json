@@ -1,0 +1,155 @@
+{
+    "name": "DB_users",
+    "scheme": [
+        {
+            "name": "id",
+            "type": "text",
+            "id": "pbcid",
+            "required": true,
+            "unique": true,
+            "system": true
+        },
+        {
+            "name": "username",
+            "type": "text",
+            "id": "field_username",
+            "required": true,
+            "unique": true,
+            "pattern": "^[a-zA-Z0-9_-]{2,32}$",
+            "message": "Username must be 2-32 alphanumeric characters, hyphens or underscores"
+        },
+        {
+            "name": "display_name",
+            "type": "text",
+            "id": "field_display_name",
+            "max": 64,
+            "required": false
+        },
+        {
+            "name": "avatar_url",
+            "type": "url",
+            "id": "field_avatar_url",
+            "required": false
+        },
+        {
+            "name": "banner",
+            "type": "url",
+            "id": "field_banner",
+            "required": false
+        },
+        {
+            "name": "status",
+            "type": "text",
+            "id": "field_status",
+            "max": 512,
+            "required": false
+        },
+        {
+            "name": "about",
+            "type": "text",
+            "id": "field_about",
+            "max": 2048,
+            "required": false
+        },
+        {
+            "name": "website",
+            "type": "url",
+            "id": "field_website",
+            "required": false
+        },
+        {
+            "name": "email",
+            "type": "email",
+            "id": "field_email",
+            "required": true,
+            "unique": true,
+            "system": true
+        },
+        {
+            "name": "password",
+            "type": "text",
+            "id": "field_password",
+            "required": true,
+            "system": true
+        },
+        {
+            "name": "privacy",
+            "type": "json",
+            "id": "field_privacy",
+            "required": false,
+            "onAdd": true,
+            "onEdit": true,
+            "default": "{\"playlists\":\"public\"}"
+        },
+        {
+            "name": "library",
+            "type": "json",
+            "id": "field_library",
+            "required": false,
+            "onAdd": true,
+            "onEdit": true,
+            "default": "{}"
+        },
+        {
+            "name": "history",
+            "type": "json",
+            "id": "field_history",
+            "required": false,
+            "onAdd": true,
+            "onEdit": true,
+            "default": "[]"
+        },
+        {
+            "name": "user_playlists",
+            "type": "json",
+            "id": "field_user_playlists",
+            "required": false,
+            "onAdd": true,
+            "onEdit": true,
+            "default": "{}"
+        },
+        {
+            "name": "user_folders",
+            "type": "json",
+            "id": "field_user_folders",
+            "required": false,
+            "onAdd": true,
+            "onEdit": true,
+            "default": "{}"
+        },
+        {
+            "name": "favorite_albums",
+            "type": "json",
+            "id": "field_favorite_albums",
+            "required": false,
+            "onAdd": true,
+            "onEdit": true,
+            "default": "[]"
+        },
+        {
+            "name": "created",
+            "type": "auto",
+            "id": "pbccreated",
+            "system": true
+        },
+        {
+            "name": "updated",
+            "type": "auto",
+            "id": "pbcupdated",
+            "system": true
+        }
+    ],
+    "type": "auth",
+    "authRule": "",
+    "authAlert": {
+        "enabled": true
+    },
+    "meta": {
+        "icon": "https://pocketbase.io/images/favicon.ico"
+    },
+    "listRule": "",
+    "viewRule": "",
+    "createRule": "",
+    "updateRule": "",
+    "deleteRule": ""
+}

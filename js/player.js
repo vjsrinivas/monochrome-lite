@@ -416,6 +416,9 @@ export class Player {
                 if (mixBtn) {
                     mixBtn.style.display = track.mixes && track.mixes.TRACK_MIX ? 'flex' : 'none';
                 }
+                document.querySelectorAll('#player-overflow-menu button[data-action="track-mix"]').forEach((el) => {
+                    el.style.display = track.mixes && track.mixes.TRACK_MIX ? '' : 'none';
+                });
                 const totalDurationEl = document.getElementById('total-duration');
                 if (totalDurationEl) totalDurationEl.textContent = formatTime(track.duration);
                 document.title = `${trackTitle} • ${getTrackArtists(track)}`;
@@ -1154,6 +1157,9 @@ export class Player {
         if (mixBtn) {
             mixBtn.style.display = track.mixes && track.mixes.TRACK_MIX ? 'flex' : 'none';
         }
+        document.querySelectorAll('#player-overflow-menu button[data-action="track-mix"]').forEach((el) => {
+            el.style.display = track.mixes && track.mixes.TRACK_MIX ? '' : 'none';
+        });
         document.title = `${trackTitle} • ${getTrackArtists(track)}`;
 
         this.updatePlayingTrackIndicator();

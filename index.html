@@ -889,12 +889,33 @@
                         <use svg="!lucide/x.svg" size="20" />
                     </button>
                 </div>
+                <div class="auth-mode-toggle">
+                    <button type="button" id="auth-mode-signin" class="auth-mode-btn active">Sign In</button>
+                    <button type="button" id="auth-mode-signup" class="auth-mode-btn">Sign Up</button>
+                </div>
                 <input
                     type="email"
                     id="auth-email"
                     class="template-input email-auth-input"
                     placeholder="Email Address"
                 />
+                <div class="auth-username-field" id="auth-username-field" style="display: none">
+                    <input
+                        type="text"
+                        id="auth-username"
+                        class="template-input email-auth-input"
+                        placeholder="Username"
+                    />
+                    <div id="auth-username-status"></div>
+                </div>
+                <div class="auth-password-confirm-field" id="auth-password-confirm-field" style="display: none">
+                    <input
+                        type="password"
+                        id="auth-password-confirm"
+                        class="template-input email-auth-input"
+                        placeholder="Confirm Password"
+                    />
+                </div>
                 <div class="email-auth-password-block">
                     <input
                         type="password"
@@ -906,10 +927,8 @@
                         Forgot password?
                     </button>
                 </div>
-                <div class="email-auth-actions">
-                    <button type="button" id="email-signin-btn" class="btn-primary email-auth-submit">Sign In</button>
-                    <button type="button" id="email-signup-btn" class="btn-secondary email-auth-submit">Sign Up</button>
-                </div>
+                <div id="auth-error" class="auth-error-msg" style="display: none"></div>
+                <button type="button" id="email-auth-submit-btn" class="btn-primary email-auth-submit">Submit</button>
             </div>
         </div>
 
@@ -1670,6 +1689,7 @@
                             />
                         </button>
                         <div id="header-account-dropdown" class="dropdown-menu"></div>
+                        <div id="header-account-overlay" class="dropdown-overlay"></div>
                     </div>
                 </header>
 
@@ -5133,6 +5153,14 @@
                         <button id="queue-btn" title="Queue">
                             <use svg="!lucide/list.svg" size="24" />
                         </button>
+                        <button
+                            id="player-overflow-btn"
+                            class="mobile-only"
+                            title="More actions"
+                            aria-label="More actions"
+                        >
+                            <use svg="!lucide/ellipsis-vertical.svg" size="20" />
+                        </button>
                     </div>
                     <div class="volume-slider-row desktop-only">
                         <button id="volume-btn" title="Mute"></button>
@@ -5143,6 +5171,16 @@
                             <use svg="!lucide/clock.svg" size="20" />
                         </button>
                     </div>
+                </div>
+                <div id="player-overflow-menu" class="player-overflow-menu">
+                    <button data-action="add-to-playlist">
+                        <use svg="!lucide/list-plus.svg" size="18" /> Add to Playlist
+                    </button>
+                    <button data-action="track-mix"><use svg="./images/mix.svg" size="18" /> Track Mix</button>
+                    <button data-action="lyrics"><use svg="!lucide/mic-vocal.svg" size="18" /> Lyrics</button>
+                    <button data-action="download"><use svg="!lucide/download.svg" size="18" /> Download</button>
+                    <button data-action="cast"><use svg="!lucide/cast.svg" size="18" /> Cast</button>
+                    <button data-action="sleep-timer"><use svg="!lucide/clock.svg" size="18" /> Sleep Timer</button>
                 </div>
             </footer>
         </div>

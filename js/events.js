@@ -570,6 +570,45 @@ export async function initializePlayerEvents(player, audioPlayer, scrobbler, ui)
         });
     }
 
+    // Player overflow menu (mobile) - toggle and dispatch
+    const overflowBtn = document.getElementById('player-overflow-btn');
+    const overflowMenu = document.getElementById('player-overflow-menu');
+
+    if (overflowBtn && overflowMenu) {
+        overflowBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            overflowMenu.classList.toggle('active');
+        });
+
+        const actionToBtnId = {
+            'add-to-playlist': 'now-playing-add-playlist-btn',
+            'track-mix': 'now-playing-mix-btn',
+            lyrics: 'toggle-lyrics-btn',
+            download: 'download-current-btn',
+            cast: 'cast-btn',
+            queue: 'queue-btn',
+            'sleep-timer': 'sleep-timer-btn',
+        };
+
+        overflowMenu.querySelectorAll('button').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const action = btn.dataset.action;
+                const targetId = actionToBtnId[action];
+                if (targetId) {
+                    document.getElementById(targetId)?.click();
+                }
+                overflowMenu.classList.remove('active');
+            });
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!overflowBtn.contains(e.target) && !overflowMenu.contains(e.target)) {
+                overflowMenu.classList.remove('active');
+            }
+        });
+    }
+
     // Waveform Masking Logic
     const updateWaveform = async () => {
         const progressBar = document.getElementById('progress-bar');

@@ -1,5 +1,6 @@
-// js/accounts/auth.js - PocketBase auth wrapper
-import { pb } from './pocketbase.js';
+// js/accounts/auth.js - PocketBase auth wrapper with local fallback
+import { pb, checkHealth, getHealthStatus } from './pocketbase.js';
+import { localAuthManager } from './local-auth.js';
 
 function normalizeUser(user) {
     if (!user) return null;
@@ -10,6 +11,19 @@ class AuthManager {
     constructor() {
         this.user = normalizeUser(pb.authStore.model);
         this.authListeners = [];
+        this.mode = 'signin';
+        this.isLoading = false;
+        this._pbAvailable = false;
+        this._checkConnectivity();
+    }
+
+    async _checkConnectivity() {
+        try {
+            const status = await checkHealth();
+            this._pbAvailable = status === 'connected';
+        } catch {
+            this._pbAvailable = false;
+        }
     }
 
     onAuthStateChanged(callback) {
@@ -19,48 +33,87 @@ class AuthManager {
         }
     }
 
-    async signInWithEmail(email, password) {
+    async _tryPocketBase(fn) {
+        if (this._pbAvailable) {
+            try {
+                return await fn();
+            } catch (err) {
+                console.warn('[Auth] PocketBase failed, falling back to local auth:', err.message);
+                this._pbAvailable = false;
+                throw err;
+            }
+        }
+        throw new Error('PocketBase not available');
+    }
+
+    async signInWithEmail(email, password, onError) {
+        this.isLoading = true;
         try {
-            const authData = await pb.collection('users').authWithPassword(email, password);
+            const authData = await this._tryPocketBase(() => pb.collection('users').authWithPassword(email, password));
             this.user = normalizeUser(authData.record);
             this.updateUI(this.user);
             this.authListeners.forEach((listener) => listener(this.user));
             return this.user;
         } catch (error) {
-            console.error('Email Login failed:', error);
-            alert(`Login failed: ${error.message}`);
-            throw error;
+            try {
+                const localUser = await localAuthManager.signIn(email, password);
+                this.user = localUser;
+                this._pbAvailable = false;
+                this.updateUI(this.user);
+                this.authListeners.forEach((listener) => listener(this.user));
+                return this.user;
+            } catch (localError) {
+                const msg = error.message || localError.message || 'Authentication failed';
+                console.error('Email Login failed:', msg);
+                if (onError) onError(msg);
+                throw error;
+            }
+        } finally {
+            this.isLoading = false;
         }
     }
 
-    async signUpWithEmail(email, password) {
+    async signUpWithEmail(email, password, username, onError) {
+        this.isLoading = true;
         try {
             const data = {
                 email,
                 password,
                 passwordConfirm: password,
+                username,
                 emailVisibility: true,
             };
-            await pb.collection('users').create(data);
+            await this._tryPocketBase(() => pb.collection('users').create(data));
             await pb.collection('users').authWithPassword(email, password);
             this.user = normalizeUser(pb.authStore.model);
             this.updateUI(this.user);
             this.authListeners.forEach((listener) => listener(this.user));
             return this.user;
         } catch (error) {
-            console.error('Sign Up failed:', error);
-            alert(`Sign Up failed: ${error.message}`);
-            throw error;
+            try {
+                const localUser = await localAuthManager.signUp(email, password, username);
+                this.user = localUser;
+                this._pbAvailable = false;
+                this.updateUI(this.user);
+                this.authListeners.forEach((listener) => listener(this.user));
+                return this.user;
+            } catch (localError) {
+                const msg = error.message || localError.message || 'Sign up failed';
+                console.error('Sign Up failed:', msg);
+                if (onError) onError(msg);
+                throw error;
+            }
+        } finally {
+            this.isLoading = false;
         }
     }
 
-    async sendPasswordReset(email) {
+    async sendPasswordReset(email, onError) {
         try {
             await pb.collection('users').requestPasswordReset(email);
-            alert(`Password reset email sent to ${email}`);
         } catch (error) {
             console.error('Password reset failed:', error);
-            alert(`Failed to send reset email: ${error.message}`);
+            if (onError) onError(error.message || 'Failed to send reset email');
             throw error;
         }
     }

@@ -27,7 +27,7 @@ import { showNotification } from './downloads.js';
 import { syncManager } from './accounts/pocketbase.js';
 import { authManager } from './accounts/auth.js';
 import { registerSW } from 'virtual:pwa-register';
-import { openEditProfile } from './profile.js';
+
 import { ThemeStore } from './themeStore.js';
 import './commandPalette.js';
 import {
@@ -49,6 +49,7 @@ import {
     SVG_PLAY,
     SVG_CLOSE,
     SVG_RESET,
+    SVG_USER,
 } from './icons.js';
 
 // Capture real iOS state before spoofing (needed for background audio)
@@ -2537,6 +2538,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const headerAccountBtn = document.getElementById('header-account-btn');
     const headerAccountDropdown = document.getElementById('header-account-dropdown');
+    const headerAccountOverlay = document.getElementById('header-account-overlay');
     const headerAccountImg = document.getElementById('header-account-img');
     const headerAccountIcon = document.getElementById('header-account-icon');
 
@@ -2555,7 +2557,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             headerAccountBtn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                headerAccountDropdown.classList.toggle('active');
+                const isOpen = headerAccountDropdown.classList.toggle('active');
+                if (headerAccountOverlay) {
+                    headerAccountOverlay.classList.toggle('is-visible', isOpen);
+                    document.body.style.overflow = isOpen ? 'hidden' : '';
+                }
                 await updateAccountDropdown();
             });
         }
@@ -2563,79 +2569,91 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.addEventListener('click', (e) => {
             if (!headerAccountBtn.contains(e.target) && !headerAccountDropdown.contains(e.target)) {
                 headerAccountDropdown.classList.remove('active');
+                if (headerAccountOverlay) {
+                    headerAccountOverlay.classList.remove('is-visible');
+                    document.body.style.overflow = '';
+                }
             }
         });
+
+        if (headerAccountOverlay) {
+            headerAccountOverlay.addEventListener('click', () => {
+                headerAccountDropdown.classList.remove('active');
+                headerAccountOverlay.classList.remove('is-visible');
+                document.body.style.overflow = '';
+            });
+        }
 
         async function updateAccountDropdown() {
             const user = authManager?.user;
             headerAccountDropdown.innerHTML = '';
 
             if (!user) {
-                const iconBtnStyle =
-                    'background:none;border:none;cursor:pointer;padding:4px;border-radius:6px;display:flex;align-items:center;transition:opacity 0.15s';
                 headerAccountDropdown.innerHTML = `
-                    <span style="font-size:0.75rem;color:var(--muted-foreground);padding:0.25rem 0.5rem">Connect with</span>
-                    <div style="display:flex;gap:0.5rem;padding:0.25rem 0.5rem;align-items:center">
-                        <button id="header-discord-auth" title="Discord" style="${iconBtnStyle}">${discordSvg}</button>
-                        <button id="header-google-auth" title="Google" style="${iconBtnStyle}">${googleSvg}</button>
-                        <button id="header-github-auth" title="GitHub" style="${iconBtnStyle}">${githubSvg}</button>
-                        <button id="header-spotify-auth" title="Spotify" style="${iconBtnStyle}">${spotifySvg}</button>
+                    <div class="dropdown-account-header">
+                        ${SVG_USER(14)}
+                        <span>Account</span>
                     </div>
-                    <hr style="border:none;border-top:1px solid var(--border);margin:0.25rem 0">
-                    <button class="btn-secondary" id="header-email-auth">Connect with Email</button>
+                    <button class="btn-primary" id="header-sign-in">Sign In</button>
+                    <button class="btn-secondary" id="header-sign-up">Sign Up</button>
                 `;
 
-                for (const id of [
-                    'header-discord-auth',
-                    'header-google-auth',
-                    'header-github-auth',
-                    'header-spotify-auth',
-                ]) {
-                    const btn = document.getElementById(id);
-                    const svg = btn.querySelector('svg');
-                    svg.style.filter = 'brightness(0) invert(1)';
-                    svg.style.transition = 'filter 0.15s';
-                    btn.addEventListener('mouseenter', () => {
-                        svg.style.filter = 'brightness(0) invert(0.5)';
-                    });
-                    btn.addEventListener('mouseleave', () => {
-                        svg.style.filter = 'brightness(0) invert(1)';
-                    });
-                }
-
-                document.getElementById('header-google-auth').onclick = () => authManager.signInWithGoogle();
-                document.getElementById('header-github-auth').onclick = () => authManager.signInWithGitHub();
-                document.getElementById('header-discord-auth').onclick = () => authManager.signInWithDiscord();
-                document.getElementById('header-spotify-auth').onclick = () => authManager.signInWithSpotify();
-                document.getElementById('header-email-auth').onclick = () => {
+                document.getElementById('header-sign-in').onclick = () => {
                     document.getElementById('email-auth-modal').classList.add('active');
                     headerAccountDropdown.classList.remove('active');
+                    if (headerAccountOverlay) {
+                        headerAccountOverlay.classList.remove('is-visible');
+                        document.body.style.overflow = '';
+                    }
+                };
+                document.getElementById('header-sign-up').onclick = () => {
+                    document.getElementById('email-auth-modal').classList.add('active');
+                    headerAccountDropdown.classList.remove('active');
+                    if (headerAccountOverlay) {
+                        headerAccountOverlay.classList.remove('is-visible');
+                        document.body.style.overflow = '';
+                    }
                 };
             } else {
                 const data = await syncManager.getUserData();
-                const hasProfile = data && data.profile && data.profile.username;
+                const displayName = data?.profile?.display_name || data?.profile?.username || '';
+                const email = user.email || '';
+                const avatarUrl = data?.profile?.avatar_url;
 
-                if (hasProfile) {
-                    headerAccountDropdown.innerHTML = `
-                        <button class="btn-secondary" id="header-view-profile">My Profile</button>
-                        <button class="btn-secondary danger" id="header-sign-out">Sign Out</button>
-                    `;
-                    document.getElementById('header-view-profile').onclick = () => {
-                        navigate(`/user/@${data.profile.username}`);
-                        headerAccountDropdown.classList.remove('active');
-                    };
-                } else {
-                    headerAccountDropdown.innerHTML = `
-                        <button class="btn-primary" id="header-create-profile">Create Profile</button>
-                        <button class="btn-secondary danger" id="header-sign-out">Sign Out</button>
-                    `;
-                    document.getElementById('header-create-profile').onclick = async () => {
-                        openEditProfile().catch(console.error);
-                        headerAccountDropdown.classList.remove('active');
-                    };
-                }
+                let userInfoHtml = `
+                    <div class="dropdown-user-info">
+                        ${
+                            avatarUrl
+                                ? `<img src="${avatarUrl}&s=100" class="dropdown-user-avatar" alt="avatar">`
+                                : `<span class="dropdown-user-avatar">${SVG_USER(18)}</span>`
+                        }
+                        <span class="dropdown-user-name" title="${email}">${displayName || email}</span>
+                    </div>
+                `;
 
-                document.getElementById('header-sign-out').onclick = () => authManager.signOut();
+                let buttonsHtml = `
+                    <button class="btn-secondary" id="header-account-settings">Account Settings</button>
+                    <button class="btn-secondary danger" id="header-sign-out">Sign Out</button>
+                `;
+
+                headerAccountDropdown.innerHTML = userInfoHtml + buttonsHtml;
+
+                document.getElementById('header-account-settings').onclick = () => {
+                    navigate('/account');
+                    headerAccountDropdown.classList.remove('active');
+                    if (headerAccountOverlay) {
+                        headerAccountOverlay.classList.remove('is-visible');
+                        document.body.style.overflow = '';
+                    }
+                };
+
+                document.getElementById('header-sign-out').onclick = () => {
+                    authManager.signOut();
+                    if (headerAccountOverlay) {
+                        headerAccountOverlay.classList.remove('is-visible');
+                        document.body.style.overflow = '';
+                    }
+                };
             }
         }
 
