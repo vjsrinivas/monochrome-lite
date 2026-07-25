@@ -703,234 +703,7 @@
             </div>
         </div>
 
-        <div id="edit-profile-modal" class="modal">
-            <div class="modal-overlay"></div>
-            <div class="modal-content">
-                <h3>Edit Profile</h3>
-                <div style="margin-bottom: 1rem">
-                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem">Username</label>
-                    <input type="text" id="edit-profile-username" class="template-input" placeholder="username" />
-                    <p
-                        id="username-error"
-                        style="color: #ef4444; font-size: 0.8rem; display: none; margin-top: 0.25rem"
-                    ></p>
-                </div>
-                <div style="margin-bottom: 1rem">
-                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem">Display Name</label>
-                    <input
-                        type="text"
-                        id="edit-profile-display-name"
-                        class="template-input"
-                        placeholder="Display Name"
-                    />
-                </div>
-                <div style="margin-bottom: 1rem">
-                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem">Avatar URL</label>
-                    <input
-                        type="url"
-                        id="edit-profile-avatar"
-                        class="template-input"
-                        placeholder="Avatar URL"
-                        style="width: 100%"
-                    />
-                </div>
-                <div style="margin-bottom: 1rem">
-                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem">Banner URL</label>
-                    <input
-                        type="url"
-                        id="edit-profile-banner"
-                        class="template-input"
-                        placeholder="Banner URL"
-                        style="width: 100%"
-                    />
-                </div>
-                <div style="margin-bottom: 1rem">
-                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem"
-                        >Status (Listening to...)</label
-                    >
-                    <div class="status-picker-container">
-                        <input
-                            type="text"
-                            id="edit-profile-status-search"
-                            class="template-input"
-                            placeholder="Search for a song or album..."
-                            autocomplete="off"
-                        />
-                        <div id="status-search-results" class="search-results-dropdown"></div>
-                        <input type="hidden" id="edit-profile-status-json" />
-                        <div
-                            id="status-preview"
-                            style="
-                                display: none;
-                                margin-top: 0.5rem;
-                                padding: 0.5rem;
-                                background: var(--secondary);
-                                border-radius: var(--radius);
-                                align-items: center;
-                                gap: 0.5rem;
-                            "
-                        >
-                            <img
-                                id="status-preview-img"
-                                alt="Status preview"
-                                style="width: 32px; height: 32px; border-radius: 4px; object-fit: cover"
-                            />
-                            <div style="flex: 1; min-width: 0">
-                                <div
-                                    id="status-preview-title"
-                                    style="
-                                        font-weight: 500;
-                                        font-size: 0.9rem;
-                                        white-space: nowrap;
-                                        overflow: hidden;
-                                        text-overflow: ellipsis;
-                                    "
-                                ></div>
-                                <div
-                                    id="status-preview-subtitle"
-                                    style="
-                                        font-size: 0.8rem;
-                                        color: var(--muted-foreground);
-                                        white-space: nowrap;
-                                        overflow: hidden;
-                                        text-overflow: ellipsis;
-                                    "
-                                ></div>
-                            </div>
-                            <button id="clear-status-btn" class="btn-icon" style="width: 24px; height: 24px">
-                                &times;
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div style="margin-bottom: 1rem">
-                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem"
-                        >Favorite Albums (Max 5)</label
-                    >
-                    <div
-                        id="edit-favorite-albums-list"
-                        style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.5rem"
-                    ></div>
-                    <div class="status-picker-container">
-                        <input
-                            type="text"
-                            id="edit-favorite-albums-search"
-                            class="template-input"
-                            placeholder="Search for an album..."
-                            autocomplete="off"
-                        />
-                        <div id="edit-favorite-albums-results" class="search-results-dropdown"></div>
-                    </div>
-                </div>
-                <div style="margin-bottom: 1rem">
-                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem">About Me</label>
-                    <textarea
-                        id="edit-profile-about"
-                        class="template-input"
-                        style="resize: vertical; min-height: 80px"
-                        placeholder="Tell us about yourself"
-                    ></textarea>
-                </div>
-                <div style="margin-bottom: 1rem">
-                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem">Website</label>
-                    <input type="url" id="edit-profile-website" class="template-input" placeholder="https://..." />
-                </div>
-                <h4 style="margin-top: 1.5rem; margin-bottom: 1rem; font-size: 1rem">Privacy</h4>
-                <div class="setting-item" style="padding: 0.5rem 0; border: none">
-                    <div class="info"><span class="label">Public Playlists</span></div>
-                    <label class="toggle-switch"
-                        ><input type="checkbox" id="privacy-playlists-toggle" checked /><span class="slider"></span
-                    ></label>
-                </div>
-
-                <div class="modal-actions">
-                    <button id="edit-profile-cancel" class="btn-secondary">Cancel</button>
-                    <button id="edit-profile-save" class="btn-primary">Save Profile</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="folder-modal" class="modal">
-            <div class="modal-overlay"></div>
-            <div class="modal-content">
-                <h3 id="folder-modal-title">Create Folder</h3>
-                <input
-                    type="text"
-                    id="folder-name-input"
-                    class="template-input"
-                    placeholder="Folder name"
-                    style="margin: 1rem 0"
-                />
-                <input
-                    type="url"
-                    id="folder-cover-input"
-                    class="template-input"
-                    placeholder="Icon URL (optional)"
-                    style="margin: 0.5rem 0"
-                />
-                <div class="modal-actions">
-                    <button id="folder-modal-cancel" class="btn-secondary">Cancel</button>
-                    <button id="folder-modal-save" class="btn-primary">Save</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="email-auth-modal" class="modal">
-            <div class="modal-overlay"></div>
-            <div class="modal-content email-auth-modal-content">
-                <div class="email-auth-modal-header">
-                    <h3>Email Authentication</h3>
-                    <button
-                        type="button"
-                        class="btn-icon email-auth-modal-close"
-                        id="email-auth-modal-close"
-                        title="Close"
-                    >
-                        <use svg="!lucide/x.svg" size="20" />
-                    </button>
-                </div>
-                <div class="auth-mode-toggle">
-                    <button type="button" id="auth-mode-signin" class="auth-mode-btn active">Sign In</button>
-                    <button type="button" id="auth-mode-signup" class="auth-mode-btn">Sign Up</button>
-                </div>
-                <input
-                    type="email"
-                    id="auth-email"
-                    class="template-input email-auth-input"
-                    placeholder="Email Address"
-                />
-                <div class="auth-username-field" id="auth-username-field" style="display: none">
-                    <input
-                        type="text"
-                        id="auth-username"
-                        class="template-input email-auth-input"
-                        placeholder="Username"
-                    />
-                    <div id="auth-username-status"></div>
-                </div>
-                <div class="auth-password-confirm-field" id="auth-password-confirm-field" style="display: none">
-                    <input
-                        type="password"
-                        id="auth-password-confirm"
-                        class="template-input email-auth-input"
-                        placeholder="Confirm Password"
-                    />
-                </div>
-                <div class="email-auth-password-block">
-                    <input
-                        type="password"
-                        id="auth-password"
-                        class="template-input email-auth-input"
-                        placeholder="Password"
-                    />
-                    <button type="button" id="reset-password-btn" class="email-auth-forgot-link">
-                        Forgot password?
-                    </button>
-                </div>
-                <div id="auth-error" class="auth-error-msg" style="display: none"></div>
-                <button type="button" id="email-auth-submit-btn" class="btn-primary email-auth-submit">Submit</button>
-            </div>
-        </div>
+ 
 
         <div id="playlist-select-modal" class="modal">
             <div class="modal-overlay"></div>
@@ -1103,40 +876,7 @@
             </div>
         </div>
 
-        <div id="custom-db-modal" class="modal">
-            <div class="modal-overlay"></div>
-            <div class="modal-content">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem">
-                    <h3 style="margin: 0">Custom Database/Auth</h3>
-                    <button
-                        id="custom-db-reset"
-                        class="btn-secondary danger"
-                        style="padding: 0.4rem 0.8rem; font-size: 0.8rem"
-                    >
-                        Reset to Defaults
-                    </button>
-                </div>
-                <p style="font-size: 0.9rem; color: var(--muted-foreground); margin-bottom: 1rem">
-                    Configure a custom PocketBase instance. Leave empty to use defaults.
-                    <br />
-                    A Guide To Set This Up Can Be Found
-                    <a
-                        href="https://github.com/monochrome-music/monochrome/blob/main/DOCKER.md"
-                        style="text-decoration: underline"
-                        >Here</a
-                    >.
-                </p>
-                <div style="margin-bottom: 1rem">
-                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem">PocketBase URL</label>
-                    <input type="url" id="custom-pb-url" class="template-input" placeholder="https://data.samidy.xyz" />
-                </div>
-                <div class="modal-actions">
-                    <button id="custom-db-cancel" class="btn-secondary">Cancel</button>
-                    <button id="custom-db-save" class="btn-primary">Save & Reload</button>
-                </div>
-            </div>
-        </div>
-
+ 
         <div id="theme-store-modal" class="modal">
             <div class="modal-overlay"></div>
             <div
@@ -1766,7 +1506,7 @@
                         <button class="search-tab" data-tab="albums">Albums</button>
                         <button class="search-tab" data-tab="artists">Artists</button>
                         <button class="search-tab" data-tab="playlists">Playlists</button>
-                        <button class="search-tab" data-tab="podcasts">Podcasts</button>
+ 
                     </div>
                     <div class="search-tab-content active" id="search-tab-tracks">
                         <div class="track-list" id="search-tracks-container"></div>
@@ -1780,9 +1520,7 @@
                     <div class="search-tab-content" id="search-tab-playlists">
                         <div class="card-grid" id="search-playlists-container"></div>
                     </div>
-                    <div class="search-tab-content" id="search-tab-podcasts">
-                        <div class="card-grid" id="search-podcasts-container"></div>
-                    </div>
+ 
                 </div>
 
                 <div id="page-library" class="page">
@@ -1797,24 +1535,17 @@
                                 </div>
                                 <h4 class="card-title">Create playlist</h4>
                             </button>
-                            <button type="button" class="library-create-dashed-card" id="library-create-folder-card">
-                                <div class="library-create-dashed-art">
-                                    <use svg="!lucide/folder-plus.svg" size="20" />
-                                </div>
-                                <h4 class="card-title">Create folder</h4>
-                            </button>
                         </div>
-                        <div class="card-grid" id="my-folders-container"></div>
                         <div class="card-grid" id="my-playlists-container"></div>
                     </section>
 
                     <section class="content-section">
-                        <h2 class="section-title">Favorites</h2>
+                        <h2 class="section-title">Catalog</h2>
                         <div class="search-tabs">
                             <button class="search-tab active" data-tab="tracks">Tracks</button>
                             <button class="search-tab" data-tab="albums">Albums</button>
                             <button class="search-tab" data-tab="artists">Artists</button>
-                            <button class="search-tab" data-tab="playlists">Playlists</button>
+                            <button class="search-tab" data-tab="playlists">Latest</button>
                         </div>
                         <div class="search-tab-content active" id="library-tab-tracks">
                             <div
@@ -1900,7 +1631,7 @@
                         <div class="search-tab-content" id="library-tab-artists">
                             <div class="card-grid" id="library-artists-container"></div>
                         </div>
-                        <div class="search-tab-content" id="library-tab-playlists">
+                        <div class="search-tab-content" id="library-tab-latest">
                             <div class="card-grid" id="library-playlists-container"></div>
                         </div>
                     </section>
@@ -1919,42 +1650,7 @@
                     <div class="track-list" id="recent-tracks-container"></div>
                 </div>
 
-                <div id="page-podcasts" class="page">
-                    <header class="detail-header">
-                        <img
-                            id="podcasts-detail-image"
-                            src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
-                            alt=""
-                            class="detail-header-image artist"
-                        />
-                        <div class="detail-header-info">
-                            <div class="type">Podcast</div>
-                            <h1 class="title" id="podcasts-detail-name"></h1>
-                            <div class="meta" id="podcasts-detail-meta"></div>
-                            <div class="detail-header-actions">
-                                <button id="play-podcasts-btn" class="btn-primary" title="Play Latest Episode">
-                                    <use svg="./images/play.svg" size="20" />
-                                    <span>Play Latest</span>
-                                </button>
-                            </div>
-                        </div>
-                    </header>
-                    <div class="content-section">
-                        <h2 class="section-title">Episodes</h2>
-                        <div class="track-list" id="podcasts-episodes-container"></div>
-                    </div>
-                </div>
-
-                <div id="page-podcasts-browse" class="page">
-                    <h2 class="section-title">Browse Podcasts</h2>
-                    <div class="search-tabs">
-                        <button class="search-tab active" data-tab="recent">Recent</button>
-                    </div>
-                    <div class="search-tab-content active" id="podcasts-tab-recent">
-                        <div class="card-grid" id="podcasts-recent-container"></div>
-                    </div>
-                </div>
-
+ 
                 <div id="page-album" class="page">
                     <header class="detail-header">
                         <img
@@ -2136,63 +1832,7 @@
                     </section>
                 </section>
 
-                <section id="page-folder" class="page">
-                    <header class="detail-header">
-                        <img
-                            id="folder-detail-image"
-                            src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
-                            class="detail-header-image"
-                            alt="Folder Cover"
-                        />
-                        <div class="detail-header-info">
-                            <h1 class="title" id="folder-detail-title"></h1>
-                            <div class="meta" id="folder-detail-meta"></div>
-                            <div class="detail-header-actions">
-                                <button id="delete-folder-btn" class="btn-secondary danger">Delete Folder</button>
-                            </div>
-                        </div>
-                    </header>
-                    <div class="card-grid" id="folder-detail-container"></div>
-                </section>
-
-                <section id="page-mix" class="page">
-                    <header class="detail-header">
-                        <img
-                            id="mix-detail-image"
-                            src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
-                            class="detail-header-image"
-                            alt="Mix Cover"
-                        />
-                        <div class="detail-header-info">
-                            <h1 class="title" id="mix-detail-title"></h1>
-                            <div class="meta" id="mix-detail-meta"></div>
-                            <div class="meta" id="mix-detail-description" class="detail-description"></div>
-                            <div class="detail-header-actions">
-                                <button id="play-mix-btn" class="btn-primary" title="Play">
-                                    <use svg="./images/play.svg" size="20" />
-                                    <span>Play</span>
-                                </button>
-                                <button id="download-mix-btn" class="btn-primary" title="Download">
-                                    <use svg="!lucide/download.svg" size="20" />
-                                    <span>Download</span>
-                                </button>
-                                <button
-                                    id="like-mix-btn"
-                                    class="btn-secondary like-btn"
-                                    data-action="toggle-like"
-                                    data-type="mix"
-                                    title="Save to Favorites"
-                                    style="display: none"
-                                >
-                                    <use svg="!lucide/heart.svg" class="heart-icon" size="20" />
-                                    <span>Save</span>
-                                </button>
-                            </div>
-                        </div>
-                    </header>
-                    <div id="mix-detail-tracklist" class="track-list"></div>
-                </section>
-
+ 
                 <div id="page-artist" class="page">
                     <header class="detail-header">
                         <div id="artist-detail-banner-container" class="detail-header-banner"></div>
@@ -2338,44 +1978,7 @@
                     </section>
                 </div>
 
-                <div id="page-profile" class="page">
-                    <div class="profile-header-container">
-                        <div class="profile-banner" id="profile-banner"></div>
-                        <div class="profile-info-section">
-                            <img id="profile-avatar" src="/assets/appicon.png" class="profile-avatar" alt="Avatar" />
-                            <div class="profile-details">
-                                <h1 id="profile-display-name">User</h1>
-                                <div id="profile-username" class="profile-username">@username</div>
-                                <div id="profile-status" class="profile-status" style="display: none"></div>
-                                <div id="profile-about" class="profile-about"></div>
-                                <div class="profile-links">
-                                    <a
-                                        id="profile-website"
-                                        href="#"
-                                        target="_blank"
-                                        class="profile-link"
-                                        style="display: none"
-                                        >Website</a
-                                    >
-                                </div>
-                            </div>
-                            <div class="profile-actions">
-                                <button id="profile-edit-btn" class="btn-secondary" style="display: none">
-                                    Edit Profile
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="profile-content">
-                        <h2 class="section-title">Public Playlists</h2>
-                        <div class="card-grid" id="profile-playlists-container"></div>
-                        <div id="profile-favorite-albums-section" style="display: none; margin-top: 3rem">
-                            <h2 class="section-title">Favorite Albums of All Time</h2>
-                            <div id="profile-favorite-albums-container"></div>
-                        </div>
-                    </div>
-                </div>
-
+ 
                 <div id="page-settings" class="page">
                     <h2 class="section-title">Settings</h2>
                     <form
@@ -2408,9 +2011,9 @@
                         <button class="settings-tab" data-tab="interface">Interface</button>
                         <button class="settings-tab" data-tab="scrobbling">Scrobbling</button>
                         <button class="settings-tab" data-tab="audio">Audio</button>
-                        <button class="settings-tab" data-tab="nas">NAS</button>
-                        <button class="settings-tab" data-tab="downloads">Downloads</button>
+                         <button class="settings-tab" data-tab="downloads">Downloads</button>
                         <button class="settings-tab" data-tab="system">System</button>
+                        <button class="settings-tab" data-tab="gateway">Gateway</button>
                     </div>
                     <div class="settings-tab-content active" id="settings-tab-appearance">
                         <div class="settings-list">
@@ -4345,81 +3948,6 @@
                             </div>
                         </div>
                     </div>
-                    <div class="settings-tab-content" id="settings-tab-nas">
-                        <div class="settings-list">
-                            <div class="settings-group">
-                                <div class="setting-item">
-                                    <div class="info">
-                                        <span class="label">NAS Audio Source</span>
-                                        <span class="description"
-                                            >Use local NAS as primary audio source instead of streaming</span
-                                        >
-                                    </div>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="nas-enabled-toggle" />
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                                <div class="setting-item">
-                                    <div class="info">
-                                        <span class="label">NAS Base URL</span>
-                                        <span class="description"
-                                            >Address of your NAS audio server (e.g., http://192.168.1.100:8080)</span
-                                        >
-                                    </div>
-                                    <input
-                                        type="url"
-                                        id="nas-base-url-input"
-                                        placeholder="http://192.168.1.100:8080"
-                                        style="width: 100%; max-width: 400px"
-                                    />
-                                </div>
-                                <div class="setting-item">
-                                    <div class="info">
-                                        <span class="label">File Mapping Strategy</span>
-                                        <span class="description">How track files are identified on the NAS</span>
-                                    </div>
-                                    <select id="nas-mapping-strategy-select">
-                                        <option value="ISRC">ISRC (International Standard Recording Code)</option>
-                                        <option value="TIDAL_ID">TIDAL Track ID</option>
-                                        <option value="CUSTOM_API">Custom API Resolver</option>
-                                    </select>
-                                </div>
-                                <div class="setting-item" id="nas-api-url-group" style="display: none">
-                                    <div class="info">
-                                        <span class="label">Custom API URL</span>
-                                        <span class="description"
-                                            >API endpoint to resolve track paths (must return { path: '/music/...'
-                                            })</span
-                                        >
-                                    </div>
-                                    <input
-                                        type="url"
-                                        id="nas-api-url-input"
-                                        placeholder="http://192.168.1.100:9000/api"
-                                        style="width: 100%; max-width: 400px"
-                                    />
-                                </div>
-                            </div>
-                            <div class="settings-group">
-                                <div class="setting-item">
-                                    <div class="info">
-                                        <span class="label">Source Priority</span>
-                                        <span class="description"
-                                            >When NAS is enabled, it takes priority over streaming services</span
-                                        >
-                                    </div>
-                                    <span
-                                        class="description"
-                                        style="color: var(--muted-foreground); font-size: 0.85rem"
-                                    >
-                                        NAS will be checked first. If a file is not found, playback will fail rather
-                                        than fall back to streaming.
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                     <div class="settings-tab-content" id="settings-tab-downloads">
                         <div class="settings-list">
                             <div class="settings-group">
@@ -4862,6 +4390,38 @@
                             ></p>
                         </div>
                     </div>
+                    <div class="settings-tab-content" id="settings-tab-gateway">
+                        <div class="settings-list">
+                            <div class="settings-group">
+                                <div class="setting-item">
+                                    <div class="info">
+                                        <span class="label">Gateway URL</span>
+                                        <span class="description">URL of your Gateway server</span>
+                                    </div>
+                                    <input
+                                        type="url"
+                                        id="gateway-url-input"
+                                        placeholder="http://localhost:8080"
+                                        class="template-input"
+                                        style="width: 300px"
+                                    />
+                                </div>
+                                <div class="setting-item">
+                                    <div class="info">
+                                        <span class="label">API Key</span>
+                                        <span class="description">Bearer token for authentication (optional)</span>
+                                    </div>
+                                    <input
+                                        type="password"
+                                        id="gateway-api-key-input"
+                                        placeholder="Enter API key"
+                                        class="template-input"
+                                        style="width: 300px"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="page-about" class="page">
@@ -5070,7 +4630,7 @@
 
             <footer class="now-playing-bar">
                 <div class="track-info">
-                    <img src="/assets/appicon.png" alt="Current Track Cover" class="cover" fetchpriority="high" />
+                    <div class="cover" id="cover-placeholder" style="display:flex;align-items:center;justify-content:center;background:var(--secondary);color:var(--muted-foreground);width:56px;height:56px;border-radius:var(--radius-sm);flex-shrink:0;"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.7"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
                     <div class="details">
                         <div class="title">Select a song</div>
                         <span class="source-badge" id="audio-source-badge" style="display: none"></span>
@@ -5182,6 +4742,7 @@
                     <button data-action="cast"><use svg="!lucide/cast.svg" size="18" /> Cast</button>
                     <button data-action="sleep-timer"><use svg="!lucide/clock.svg" size="18" /> Sleep Timer</button>
                 </div>
+                <div id="scrub-tooltip" class="scrub-tooltip"></div>
             </footer>
         </div>
         <script type="module" src="/js/app.js"></script>

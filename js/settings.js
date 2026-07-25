@@ -39,17 +39,17 @@ import {
     fullscreenCoverTiltSpeedSettings,
     devModeSettings,
     serverDisruptionSettings,
-    nasSettings,
-} from './storage.js';
+    apiSettings,
+ } from './storage.js';
 import { audioContextManager, getPresetsForBandCount } from './audio-context.js';
 import { calculateBiquadResponse, interpolate, getNormalizationOffset, runAutoEqAlgorithm } from './autoeq-engine.js';
 import { parseRawData, TARGETS, SPEAKER_TARGETS } from './autoeq-data.js';
 import { fetchAutoEqIndex, fetchHeadphoneData, searchHeadphones, POPULAR_HEADPHONES } from './autoeq-importer.js';
 import { db } from './db.js';
-import { authManager } from './accounts/auth.js';
-import { syncManager } from './accounts/pocketbase.js';
-import { containerFormats, customFormats } from './ffmpegFormats.ts';
 import { BulkDownloadMethod, modernSettings } from './ModernSettings.js';
+
+const containerFormats = {};
+const customFormats = {};
 
 async function getButterchurnPresets(...args) {
     const butterchurnModule = await import('./visualizers/butterchurn.js');
@@ -71,9 +71,6 @@ export async function initializeSettings(scrobbler, player, api, ui) {
         settingsTab.classList.add('active');
         document.getElementById(`settings-tab-${savedTab}`)?.classList.add('active');
     }
-
-    // Initialize account system UI & Settings
-    authManager.updateUI(authManager.user);
 
     // ========================================
     // Dev Mode
@@ -120,207 +117,6 @@ export async function initializeSettings(scrobbler, player, api, ui) {
         });
     }
 
-    // Email Auth UI Logic
-    const toggleEmailBtn = document.getElementById('toggle-email-auth-btn');
-    const authModalCloseBtn = document.getElementById('email-auth-modal-close');
-    const authModal = document.getElementById('email-auth-modal');
-    const emailInput = document.getElementById('auth-email');
-    const passwordInput = document.getElementById('auth-password');
-    const usernameInput = document.getElementById('auth-username');
-    const passwordConfirmInput = document.getElementById('auth-password-confirm');
-    const submitBtn = document.getElementById('email-auth-submit-btn');
-    const resetPasswordBtn = document.getElementById('reset-password-btn');
-    const authErrorEl = document.getElementById('auth-error');
-    const authModeSigninBtn = document.getElementById('auth-mode-signin');
-    const authModeSignupBtn = document.getElementById('auth-mode-signup');
-    const authUsernameField = document.getElementById('auth-username-field');
-    const authPasswordConfirmField = document.getElementById('auth-password-confirm-field');
-    const authUsernameStatus = document.getElementById('auth-username-status');
-
-    let authMode = 'signin';
-    let usernameCheckTimeout = null;
-
-    function setAuthMode(mode) {
-        authMode = mode;
-        authManager.mode = mode;
-        if (authModeSigninBtn) authModeSigninBtn.classList.toggle('active', mode === 'signin');
-        if (authModeSignupBtn) authModeSignupBtn.classList.toggle('active', mode === 'signup');
-        if (authUsernameField) authUsernameField.style.display = mode === 'signup' ? '' : 'none';
-        if (authPasswordConfirmField) authPasswordConfirmField.style.display = mode === 'signup' ? '' : 'none';
-        if (authMode === 'signin' && resetPasswordBtn) {
-            resetPasswordBtn.style.display = '';
-        } else if (resetPasswordBtn) {
-            resetPasswordBtn.style.display = 'none';
-        }
-        hideAuthError();
-    }
-
-    function showAuthError(msg) {
-        if (!authErrorEl) return;
-        authErrorEl.textContent = msg;
-        authErrorEl.style.display = '';
-    }
-
-    function hideAuthError() {
-        if (authErrorEl) {
-            authErrorEl.textContent = '';
-            authErrorEl.style.display = 'none';
-        }
-    }
-
-    function setButtonLoading(btn, loading) {
-        if (!btn) return;
-        btn.disabled = loading;
-    }
-
-    function validateEmail(email) {
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    }
-
-    function validatePassword(password) {
-        return password.length >= 8;
-    }
-
-    function validateUsername(username) {
-        return /^[a-zA-Z0-9_]{2,20}$/.test(username);
-    }
-
-    if (authModeSigninBtn) {
-        authModeSigninBtn.addEventListener('click', () => setAuthMode('signin'));
-    }
-
-    if (authModeSignupBtn) {
-        authModeSignupBtn.addEventListener('click', () => setAuthMode('signup'));
-    }
-
-    if (toggleEmailBtn && authModal) {
-        toggleEmailBtn.addEventListener('click', () => {
-            authModal.classList.add('active');
-        });
-    }
-
-    if (authModal) {
-        const closeAuthModal = () => authModal.classList.remove('active');
-        authModalCloseBtn?.addEventListener('click', closeAuthModal);
-        authModal.querySelector('.modal-overlay')?.addEventListener('click', closeAuthModal);
-    }
-
-    if (usernameInput) {
-        usernameInput.addEventListener('input', () => {
-            const username = usernameInput.value.trim();
-            if (authMode !== 'signup' || username.length < 2) {
-                if (authUsernameStatus) authUsernameStatus.innerHTML = '';
-                return;
-            }
-            if (authUsernameStatus) authUsernameStatus.innerHTML = '<span class="auth-loading-spinner"></span>';
-            clearTimeout(usernameCheckTimeout);
-            usernameCheckTimeout = setTimeout(async () => {
-                try {
-                    const taken = await syncManager.isUsernameTaken(username);
-                    if (authUsernameStatus) {
-                        if (taken) {
-                            authUsernameStatus.innerHTML =
-                                '<span class="auth-username-status-taken">&#10007; Taken</span>';
-                        } else {
-                            authUsernameStatus.innerHTML =
-                                '<span class="auth-username-status-available">&#10003; Available</span>';
-                        }
-                    }
-                } catch {
-                    if (authUsernameStatus) authUsernameStatus.innerHTML = '';
-                }
-            }, 400);
-        });
-    }
-
-    if (submitBtn) {
-        submitBtn.addEventListener('click', async () => {
-            hideAuthError();
-            const email = emailInput.value.trim();
-            const password = passwordInput.value;
-
-            if (!email || !password) {
-                showAuthError('Please enter both email and password.');
-                return;
-            }
-            if (!validateEmail(email)) {
-                showAuthError('Please enter a valid email address.');
-                return;
-            }
-            if (!validatePassword(password)) {
-                showAuthError('Password must be at least 8 characters.');
-                return;
-            }
-
-            setButtonLoading(submitBtn, true);
-            try {
-                if (authMode === 'signin') {
-                    await authManager.signInWithEmail(email, password, showAuthError);
-                } else {
-                    const username = usernameInput ? usernameInput.value.trim() : '';
-                    const passwordConfirm = passwordConfirmInput ? passwordConfirmInput.value : '';
-
-                    if (!validateUsername(username)) {
-                        showAuthError('Username must be 2-20 characters (letters, numbers, underscore).');
-                        setButtonLoading(submitBtn, false);
-                        return;
-                    }
-
-                    if (password !== passwordConfirm) {
-                        showAuthError('Passwords do not match.');
-                        setButtonLoading(submitBtn, false);
-                        return;
-                    }
-
-                    await authManager.signUpWithEmail(email, password, username, showAuthError);
-                }
-                authModal.classList.remove('active');
-                emailInput.value = '';
-                passwordInput.value = '';
-                usernameInput && (usernameInput.value = '');
-                passwordConfirmInput && (passwordConfirmInput.value = '');
-            } catch {
-                // Error shown via callback
-            } finally {
-                setButtonLoading(submitBtn, false);
-            }
-        });
-
-        submitBtn.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') submitBtn.click();
-        });
-    }
-
-    if (resetPasswordBtn) {
-        resetPasswordBtn.addEventListener('click', async () => {
-            hideAuthError();
-            const email = emailInput.value.trim();
-            if (!email) {
-                showAuthError('Please enter your email address to reset your password.');
-                return;
-            }
-            if (!validateEmail(email)) {
-                showAuthError('Please enter a valid email address.');
-                return;
-            }
-            try {
-                await authManager.sendPasswordReset(email, showAuthError);
-            } catch {
-                // Error shown via callback
-            }
-        });
-    }
-
-    [emailInput, passwordInput, usernameInput, passwordConfirmInput].forEach((input) => {
-        if (input) {
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    submitBtn.click();
-                }
-            });
-        }
-    });
-
     // ========================================
     // Maloja Settings
     // ========================================
@@ -355,9 +151,35 @@ export async function initializeSettings(scrobbler, player, api, ui) {
         });
     }
 
-    if (malojaCustomUrlInput) {
-        malojaCustomUrlInput.addEventListener('change', (e) => {
-            malojaSettings.setCustomUrl(e.target.value.trim());
+   if (malojaCustomUrlInput) {
+            malojaCustomUrlInput.addEventListener('change', (e) => {
+                malojaSettings.setCustomUrl(e.target.value.trim());
+            });
+        }
+
+    // Gateway Settings
+    // ========================================
+    const gatewayUrlInput = document.getElementById('gateway-url-input');
+    const gatewayApiKeyInput = document.getElementById('gateway-api-key-input');
+
+    function updateGatewayUI() {
+        if (gatewayUrlInput) gatewayUrlInput.value = apiSettings.gatewayUrl;
+        if (gatewayApiKeyInput) gatewayApiKeyInput.value = apiSettings.gatewayApiKey;
+    }
+
+    updateGatewayUI();
+
+    if (gatewayUrlInput) {
+        gatewayUrlInput.addEventListener('change', (e) => {
+            apiSettings.setGatewayUrl(e.target.value.trim());
+            MusicAPI.reinitialize();
+        });
+    }
+
+    if (gatewayApiKeyInput) {
+        gatewayApiKeyInput.addEventListener('change', (e) => {
+            apiSettings.setGatewayApiKey(e.target.value.trim());
+            MusicAPI.reinitialize();
         });
     }
 
@@ -486,53 +308,6 @@ export async function initializeSettings(scrobbler, player, api, ui) {
             musicProviderSettings.setProvider(e.target.value);
             // Reload page to apply changes
             window.location.reload();
-        });
-    }
-
-    // ========================================
-    // NAS Settings
-    // ========================================
-    const nasToggle = document.getElementById('nas-enabled-toggle');
-    const nasBaseUrlInput = document.getElementById('nas-base-url-input');
-    const nasMappingStrategySelect = document.getElementById('nas-mapping-strategy-select');
-    const nasApiUrlInput = document.getElementById('nas-api-url-input');
-    const nasApiUrlGroup = document.getElementById('nas-api-url-group');
-
-    function updateNasUI() {
-        if (nasToggle) nasToggle.checked = nasSettings.isEnabled();
-        if (nasBaseUrlInput) nasBaseUrlInput.value = nasSettings.getBaseUrl();
-        if (nasMappingStrategySelect) nasMappingStrategySelect.value = nasSettings.getMappingStrategy();
-        if (nasApiUrlInput) nasApiUrlInput.value = nasSettings.getApiUrl();
-        if (nasApiUrlGroup) {
-            nasApiUrlGroup.style.display = nasSettings.getMappingStrategy() === 'CUSTOM_API' ? '' : 'none';
-        }
-    }
-
-    updateNasUI();
-
-    if (nasToggle) {
-        nasToggle.addEventListener('change', (e) => {
-            nasSettings.setEnabled(e.target.checked);
-            updateNasUI();
-        });
-    }
-
-    if (nasBaseUrlInput) {
-        nasBaseUrlInput.addEventListener('input', (e) => {
-            nasSettings.setBaseUrl(e.target.value);
-        });
-    }
-
-    if (nasMappingStrategySelect) {
-        nasMappingStrategySelect.addEventListener('change', (e) => {
-            nasSettings.setMappingStrategy(e.target.value);
-            updateNasUI();
-        });
-    }
-
-    if (nasApiUrlInput) {
-        nasApiUrlInput.addEventListener('input', (e) => {
-            nasSettings.setApiUrl(e.target.value);
         });
     }
 

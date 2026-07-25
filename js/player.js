@@ -21,8 +21,6 @@ import {
 import { audioContextManager } from './audio-context.js';
 import { isIos, isSafari } from './platform-detection.js';
 import { db } from './db.js';
-import { getProxyUrl } from './proxy-utils.js';
-
 import { SVG_CLOCK, SVG_ATMOS } from './icons.js';
 import { UIRenderer } from './ui.js';
 import { MediaSession } from '@capgo/capacitor-media-session';
@@ -149,7 +147,7 @@ export class Player {
                     const uris = request.uris;
                     for (let i = 0; i < uris.length; i++) {
                         if (uris[i].includes('tidal.com')) {
-                            uris[i] = getProxyUrl(uris[i]);
+                            uris[i] = uris[i];
                         }
                     }
                 }
@@ -369,7 +367,7 @@ export class Player {
                         } else if (coverEl.tagName === 'VIDEO' && coverEl.src !== videoCoverUrl) {
                             coverEl.src = videoCoverUrl;
                         }
-                    } else {
+                      } else if (coverId) {
                         const setImgSrcset = (img) => {
                             if (img.getAttribute('src') !== coverUrl) img.src = coverUrl;
                             if (coverSrcset) {
@@ -380,15 +378,49 @@ export class Player {
                                 img.removeAttribute('sizes');
                             }
                         };
+                        const createPlaceholder = () => {
+                            return `<div class="cover" id="cover-placeholder" style="display:flex;align-items:center;justify-content:center;background:var(--secondary);color:var(--muted-foreground);width:56px;height:56px;border-radius:var(--radius-sm);flex-shrink:0;"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.7"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>`;
+                        };
                         if (coverEl.tagName === 'VIDEO') {
                             const img = document.createElement('img');
                             img.className = coverEl.className;
                             img.id = coverEl.id;
+                            img.onerror = () => { const el = document.getElementById(img.id); if (el) el.outerHTML = createPlaceholder(); };
+                            setImgSrcset(img);
+                            coverEl.replaceWith(img);
+                        } else if (coverEl.tagName === 'DIV') {
+                            const img = document.createElement('img');
+                            img.className = coverEl.className;
+                            img.id = coverEl.id;
+                            img.alt = coverEl.alt || 'Cover';
+                            img.fetchpriority = coverEl.getAttribute('fetchpriority') || 'high';
+                            img.onerror = () => { const el = document.getElementById(img.id); if (el) el.outerHTML = createPlaceholder(); };
                             setImgSrcset(img);
                             coverEl.replaceWith(img);
                         } else {
+                            coverEl.onerror = () => { const el = document.getElementById(coverEl.id); if (el) el.outerHTML = createPlaceholder(); };
                             setImgSrcset(coverEl);
                         }
+                    }
+
+                    // Background cover art resolution via gateway
+                    if (track.type !== 'video') {
+                        this.api.getCoverArtUrl(track.title).then((coverArt) => {
+                            const el = document.querySelector('.now-playing-bar .cover:not(#audio-player):not(#video-player)');
+                            if (!el) return;
+                            if (el.tagName === 'DIV' && coverArt?.url) {
+                                const img = document.createElement('img');
+                                img.className = el.className;
+                                img.id = el.id;
+                                img.alt = 'Cover';
+                                img.src = coverArt.url;
+                                el.replaceWith(img);
+                            } else if (el.tagName === 'IMG' && el.src && !el.src.includes('appicon.png') && coverId) {
+                                return;
+                            } else if (el.tagName === 'IMG' && coverArt?.url) {
+                                el.src = coverArt.url;
+                            }
+                        }).catch(() => {});
                     }
                 }
                 if (titleEl) {
@@ -640,7 +672,7 @@ export class Player {
                         const preloader = new Audio();
                         preloader.preload = 'auto';
                         preloader.muted = true;
-                        preloader.src = getProxyUrl(streamUrl);
+                        preloader.src = streamUrl;
                         streamInfo.preloader = preloader; // Hold reference
                     }
                 }
@@ -1089,12 +1121,24 @@ export class Player {
 
                 if (videoCoverUrl) {
                     void this.updateVideoCovers(videoCoverUrl);
-                } else {
+                } else if (coverId) {
                     let imgEl = coverEl;
+                    const createPlaceholder = () => {
+                        return `<div class="cover" id="cover-placeholder" style="display:flex;align-items:center;justify-content:center;background:var(--secondary);color:var(--muted-foreground);width:56px;height:56px;border-radius:var(--radius-sm);flex-shrink:0;"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.7"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>`;
+                    };
                     if (coverEl.tagName === 'VIDEO') {
                         imgEl = document.createElement('img');
                         imgEl.className = coverEl.className;
                         imgEl.id = coverEl.id;
+                        imgEl.onerror = () => { const el = document.getElementById(imgEl.id); if (el) el.outerHTML = createPlaceholder(); };
+                        coverEl.replaceWith(imgEl);
+                    } else if (coverEl.tagName === 'DIV') {
+                        imgEl = document.createElement('img');
+                        imgEl.className = coverEl.className;
+                        imgEl.id = coverEl.id;
+                        imgEl.alt = coverEl.alt || 'Cover';
+                        imgEl.fetchpriority = coverEl.getAttribute('fetchpriority') || 'high';
+                        imgEl.onerror = () => { const el = document.getElementById(imgEl.id); if (el) el.outerHTML = createPlaceholder(); };
                         coverEl.replaceWith(imgEl);
                     }
 
@@ -1109,6 +1153,26 @@ export class Player {
                         }
                     }
                 }
+
+                // Background cover art resolution via gateway
+                if (track.type !== 'video') {
+                    this.api.getCoverArtUrl(track.title).then((coverArt) => {
+                        const el = document.querySelector('.now-playing-bar .cover:not(#audio-player):not(#video-player)');
+                        if (!el) return;
+                        if (el.tagName === 'DIV' && coverArt?.url) {
+                            const img = document.createElement('img');
+                            img.className = el.className;
+                            img.id = el.id;
+                            img.alt = 'Cover';
+                            img.src = coverArt.url;
+                            el.replaceWith(img);
+                        } else if (el.tagName === 'IMG' && el.src && !el.src.includes('appicon.png') && coverId) {
+                            return;
+                        } else if (el.tagName === 'IMG' && coverArt?.url) {
+                            el.src = coverArt.url;
+                        }
+                    }).catch(() => {});
+                }
             }
             if (this.audio) {
                 const isInFullscreen = document.getElementById('fullscreen-cover-overlay')?.style.display === 'flex';
@@ -1122,11 +1186,7 @@ export class Player {
         const sourceBadge = document.getElementById('audio-source-badge');
         if (sourceBadge) {
             const streamSource = track.streamSource || track._streamSource || null;
-            if (streamSource === 'nas') {
-                sourceBadge.style.display = 'inline-flex';
-                sourceBadge.textContent = 'NAS';
-                sourceBadge.title = 'Playing from NAS';
-            } else if (streamSource === 'dev') {
+            if (streamSource === 'dev') {
                 sourceBadge.style.display = 'inline-flex';
                 sourceBadge.textContent = 'DEV';
                 sourceBadge.title = 'Playing from Dev Mode';
@@ -1291,10 +1351,10 @@ export class Player {
                             : streamUrl;
 
                     try {
-                        await this.shakaPlayer.load(getProxyUrl(loadTarget));
+                        await this.shakaPlayer.load(loadTarget);
                     } catch (e) {
                         console.error('PreloadManager load Error:', e);
-                        if (loadTarget !== streamUrl) await this.shakaPlayer.load(getProxyUrl(streamUrl));
+                        if (loadTarget !== streamUrl) await this.shakaPlayer.load(streamUrl);
                         else throw e;
                     }
 
@@ -1367,13 +1427,13 @@ export class Player {
 
                     try {
                         if (startTime > 0) {
-                            await this.shakaPlayer.load(getProxyUrl(loadTarget), startTime);
+                            await this.shakaPlayer.load(loadTarget, startTime);
                         } else {
-                            await this.shakaPlayer.load(getProxyUrl(loadTarget));
+                            await this.shakaPlayer.load(loadTarget);
                         }
                     } catch (e) {
                         console.error('PreloadManager load Error:', e);
-                        if (loadTarget !== streamUrl) await this.shakaPlayer.load(getProxyUrl(streamUrl));
+                        if (loadTarget !== streamUrl) await this.shakaPlayer.load(streamUrl);
                         else throw e;
                     }
 
@@ -1396,7 +1456,7 @@ export class Player {
                         } catch {}
                         this.shakaInitialized = false;
                     }
-                    activeElement.src = getProxyUrl(streamUrl);
+                    activeElement.src = streamUrl;
                     this.applyAudioEffects();
                     this.updateAdaptiveQualityBadge();
 

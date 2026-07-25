@@ -1,6 +1,5 @@
 //router.js
 import { getTrackArtists } from './utils.js';
-import { loadProfile } from './profile.js';
 
 export function navigate(path) {
     if (path === window.location.pathname) {
@@ -30,79 +29,27 @@ export function createRouter(ui) {
         const page = parts[0];
         const param = parts.slice(1).join('/');
 
-        // Helper to extract provider prefix and ID from params
-        // Supports formats like: /track/t/123 (Tidal), /track/123 (default)
-        const extractProviderAndId = (p) => {
-            if (p.startsWith('t/')) {
-                return { provider: 'tidal', id: p.slice(2) };
-            }
-            return { provider: null, id: p };
-        };
-
         switch (page) {
             case 'search':
                 await ui.renderSearchPage(decodeURIComponent(param));
                 break;
-            case 'album': {
-                const { provider, id } = extractProviderAndId(param);
-                await ui.renderAlbumPage(id, provider);
+            case 'album':
+                await ui.renderAlbumPage(param);
                 break;
-            }
-            case 'artist': {
-                const { provider, id } = extractProviderAndId(param);
-                await ui.renderArtistPage(id, provider);
+            case 'artist':
+                await ui.renderArtistPage(param);
                 break;
-            }
-            case 'playlist': {
-                const { provider, id } = extractProviderAndId(param);
-                await ui.renderPlaylistPage(id, 'api', provider);
+            case 'track':
+                await ui.renderTrackPage(param);
                 break;
-            }
-            case 'userplaylist':
-                await ui.renderPlaylistPage(param, 'user');
-                break;
-            case 'folder':
-                await ui.renderFolderPage(param);
-                break;
-            case 'mix': {
-                const { provider, id } = extractProviderAndId(param);
-                await ui.renderMixPage(id, provider);
-                break;
-            }
-            case 'track': {
-                const { provider, id } = extractProviderAndId(param);
-                if (id.startsWith('tracker-')) {
-                    await ui.renderTrackerTrackPage(id);
-                } else {
-                    await ui.renderTrackPage(id, provider);
-                }
-                break;
-            }
             case 'library':
                 await ui.renderLibraryPage();
                 break;
             case 'recent':
                 await ui.renderRecentPage();
                 break;
-
-            case 'podcasts':
-                if (param) {
-                    await ui.renderPodcastPage(param);
-                } else {
-                    await ui.renderPodcastsBrowsePage();
-                }
-                break;
             case 'home':
                 await ui.renderHomePage();
-                break;
-            case 'reset-password':
-                await ui.renderResetPasswordPage();
-                break;
-
-            case 'user':
-                if (param && param.startsWith('@') && !param.includes('/')) {
-                    await loadProfile(decodeURIComponent(param.slice(1)));
-                }
                 break;
             default:
                 ui.showPage(page);
@@ -119,7 +66,7 @@ export function updateTabTitle(player) {
         document.title = `${track.title} • ${getTrackArtists(track)}`;
     } else {
         const path = window.location.pathname;
-        if (path.startsWith('/album/') || path.startsWith('/playlist/') || path.startsWith('/track/')) {
+        if (path.startsWith('/album/') || path.startsWith('/track/')) {
             return;
         }
         document.title = 'Monochrome Music';

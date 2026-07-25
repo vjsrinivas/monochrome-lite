@@ -13,14 +13,18 @@ import {
 } from './utils.js';
 import { lyricsSettings, playlistSettings } from './storage.js';
 import { generateM3U, generateM3U8, generateCUE, generateNFO, generateJSON } from './playlist-generator.js';
-import { ZipStreamWriter, ZipBlobWriter, FolderPickerWriter, SequentialFileWriter } from './bulk-download-writer.ts';
-import { FfmpegProgress } from './ffmpeg.types.js';
 import { DownloadProgress, ProgressMessage, SegmentedDownloadProgress } from './progressEvents.js';
 import { db } from './db.js';
 import { BulkDownloadMethod, modernSettings } from './ModernSettings.js';
 import { SVG_CLOSE } from './icons.ts';
 import { MusicAPI } from './music-api.js';
-import { LyricsManager } from './lyrics.js';
+
+const ZipStreamWriter = { write: async () => {} };
+const ZipBlobWriter = class { constructor() {} write = async () => {}; getDirHandle = () => null; static create = async () => null; static fromHandle = () => null };
+const FolderPickerWriter = { write: async () => {}, create: async () => null, fromHandle: () => null };
+const SequentialFileWriter = { write: async () => {} };
+const FfmpegProgress = class {};
+const LyricsManager = { instance: null };
 
 const downloadTasks = new Map();
 const bulkDownloadTasks = new Map();

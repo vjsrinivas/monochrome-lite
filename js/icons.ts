@@ -43,6 +43,7 @@ export { default as SVG_MOVE_UP } from '!lucide/move-up.svg?svg&icon';
 export { default as SVG_MUSIC } from '!lucide/music.svg?svg&icon';
 export { default as SVG_MUTE } from '!lucide/volume-x.svg?svg&icon';
 export { default as SVG_OFFLINE } from '!lucide/triangle-alert.svg?svg&icon';
+export { default as SVG_GATEWAY_OK } from '!lucide/check-circle-2.svg?svg&icon';
 export { default as SVG_PALETTE } from '!lucide/palette.svg?svg&icon';
 export { default as SVG_PAUSE } from '../images/pause.svg?svg&icon';
 export { default as SVG_PAUSE_LARGE } from '../images/pause-large.svg?svg&icon';

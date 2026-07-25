@@ -1,5 +1,3 @@
-import { syncManager } from './accounts/pocketbase.js';
-import { authManager } from './accounts/auth.js';
 import { navigate } from './router.js';
 import { SVG_BIN, SVG_SQUARE_PEN } from './icons.js';
 
@@ -35,7 +33,7 @@ const GENERIC_FONT_FAMILIES = [
 export class ThemeStore {
     static EXPECTED_USER_ID_LENGTH = 15;
     constructor() {
-        this.pb = syncManager.pb;
+        this.pb = null;
         this.modal = document.getElementById('theme-store-modal');
         this.grid = document.getElementById('community-themes-grid');
         this.uploadForm = document.getElementById('theme-upload-form');
@@ -81,13 +79,7 @@ export class ThemeStore {
 
         this.uploadForm?.addEventListener('submit', (e) => this.handleUpload(e));
 
-        if (authManager) {
-            authManager.onAuthStateChanged(async () => {
-                if (this.modal.classList.contains('active')) {
-                    await this.checkAuth();
-                }
-            });
-        }
+        // PocketBase removed - auth state changes no longer apply
 
         document.getElementById('theme-store-login-btn')?.addEventListener('click', () => {
             this.modal.classList.remove('active');
@@ -139,35 +131,16 @@ export class ThemeStore {
         this.grid.innerHTML = '';
         this.loadingIndicator.style.display = 'block';
 
-        let currentUserId = null;
-        if (authManager.user) {
-            try {
-                const record = await syncManager._getUserRecord(authManager.user.$id);
-                currentUserId = record?.id;
-            } catch (e) {
-                console.warn('Failed to resolve user ID for theme ownership check', e);
-            }
+        // PocketBase removed - load local themes only
+        const localThemes = JSON.parse(localStorage.getItem('local_themes') || '[]');
+        this.loadingIndicator.style.display = 'none';
+        if (localThemes.length === 0) {
+            this.grid.innerHTML = '<div class="empty-state">No local themes found.</div>';
+            return;
         }
-
-        try {
-            const result = await this.pb.collection('themes').getList(1, THEMES_PER_PAGE, {
-                sort: '-created',
-                filter: query ? `name ~ "${query}" || description ~ "${query}"` : '',
-                expand: 'author',
-            });
-            this.loadingIndicator.style.display = 'none';
-            if (result.items.length === 0) {
-                this.grid.innerHTML = '<div class="empty-state">No themes found.</div>';
-                return;
-            }
-            result.items.forEach((theme) => {
-                this.grid.appendChild(this.createThemeCard(theme, currentUserId));
-            });
-        } catch (err) {
-            console.error('Failed to load themes:', err);
-            this.loadingIndicator.style.display = 'none';
-            this.grid.innerHTML = '<div class="empty-state">Failed to load themes.</div>';
-        }
+        localThemes.forEach((theme) => {
+            this.grid.appendChild(this.createThemeCard(theme, null));
+        });
     }
 
     createThemeCard(theme, currentUserId) {
@@ -257,20 +230,8 @@ export class ThemeStore {
         return div;
     }
 
-    async deleteTheme(themeId) {
-        if (!confirm('Are you sure you want to delete this theme?')) return;
-
-        try {
-            const fbUser = authManager.user;
-            if (!fbUser) throw new Error('Not authenticated');
-
-            await this.pb.collection('themes').delete(themeId, { f_id: fbUser.$id });
-            alert('Theme deleted successfully.');
-            await this.loadThemes();
-        } catch (err) {
-            console.error('Failed to delete theme:', err);
-            alert('Failed to delete theme. You might not have permission.');
-        }
+    async deleteTheme(_themeId) {
+        alert('Theme uploads require a PocketBase server. Configure one in Settings > System.');
     }
 
     openThemeDetails(theme) {
@@ -496,17 +457,7 @@ export class ThemeStore {
         if (isLoggedIn) {
             authMessage.style.display = 'none';
             form.style.display = 'block';
-
-            try {
-                const userData = await syncManager.getUserData();
-                if (userData?.profile?.username && websiteContainer) {
-                    websiteContainer.style.display = 'none';
-                } else if (websiteContainer) {
-                    websiteContainer.style.display = 'block';
-                }
-            } catch (e) {
-                console.warn('Failed to check profile for website input visibility', e);
-            }
+            if (websiteContainer) websiteContainer.style.display = 'block';
         } else {
             authMessage.style.display = 'flex';
             form.style.display = 'none';
@@ -517,90 +468,7 @@ export class ThemeStore {
 
     async handleUpload(e) {
         e.preventDefault();
-
-        const name = document.getElementById('theme-upload-name').value;
-        const desc = document.getElementById('theme-upload-desc').value;
-        const css = document.getElementById('theme-upload-css').value;
-        const website = document.getElementById('theme-upload-website').value;
-
-        const fbUser = authManager?.user;
-        if (!fbUser) {
-            alert('You must be logged in to upload themes.');
-            return;
-        }
-
-        let userId = null;
-        let userName = null;
-
-        try {
-            const dbUser = await syncManager._getUserRecord(fbUser.$id);
-            if (!dbUser) {
-                throw new Error('Could not find or create your user record. Please try again.');
-            }
-
-            userId = dbUser.id;
-            userName = dbUser.username || dbUser.display_name || fbUser.email;
-
-            if (userId.length !== ThemeStore.EXPECTED_USER_ID_LENGTH) {
-                throw new Error(
-                    `Your user ID is corrupted (${userId.length} chars, expected ${ThemeStore.EXPECTED_USER_ID_LENGTH}). ` +
-                        `Please go to Settings > System > Reset Local Data, then log out and back in.`
-                );
-            }
-
-            console.log(this.editingThemeId ? 'Updating theme:' : 'Uploading theme:', {
-                name,
-                author: userId,
-                authorName: userName,
-            });
-
-            const formData = new FormData();
-            formData.append('name', name);
-            formData.append('description', desc);
-            formData.append('css', css);
-            formData.append('authorName', userName);
-            formData.append('authorUrl', website || '');
-
-            if (this.editingThemeId) {
-                await this.pb.collection('themes').update(this.editingThemeId, formData, { f_id: fbUser.$id });
-                alert('Theme updated successfully!');
-            } else {
-                formData.append('author', userId);
-                await this.pb.collection('themes').create(formData, { f_id: fbUser.$id });
-                alert('Theme uploaded successfully!');
-            }
-
-            this.resetEditState();
-
-            const previewWindow = document.getElementById('theme-preview-window');
-            const togglePreviewBtn = document.getElementById('te-toggle-preview');
-            if (previewWindow) previewWindow.style.display = 'none';
-            if (togglePreviewBtn) {
-                togglePreviewBtn.textContent = 'Preview';
-                togglePreviewBtn.classList.remove('active');
-            }
-
-            this.modal.querySelector('[data-tab="browse"]').click();
-            await this.loadThemes();
-        } catch (err) {
-            console.error('Upload failed:', err);
-            console.error('Response data:', err.data);
-
-            const responseData = err.data?.data || {};
-
-            if (Object.keys(responseData).length > 0) {
-                let msg = 'Failed to upload theme:\n';
-                for (const [key, value] of Object.entries(responseData)) {
-                    msg += `• ${key}: ${value.message}\n`;
-                }
-                alert(msg);
-            } else {
-                const message = err.message || err.data?.message || 'Unknown error';
-                const debugInfo = `User ID: ${userId} (${userId?.length} chars) | Status: ${err.status}`;
-                console.error('Upload failed (debug info):', debugInfo);
-                alert(`Failed to upload theme: ${message}`);
-            }
-        }
+        alert('Theme uploads require a PocketBase server. Configure one in Settings > System.');
     }
 
     startEditTheme(theme) {

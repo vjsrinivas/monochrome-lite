@@ -1,12 +1,11 @@
 // js/music-api.js
 
-import { LosslessAPI } from './api.js';
-import { PodcastsAPI } from './podcasts-api.js';
+import { GatewayAPI } from './gateway-api.js';
 
 /**
  * MusicAPI - Singleton class that provides a unified interface for accessing music audio sources.
  *
- * Primarily uses local NAS audio source.
+ * Primarily uses local Gateway streaming audio source.
  * Includes functionality for searching, retrieving metadata, streaming, and managing
  * playlists, artists, albums, tracks, and podcasts.
  *
@@ -28,10 +27,10 @@ import { PodcastsAPI } from './podcasts-api.js';
  * const track = await api.getTrack('track-id');
  *
  * // Get stream URL
- * const streamUrl = await api.getStreamUrl('track-id', 'HIGH');
+ * const streamUrl = await api.getStreamUrl('track-id');
  *
- * @property {LosslessAPI} audioAPI - The audio source API instance (NAS/streaming)
- * @property {PodcastsAPI} podcastsAPI - The Podcasts API instance
+ * @property {GatewayAPI} audioAPI - The audio source API instance (streaming)
+ 
  * @property {Object} _settings - Configuration settings
  * @property {Map} videoArtworkCache - Cache for video artwork data
  *
@@ -51,9 +50,11 @@ export class MusicAPI {
     }
 
     /** @private */
-    constructor(settings) {
-        this.audioAPI = new LosslessAPI(settings);
-        this.podcastsAPI = new PodcastsAPI();
+    constructor(settings = null) {
+        // Use GatewayAPI as the primary (and only) API
+        const gatewayUrl = (settings?.gatewayUrl || localStorage.getItem('gateway-url') || 'http://localhost:8080');
+        const gatewayApiKey = settings?.gatewayApiKey || localStorage.getItem('gateway-api-key') || '';
+        this.audioAPI = new GatewayAPI(gatewayUrl, gatewayApiKey);
         this._settings = settings;
         this.videoArtworkCache = new Map();
     }
@@ -67,11 +68,17 @@ export class MusicAPI {
         return (MusicAPI.#instance = api);
     }
 
-    getCurrentProvider() {
-        return 'nas';
+    static reinitialize(settings) {
+        if (!MusicAPI.#instance) return;
+        const gatewayUrl = (settings?.gatewayUrl || localStorage.getItem('gateway-url') || 'http://localhost:8080');
+        const gatewayApiKey = settings?.gatewayApiKey || localStorage.getItem('gateway-api-key') || '';
+        MusicAPI.#instance.audioAPI = new GatewayAPI(gatewayUrl, gatewayApiKey);
     }
 
-    // Get the appropriate API based on provider
+    getCurrentProvider() {
+        return this.audioAPI.getProvider();
+    }
+
     getAPI() {
         return this.audioAPI;
     }
@@ -135,49 +142,45 @@ export class MusicAPI {
 
     // Get methods
     async getTrack(id, quality) {
-        const api = this.getAPI();
-        const cleanId = this.stripProviderPrefix(id);
-        return api.getTrack(cleanId, quality);
+        return this.getAPI().getTrack(id, quality);
     }
 
     async getTrackMetadata(id) {
         const api = this.getAPI();
-        const cleanId = this.stripProviderPrefix(id);
-        return api.getTrackMetadata(cleanId);
+        if (typeof api.getTrackMetadata === 'function') {
+            return api.getTrackMetadata(id);
+        }
+        return api.getTrack(id);
     }
 
     async getAlbum(id) {
-        const api = this.getAPI();
-        const cleanId = this.stripProviderPrefix(id);
-        return api.getAlbum(cleanId);
+        return this.getAPI().getAlbum(id);
     }
 
     async getArtist(id) {
-        const api = this.getAPI();
-        const cleanId = this.stripProviderPrefix(id);
-        return api.getArtist(cleanId);
+        return this.getAPI().getArtist(id);
     }
 
     async getArtistBiography(id) {
         const api = this.getAPI();
-        const cleanId = this.stripProviderPrefix(id);
         if (typeof api.getArtistBiography === 'function') {
-            return api.getArtistBiography(cleanId);
+            return api.getArtistBiography(id);
         }
         return null;
     }
 
     async getVideo(id) {
         const api = this.getAPI();
-        const cleanId = this.stripProviderPrefix(id);
-        return api.getVideo(cleanId);
+        if (typeof api.getVideo === 'function') {
+            return api.getVideo(id);
+        }
+        return {};
     }
 
     async getVideoStreamUrl(id) {
         const api = this.getAPI();
-        const cleanId = this.stripProviderPrefix(id);
         if (typeof api.getVideoStreamUrl === 'function') {
-            return api.getVideoStreamUrl(cleanId);
+            return api.getVideoStreamUrl(id);
         }
     }
 
@@ -195,18 +198,15 @@ export class MusicAPI {
 
     async getTrackRecommendations(id) {
         const api = this.getAPI();
-        const cleanId = this.stripProviderPrefix(id);
         if (typeof api.getTrackRecommendations === 'function') {
-            return api.getTrackRecommendations(cleanId);
+            return api.getTrackRecommendations(id);
         }
         return [];
     }
 
     // Stream methods
     async getStreamUrl(id, quality) {
-        const api = this.getAPI();
-        const cleanId = this.stripProviderPrefix(id);
-        return api.getStreamUrl(cleanId, quality);
+        return this.getAPI().getStreamUrl(id, quality);
     }
 
     // Cover/artwork methods
@@ -214,14 +214,14 @@ export class MusicAPI {
         if (typeof id === 'string' && id.startsWith('blob:')) {
             return id;
         }
-        return this.audioAPI.getCoverUrl(this.stripProviderPrefix(id), size);
+        return this.audioAPI.getCoverUrl(id, size);
     }
 
     getCoverSrcset(id) {
         if (typeof id === 'string' && id.startsWith('blob:')) {
             return '';
         }
-        return this.audioAPI.getCoverSrcset(this.stripProviderPrefix(id));
+        return this.audioAPI.getCoverSrcset(id);
     }
 
     getVideoCoverUrl(imageId, size = '1280') {
@@ -231,7 +231,7 @@ export class MusicAPI {
         if (typeof imageId === 'string' && imageId.startsWith('blob:')) {
             return imageId;
         }
-        return this.audioAPI.getVideoCoverUrl(this.stripProviderPrefix(imageId), size);
+        return this.audioAPI.getVideoCoverUrl(imageId, size);
     }
 
     async getVideoArtwork(title, artist) {
@@ -260,12 +260,16 @@ export class MusicAPI {
         */
     }
 
+    async getCoverArtUrl(songName) {
+        return this.audioAPI.getCoverArtUrl(songName);
+    }
+
     getArtistPictureUrl(id, size = '320') {
-        return this.audioAPI.getArtistPictureUrl(this.stripProviderPrefix(id), size);
+        return this.audioAPI.getArtistPictureUrl(id, size);
     }
 
     getArtistPictureSrcset(id) {
-        return this.audioAPI.getArtistPictureSrcset(this.stripProviderPrefix(id));
+        return this.audioAPI.getArtistPictureSrcset(id);
     }
 
     async getArtistBanner(artistName) {
@@ -292,7 +296,8 @@ export class MusicAPI {
                             if (typeof data.animated[key] === 'string' && data.animated[key].includes('.m3u8')) {
                                 hlsUrl = data.animated[key];
                                 break;
-                            }
+}
+
                         }
                     }
                 }
@@ -313,35 +318,14 @@ export class MusicAPI {
         return this.audioAPI.extractStreamUrlFromManifest(manifest);
     }
 
-    // Helper methods
-    getProviderFromId(id) {
-        if (typeof id === 'string') {
-            if (id.startsWith('t:')) return 'tidal';
-        }
-        return null;
-    }
-
-    stripProviderPrefix(id) {
-        if (typeof id === 'string') {
-            if (id.startsWith('q:') || id.startsWith('t:')) {
-                return id.slice(2);
-            }
-        }
-        return id;
-    }
-
     // Download methods
     async downloadTrack(id, quality, filename, options = {}) {
-        const api = this.getAPI();
-        const cleanId = this.stripProviderPrefix(id);
-        return api.downloadTrack(cleanId, quality, filename, options);
+        return this.getAPI().downloadTrack(id, quality, filename, options);
     }
 
     // Similar/recommendation methods
     async getSimilarArtists(artistId) {
-        const api = this.getAPI();
-        const cleanId = this.stripProviderPrefix(artistId);
-        return api.getSimilarArtists(cleanId);
+        return this.getAPI().getSimilarArtists(artistId);
     }
 
     async getArtistTopTracks(artistId, options = {}) {
@@ -349,13 +333,24 @@ export class MusicAPI {
     }
 
     async getSimilarAlbums(albumId) {
-        const api = this.getAPI();
-        const cleanId = this.stripProviderPrefix(albumId);
-        return api.getSimilarAlbums(cleanId);
+        return this.getAPI().getSimilarAlbums(albumId);
     }
 
     async getRecommendedTracksForPlaylist(tracks, limit = 20, options = {}) {
         return this.audioAPI.getRecommendedTracksForPlaylist(tracks, limit, options);
+    }
+
+   // Catalog methods
+    async getCatalogTracks({ limit = 500, offset = 0 } = {}) {
+        return this.audioAPI.getCatalogTracks({ limit, offset });
+    }
+
+    async getCatalogAlbums({ limit = 500, offset = 0 } = {}) {
+        return this.audioAPI.getCatalogAlbums({ limit, offset });
+    }
+
+    async getCatalogArtists({ limit = 500, offset = 0 } = {}) {
+        return this.audioAPI.getCatalogArtists({ limit, offset });
     }
 
     // Cache methods
@@ -373,4 +368,4 @@ export class MusicAPI {
     }
 }
 
-export const musicAPI = new MusicAPI();
+

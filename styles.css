@@ -65,7 +65,7 @@
     --radius-full: 9999px;
     --radius: var(--radius-md);
     --player-bar-height-desktop: 90px;
-    --player-bar-height-mobile: 130px;
+    --player-bar-height-mobile: 105px;
     --sidebar-width: 240px;
     --sidebar-collapsed-width: 70px;
     --duration-instant: 0ms;
@@ -1157,6 +1157,31 @@ ul {
     border-color: rgb(0, 0, 0, 0.1);
 }
 
+.scrub-tooltip {
+    display: none;
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--player-bar-height-mobile) + max(15px, env(safe-area-inset-bottom)) + 10px);
+    transform: translateX(-50%);
+    background: var(--card);
+    color: var(--foreground);
+    padding: 4px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    z-index: 2200;
+    pointer-events: none;
+    white-space: nowrap;
+    backdrop-filter: blur(12px);
+}
+
+.scrub-tooltip.active {
+    display: block;
+}
+
 .sidebar-logo {
     display: flex;
     align-items: center;
@@ -1735,6 +1760,7 @@ input[type='search']::-webkit-search-cancel-button {
 }
 
 @keyframes pulse {
+
     0%,
     100% {
         opacity: 1;
@@ -1968,6 +1994,17 @@ input[type='search']::-webkit-search-cancel-button {
     transition: transform var(--transition-slow);
 }
 
+.cover-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--secondary);
+    color: var(--muted-foreground);
+    border-radius: var(--radius);
+}
+
 .card:hover .card-image {
     transform: scale(1.05);
 
@@ -2191,12 +2228,6 @@ input[type='search']::-webkit-search-cancel-button {
     background: var(--secondary);
 }
 
-.source-badge[title='Playing from NAS'] {
-    border-color: var(--accent);
-    color: var(--accent-foreground);
-    background: color-mix(in srgb, var(--accent) 15%, transparent);
-}
-
 .track-list {
     display: flex;
     flex-direction: column;
@@ -2268,6 +2299,7 @@ input[type='search']::-webkit-search-cancel-button {
 }
 
 @media (max-width: 1100px) {
+
     #home-recommended-songs,
     #artist-detail-tracks,
     #artist-detail-in-library,
@@ -2814,13 +2846,11 @@ body.multi-select-mode .track-item:hover {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-        to bottom,
-        rgb(0, 0, 0, 0.4) 0%,
-        rgb(0, 0, 0, 0) 40%,
-        rgb(0, 0, 0, 0.2) 70%,
-        var(--background) 100%
-    );
+    background: linear-gradient(to bottom,
+            rgb(0, 0, 0, 0.4) 0%,
+            rgb(0, 0, 0, 0) 40%,
+            rgb(0, 0, 0, 0.2) 70%,
+            var(--background) 100%);
     z-index: 1;
 }
 
@@ -3144,11 +3174,11 @@ body.multi-select-mode .track-item:hover {
     margin-bottom: 0;
 }
 
-.sidebar-settings-section .sidebar-settings-section-label + .setting-item {
+.sidebar-settings-section .sidebar-settings-section-label+.setting-item {
     margin-top: var(--spacing-sm);
 }
 
-.sidebar-settings-section .setting-item + .setting-item {
+.sidebar-settings-section .setting-item+.setting-item {
     margin-top: var(--spacing-md);
 }
 
@@ -3226,7 +3256,8 @@ body.multi-select-mode .track-item:hover {
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 0.5rem;
-    appearance: auto; /* Force native dropdown for Tesla/Mobile */
+    appearance: auto;
+    /* Force native dropdown for Tesla/Mobile */
 }
 
 .setting-item input[type='number'] {
@@ -3596,11 +3627,11 @@ body.multi-select-mode .track-item:hover {
     box-shadow: 0 2px 4px rgb(0, 0, 0, 0.2);
 }
 
-input:checked + .slider {
+input:checked+.slider {
     background-color: var(--primary);
 }
 
-input:checked + .slider::before {
+input:checked+.slider::before {
     transform: translateX(16px);
     background-color: var(--primary-foreground);
     box-shadow: -2px 2px 4px rgb(0, 0, 0, 0.1);
@@ -3612,29 +3643,29 @@ input:checked + .slider::before {
     /* Hover scale effect */
 }
 
-.toggle-switch:hover input:checked + .slider::before {
+.toggle-switch:hover input:checked+.slider::before {
     transform: translateX(16px) scale(1.1);
 }
 
-.toggle-switch input:disabled + .slider {
+.toggle-switch input:disabled+.slider {
     opacity: 0.5;
     cursor: not-allowed;
 }
 
-.toggle-switch input:disabled + .slider::before {
+.toggle-switch input:disabled+.slider::before {
     box-shadow: none;
     transform: translateX(0);
 }
 
-.toggle-switch input:disabled:checked + .slider::before {
+.toggle-switch input:disabled:checked+.slider::before {
     transform: translateX(16px);
 }
 
-.toggle-switch:hover input:disabled + .slider::before {
+.toggle-switch:hover input:disabled+.slider::before {
     transform: translateX(0);
 }
 
-.toggle-switch:hover input:disabled:checked + .slider::before {
+.toggle-switch:hover input:disabled:checked+.slider::before {
     transform: translateX(16px);
 }
 
@@ -3853,7 +3884,12 @@ input:checked + .slider::before {
     gap: 0.75rem;
     font-size: 0.8rem;
     color: var(--muted-foreground);
-    order: -1;
+}
+
+@media (min-width: 769px) {
+    .player-controls .progress-container {
+        order: -1;
+    }
 }
 
 .player-controls .progress-container span {
@@ -3903,11 +3939,11 @@ input:checked + .slider::before {
 .progress-bar:active .progress-fill::after {
     content: '';
     position: absolute;
-    right: -6px;
+    right: -4px;
     top: 50%;
     transform: translateY(-50%);
-    width: 12px;
-    height: 12px;
+    width: 8px;
+    height: 8px;
     background-color: var(--highlight);
     border-radius: var(--radius-full);
     box-shadow: 0 2px 4px rgb(0, 0, 0, 0.3);
@@ -4704,11 +4740,11 @@ input:checked + .slider::before {
 .fullscreen-progress-container .progress-bar:active .progress-fill::after {
     content: '';
     position: absolute;
-    right: -6px;
+    right: -4px;
     top: 50%;
     transform: translateY(-50%);
-    width: 12px;
-    height: 12px;
+    width: 8px;
+    height: 8px;
     background-color: var(--highlight);
     border-radius: var(--radius-full);
     box-shadow: 0 2px 4px rgb(0, 0, 0, 0.3);
@@ -5466,6 +5502,61 @@ input:checked + .slider::before {
     color: #f59e0b;
 }
 
+.gateway-notification {
+    position: fixed;
+    bottom: calc(var(--player-bar-height-desktop) + 20px);
+    left: calc(190px + 2%);
+    width: calc(96% - 190px);
+    max-width: 350px;
+    margin: 0 auto;
+    background: var(--card-foreground);
+    color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    box-shadow: var(--shadow-lg);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    animation: slide-in 0.3s ease;
+}
+
+.gateway-notification svg {
+    flex-shrink: 0;
+    color: var(--card-foreground);
+}
+
+.gateway-notification.disconnected svg {
+    color: var(--card);
+}
+
+.gateway-notification.disconnected span {
+    color: var(--card);
+}
+
+.gateway-notification.reconnected svg {
+    color: var(--card-foreground);
+}
+
+.gateway-notification.reconnected span {
+    color: var(--card);
+}
+
+body.sidebar-collapsed .gateway-notification {
+    left: calc(80px + 2%);
+    width: calc(96% - 80px);
+}
+
+@media (max-width: 768px) {
+    .gateway-notification {
+        left: 2%;
+        width: 96%;
+        max-width: none;
+        bottom: calc(var(--player-bar-height-mobile) + 15px);
+    }
+}
+
 .update-notification {
     flex-direction: column;
     align-items: stretch;
@@ -5586,6 +5677,7 @@ input:checked + .slider::before {
 }
 
 @keyframes pulse {
+
     0%,
     100% {
         opacity: 1;
@@ -7097,6 +7189,7 @@ img[src=''] {
 }
 
 @media (max-width: 768px) {
+
     html,
     body {
         height: auto;
@@ -7269,15 +7362,16 @@ img[src=''] {
     .now-playing-bar {
         grid-template:
             'track controls' auto
-            'progress progress' auto / 1fr auto;
-        gap: var(--spacing-sm);
-        padding: var(--spacing-sm) var(--spacing-md);
+            'progress progress' 1fr / 1fr auto;
+        gap: 0;
+        padding: var(--spacing-sm) var(--spacing-md) 0;
         height: var(--player-bar-height-mobile);
     }
 
     .now-playing-bar .track-info {
         grid-area: track;
         min-width: 0;
+        padding-bottom: var(--spacing-xs);
     }
 
     .track-info {
@@ -7307,11 +7401,15 @@ img[src=''] {
         display: flex;
         gap: 0.25rem;
         justify-content: flex-end;
+        padding-bottom: var(--spacing-xs);
     }
 
     .now-playing-bar .player-controls {
         grid-area: progress;
+        display: flex;
+        flex-direction: column;
         width: 100%;
+        padding-bottom: 0 !important;
     }
 
     .player-controls .buttons {
@@ -7328,6 +7426,60 @@ img[src=''] {
     .player-controls .buttons .play-pause-btn {
         width: 32px;
         height: 32px;
+    }
+
+    .player-controls .progress-container {
+        width: 100%;
+        max-width: none;
+        padding: 0;
+        margin: 0;
+        margin-top: auto;
+        display: flex;
+        gap: 0;
+        font-size: 0.8rem;
+        color: var(--muted-foreground);
+        order: 0;
+    }
+
+    #current-time,
+    #total-duration {
+        display: none;
+    }
+
+    #progress-bar {
+        height: 3px;
+        border-radius: 0;
+        flex-grow: 1;
+    }
+
+    #progress-bar:hover {
+        height: 3px;
+    }
+
+    #progress-bar .progress-fill {
+        border-radius: 0;
+    }
+
+    #progress-bar:hover .progress-fill::after,
+    #progress-bar:active .progress-fill::after {
+        content: '';
+        position: absolute;
+        right: -7px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 14px;
+        height: 14px;
+        background-color: var(--highlight);
+        border-radius: var(--radius-full);
+        box-shadow: 0 2px 4px rgb(0, 0, 0, 0.3);
+    }
+
+    .progress-bar.has-waveform.waveform-loaded {
+        height: 3px;
+    }
+
+    .progress-bar.has-waveform.waveform-loaded .progress-fill::after {
+        display: none;
     }
 
     .desktop-only {
@@ -7800,6 +7952,7 @@ img[src=''] {
 }
 
 @media (hover: none) and (pointer: coarse) {
+
     /* Allow play button to float outside square cover on mobile */
     .card-image-wrapper {
         overflow: visible;
@@ -7826,11 +7979,11 @@ img[src=''] {
     .volume-bar .volume-fill::after {
         content: '';
         position: absolute;
-        right: -8px;
+        right: -4px;
         top: 50%;
         transform: translateY(-50%);
-        width: 16px;
-        height: 16px;
+        width: 8px;
+        height: 8px;
         background-color: var(--highlight);
         border-radius: var(--radius-full);
         box-shadow: 0 2px 6px rgb(0, 0, 0, 0.3);
@@ -9675,7 +9828,7 @@ body:has(#side-panel.active) #close-fullscreen-cover-btn {
         flex-direction: column;
     }
 
-    .autoeq-graph-db-row > .autoeq-database-section {
+    .autoeq-graph-db-row>.autoeq-database-section {
         width: auto;
     }
 }
@@ -10189,7 +10342,7 @@ body:has(#side-panel.active) #close-fullscreen-cover-btn {
     padding: 6px 8px;
 }
 
-.cmdk-group + .cmdk-group {
+.cmdk-group+.cmdk-group {
     margin-top: 4px;
 }
 
@@ -10362,7 +10515,7 @@ body:has(#side-panel.active) #close-fullscreen-cover-btn {
     border-radius: 4px;
 }
 
-@media (width <= 640px) {
+@media (width <=640px) {
     #command-palette-overlay {
         padding-top: 0;
         align-items: flex-start;
@@ -10893,8 +11046,8 @@ body:has(#side-panel.active) #close-fullscreen-cover-btn {
 #fullscreen-cover-overlay .fullscreen-progress-container .progress-bar:active .progress-fill::after,
 #fullscreen-cover-overlay .fs-volume-bar:hover .fs-volume-fill::after,
 #fullscreen-cover-overlay .fs-volume-bar:active .fs-volume-fill::after {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
     box-shadow: 0 4px 12px rgb(0 0 0 / 0.28);
 }
 
@@ -11007,6 +11160,7 @@ body:has(#side-panel.active) #close-fullscreen-cover-btn {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
     #fullscreen-cover-overlay .fullscreen-main-view,
     #fullscreen-cover-overlay .fullscreen-media-column,
     #fullscreen-cover-overlay .fullscreen-lyrics-pane {
@@ -11035,8 +11189,7 @@ body:has(#side-panel.active) #close-fullscreen-cover-btn {
         width: min(760px, 100%);
         gap: 1.25rem;
         align-items: stretch;
-        padding: calc(5rem + env(safe-area-inset-top)) clamp(1rem, 4vw, 1.75rem)
-            calc(1.5rem + env(safe-area-inset-bottom));
+        padding: calc(5rem + env(safe-area-inset-top)) clamp(1rem, 4vw, 1.75rem) calc(1.5rem + env(safe-area-inset-bottom));
     }
 
     #fullscreen-cover-overlay .fullscreen-media-column {
@@ -11070,8 +11223,7 @@ body:has(#side-panel.active) #close-fullscreen-cover-btn {
     }
 
     #fullscreen-cover-overlay .fullscreen-cover-content {
-        padding: 0 calc(0.9rem + env(safe-area-inset-right)) calc(0.9rem + env(safe-area-inset-bottom))
-            calc(0.9rem + env(safe-area-inset-left));
+        padding: 0 calc(0.9rem + env(safe-area-inset-right)) calc(0.9rem + env(safe-area-inset-bottom)) calc(0.9rem + env(safe-area-inset-left));
     }
 
     #fullscreen-dismiss-handle {
@@ -11269,8 +11421,7 @@ body:has(#side-panel.active) #close-fullscreen-cover-btn {
         align-items: center;
         justify-items: center;
         gap: 0;
-        padding: calc(4.45rem + env(safe-area-inset-top)) clamp(1rem, 4vw, 1.4rem)
-            calc(0.8rem + env(safe-area-inset-bottom));
+        padding: calc(4.45rem + env(safe-area-inset-top)) clamp(1rem, 4vw, 1.4rem) calc(0.8rem + env(safe-area-inset-bottom));
         height: 100%;
         width: 100%;
         max-width: 100%;

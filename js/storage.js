@@ -3,32 +3,27 @@
 import { SVG_RIGHT_ARROW } from './icons';
 
 export const apiSettings = {
-    defaultInstances: {
-        api: [
-            { url: 'https://eu-central.monochrome.tf', version: '2.7' },
-            { url: 'https://us-west.monochrome.tf', version: '2.7' },
-            { url: 'https://api.monochrome.tf', version: '2.5' },
-            { url: 'https://monochrome-api.samidy.com', version: '2.3' },
-            { url: 'https://maus.qqdl.site', version: '2.6' },
-            { url: 'https://vogel.qqdl.site', version: '2.6' },
-            { url: 'https://katze.qqdl.site', version: '2.6' },
-            { url: 'https://hund.qqdl.site', version: '2.6' },
-            { url: 'https://tidal.kinoplus.online', version: '2.2' },
-            { url: 'https://wolf.qqdl.site', version: '2.2' },
-        ],
-        streaming: [
-            { url: 'https://eu-central.monochrome.tf', version: '2.7' },
-            { url: 'https://us-west.monochrome.tf', version: '2.7' },
-            { url: 'https://maus.qqdl.site', version: '2.6' },
-            { url: 'https://vogel.qqdl.site', version: '2.6' },
-            { url: 'https://katze.qqdl.site', version: '2.6' },
-            { url: 'https://hund.qqdl.site', version: '2.6' },
-            { url: 'https://wolf.qqdl.site', version: '2.6' },
-        ],
+    get gatewayUrl() {
+        return localStorage.getItem('gateway-url') || 'http://localhost:8080';
+    },
+    get gatewayApiKey() {
+        return localStorage.getItem('gateway-api-key') || '';
+    },
+
+    setGatewayUrl(url) {
+        localStorage.setItem('gateway-url', url);
+    },
+    setGatewayApiKey(key) {
+        localStorage.setItem('gateway-api-key', key);
     },
 
     async getInstances(type = 'api') {
-        return this.defaultInstances[type] || this.defaultInstances.api || [];
+        // Gateway mode — single endpoint
+        if (type === 'gateway') {
+            return [{ url: this.gatewayUrl }];
+        }
+        // Legacy fallback — return empty (no more multi-instance failover)
+        return [];
     },
 };
 
@@ -2486,9 +2481,9 @@ export const musicProviderSettings = {
 
     getProvider() {
         try {
-            return localStorage.getItem(this.STORAGE_KEY) || 'nas';
+            return localStorage.getItem(this.STORAGE_KEY) || 'tidal';
         } catch {
-            return 'nas';
+            return 'tidal';
         }
     },
 
@@ -2893,94 +2888,4 @@ export const keyboardShortcuts = {
     },
 };
 
-export const nasSettings = {
-    STORAGE_KEY: 'nas-settings',
 
-    _defaults() {
-        return {
-            nasEnabled: false,
-            nasBaseUrl: '',
-            nasMappingStrategy: 'ISRC',
-            nasApiUrl: '',
-            nasFallbackToStream: false,
-        };
-    },
-
-    _getAll() {
-        try {
-            const stored = localStorage.getItem(this.STORAGE_KEY);
-            if (stored) {
-                const parsed = JSON.parse(stored);
-                const defaults = this._defaults();
-                return { ...defaults, ...parsed };
-            }
-        } catch {
-            /* ignore */
-        }
-        return this._defaults();
-    },
-
-    _setAll(obj) {
-        try {
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(obj));
-        } catch {
-            /* ignore */
-        }
-    },
-
-    isEnabled() {
-        return this._getAll().nasEnabled === true;
-    },
-
-    setEnabled(enabled) {
-        const all = this._getAll();
-        all.nasEnabled = !!enabled;
-        this._setAll(all);
-    },
-
-    getBaseUrl() {
-        return this._getAll().nasBaseUrl || '';
-    },
-
-    setBaseUrl(url) {
-        const all = this._getAll();
-        all.nasBaseUrl = url.replace(/\/+$/, '');
-        this._setAll(all);
-    },
-
-    getMappingStrategy() {
-        const strategies = ['ISRC', 'TIDAL_ID', 'CUSTOM_API'];
-        const strategy = this._getAll().nasMappingStrategy;
-        return strategies.includes(strategy) ? strategy : 'ISRC';
-    },
-
-    setMappingStrategy(strategy) {
-        const all = this._getAll();
-        all.nasMappingStrategy = strategy;
-        this._setAll(all);
-    },
-
-    getApiUrl() {
-        return this._getAll().nasApiUrl || '';
-    },
-
-    setApiUrl(url) {
-        const all = this._getAll();
-        all.nasApiUrl = url.replace(/\/+$/, '');
-        this._setAll(all);
-    },
-
-    getFallbackToStream() {
-        return false;
-    },
-
-    setFallbackToStream(enabled) {
-        const all = this._getAll();
-        all.nasFallbackToStream = !!enabled;
-        this._setAll(all);
-    },
-
-    reset() {
-        localStorage.removeItem(this.STORAGE_KEY);
-    },
-};

@@ -6,10 +6,11 @@ import {
     getTrackCoverId,
     getFullArtistArray,
 } from './utils.js';
-import { addMetadataWithTagLib, getMetadataWithTagLib } from './taglib.ts';
-import { LyricsManager } from './lyrics.js';
 import { Mp4Stik } from './taglib.types.ts';
 import { modernSettings } from './ModernSettings.js';
+
+const addMetadataWithTagLib = async (blob) => blob;
+const getMetadataWithTagLib = async () => null;
 
 /**
  * @typedef {import('./container-classes.ts').Track} Track
@@ -24,9 +25,8 @@ export function prefetchMetadataObjects(track, api, coverBlob = null) {
         : coverId
           ? getCoverBlob(api, coverId).catch(console.error)
           : Promise.resolve(null);
-    const lyricsFetch = LyricsManager.instance.fetchLyrics?.(track.id, track)?.catch(console.error);
 
-    return { coverFetch, lyricsFetch };
+    return { coverFetch, lyricsFetch: Promise.resolve(null) };
 }
 
 /**

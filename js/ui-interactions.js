@@ -10,7 +10,6 @@ import {
 import { sidePanelManager } from './side-panel.js';
 import { downloadQualitySettings, contentBlockingSettings } from './storage.js';
 import { db } from './db.js';
-import { syncManager } from './accounts/pocketbase.js';
 import { showNotification, downloadTracks } from './downloads.js';
 import {
     SVG_CLOSE,
@@ -65,7 +64,6 @@ export function initializeUIInteractions(player, api, ui) {
 
                 if (playlistId && folderId) {
                     const updatedFolder = await db.addPlaylistToFolder(folderId, playlistId);
-                    await syncManager.syncUserFolder(updatedFolder, 'update');
                     const subtitle = folderCard.querySelector('.card-subtitle');
                     if (subtitle) {
                         subtitle.textContent = `${updatedFolder.playlists.length} playlists`;
@@ -151,7 +149,6 @@ export function initializeUIInteractions(player, api, ui) {
                 for (const track of currentQueue) {
                     const wasAdded = await db.toggleFavorite('track', track);
                     if (wasAdded) {
-                        await syncManager.syncLibraryItem('track', track, true);
                         addedCount++;
                     }
                 }
@@ -221,7 +218,6 @@ export function initializeUIInteractions(player, api, ui) {
                             }
 
                             const updatedPlaylist = await db.getPlaylist(playlistId);
-                            await syncManager.syncUserPlaylist(updatedPlaylist, 'update');
 
                             showNotification(`Added ${addedCount} tracks to playlist: ${playlistName}`);
                         } catch (error) {
@@ -304,7 +300,6 @@ export function initializeUIInteractions(player, api, ui) {
                 const track = player.getCurrentQueue()[index];
                 if (track) {
                     const added = await db.toggleFavorite('track', track);
-                    await syncManager.syncLibraryItem('track', track, added);
 
                     likeBtn.classList.toggle('active', added);
                     likeBtn.innerHTML = added ? SVG_HEART_FILLED(20) : SVG_HEART(20);
@@ -517,7 +512,6 @@ export function initializeUIInteractions(player, api, ui) {
             if (playlistId && folderId) {
                 try {
                     const updatedFolder = await db.addPlaylistToFolder(folderId, playlistId);
-                    await syncManager.syncUserFolder(updatedFolder, 'update');
                     window.dispatchEvent(new HashChangeEvent('hashchange'));
                     showNotification('Playlist added to folder');
                 } catch (error) {

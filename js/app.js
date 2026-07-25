@@ -16,7 +16,7 @@ import {
 import { UIRenderer } from './ui.js';
 import { Player } from './player.js';
 import { MalojaScrobbler } from './maloja.js';
-import { LyricsManager, openLyricsPanel, clearLyricsPanelSync } from './lyrics.js';
+
 import { createRouter, updateTabTitle, navigate } from './router.js';
 import { initializePlayerEvents, initializeTrackInteractions, handleTrackAction } from './events.js';
 import { initializeUIInteractions } from './ui-interactions.js';
@@ -24,8 +24,6 @@ import { debounce, getShareUrl, sanitizeForFilename } from './utils.js';
 import { sidePanelManager } from './side-panel.js';
 import { db } from './db.js';
 import { showNotification } from './downloads.js';
-import { syncManager } from './accounts/pocketbase.js';
-import { authManager } from './accounts/auth.js';
 import { registerSW } from 'virtual:pwa-register';
 
 import { ThemeStore } from './themeStore.js';
@@ -43,6 +41,7 @@ import { generateFullCSV, generateFullJSON } from './playlist-generator.js';
 import { modernSettings } from './ModernSettings.js';
 import {
     SVG_OFFLINE,
+    SVG_GATEWAY_OK,
     SVG_RIGHT_ARROW,
     SVG_LEFT_ARROW,
     SVG_ANIMATE_SPIN,
@@ -258,7 +257,7 @@ function initializeKeyboardShortcuts(player, _audioPlayer) {
         escape: () => {
             document.getElementById('search-input')?.blur();
             sidePanelManager.close();
-            clearLyricsPanelSync(player.activeElement, sidePanelManager.panel);
+            // lyrics module removed
         },
         visualizerNext: () => {
             if (UIRenderer.instance.visualizer?.presets?.['butterchurn']) {
@@ -343,6 +342,51 @@ function hideOfflineNotification() {
     }
 }
 
+let gatewayNotificationEl = null;
+
+function showGatewayNotification(type) {
+    if (gatewayNotificationEl) {
+        gatewayNotificationEl.remove();
+        gatewayNotificationEl = null;
+    }
+
+    const notification = document.createElement('div');
+    notification.className = `gateway-notification ${type}`;
+
+    if (type === 'disconnected') {
+        notification.innerHTML = `
+            ${SVG_OFFLINE(20)}
+            <span>Gateway server not accessible</span>
+        `;
+        document.body.appendChild(notification);
+        gatewayNotificationEl = notification;
+    } else if (type === 'reconnected') {
+        notification.innerHTML = `
+            ${SVG_GATEWAY_OK(20)}
+            <span>Gateway server reconnected</span>
+        `;
+        document.body.appendChild(notification);
+        gatewayNotificationEl = notification;
+        setTimeout(() => {
+            notification.style.animation = 'slide-out 0.3s ease forwards';
+            setTimeout(() => {
+                notification.remove();
+                gatewayNotificationEl = null;
+            }, 300);
+        }, 4000);
+    }
+}
+
+function hideGatewayNotification() {
+    if (gatewayNotificationEl) {
+        gatewayNotificationEl.style.animation = 'slide-out 0.3s ease forwards';
+        setTimeout(() => {
+            gatewayNotificationEl.remove();
+            gatewayNotificationEl = null;
+        }, 300);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     await modernSettings.waitPending();
 
@@ -355,7 +399,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (import.meta.env.DEV) {
         window.monochrome = {
-            LyricsManager,
+            // LyricsManager removed
             MusicAPI,
             Player,
             UIRenderer,
@@ -385,6 +429,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     new ThemeStore();
 
     await MusicAPI.initialize(apiSettings);
+
+    MusicAPI.instance.audioAPI.onConnectionChange = ({ connected }) => {
+        if (connected) {
+            showGatewayNotification('reconnected');
+        } else {
+            showGatewayNotification('disconnected');
+        }
+    };
 
     const audioPlayer = document.getElementById('audio-player');
 
@@ -512,8 +564,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const scrobbler = new MalojaScrobbler();
     window.monochromeScrobbler = scrobbler;
 
-    const lyricsManager = await LyricsManager.initialize(MusicAPI.instance);
-    UIRenderer.instance.lyricsManager = lyricsManager;
+    // lyricsManager removed - lyrics module deleted
+    UIRenderer.instance.lyricsManager = null;
 
     // Check browser support for local files
     const selectLocalBtn = document.getElementById('select-local-folder-btn');
@@ -561,7 +613,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         MusicAPI.instance,
         document.querySelector('.main-content'),
         document.getElementById('context-menu'),
-        lyricsManager,
+        null,
         UIRenderer.instance,
         scrobbler
     );
@@ -597,9 +649,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (isActive) {
                 sidePanelManager.close();
-                clearLyricsPanelSync(Player.instance.activeElement, sidePanelManager.panel);
+                // lyrics removed
             } else {
-                openLyricsPanel(Player.instance.currentTrack, Player.instance.activeElement, lyricsManager);
+                // lyrics removed
             }
         } else if (mode === 'cover') {
             const overlay = document.getElementById('fullscreen-cover-overlay');
@@ -610,7 +662,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 UIRenderer.instance.showFullscreenCover(
                     Player.instance.currentTrack,
                     nextTrack,
-                    lyricsManager,
+                    null,
                     Player.instance.activeElement
                 );
             }
@@ -867,9 +919,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (isActive) {
             sidePanelManager.close();
-            clearLyricsPanelSync(Player.instance.activeElement, sidePanelManager.panel);
+            // lyrics removed
         } else {
-            openLyricsPanel(Player.instance.currentTrack, Player.instance.activeElement, lyricsManager);
+            // lyrics removed
         }
     });
 
@@ -880,7 +932,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 Player.instance.currentTrack,
                 Player.instance,
                 MusicAPI.instance,
-                lyricsManager,
+                null,
                 'track',
                 UIRenderer.instance
             );
@@ -902,11 +954,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (currentTrackId === previousTrackId) return;
         previousTrackId = currentTrackId;
 
-        // Update lyrics panel if it's open
-        if (sidePanelManager.isActive('lyrics')) {
-            // Re-open forces update/refresh of content and sync
-            openLyricsPanel(Player.instance.currentTrack, Player.instance.activeElement, lyricsManager, true);
-        }
+        // Update lyrics panel if it's open (lyrics module removed)
 
         // Update Fullscreen if it's open
         const fullscreenOverlay = document.getElementById('fullscreen-cover-overlay');
@@ -915,7 +963,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             UIRenderer.instance.showFullscreenCover(
                 Player.instance.currentTrack,
                 nextTrack,
-                lyricsManager,
+                null,
                 Player.instance.activeElement
             );
         }
@@ -931,7 +979,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             UIRenderer.instance.showFullscreenCover(
                 Player.instance.currentTrack,
                 nextTrack,
-                lyricsManager,
+                null,
                 Player.instance.activeElement
             );
         }
@@ -1100,7 +1148,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     tracks,
                     MusicAPI.instance,
                     downloadQualitySettings.getQuality(),
-                    lyricsManager
+                    null
                 );
             } catch (error) {
                 console.error('Mix download failed:', error);
@@ -1141,7 +1189,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     tracks,
                     MusicAPI.instance,
                     downloadQualitySettings.getQuality(),
-                    lyricsManager
+                    null
                 );
             } catch (error) {
                 console.error('Playlist download failed:', error);
@@ -1213,7 +1261,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (name) {
                 const folder = await db.createFolder(name, cover);
-                await syncManager.syncUserFolder(folder, 'create');
                 UIRenderer.instance.renderLibraryPage();
                 document.getElementById('folder-modal').classList.remove('active');
             } else {
@@ -1242,8 +1289,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const folderId = window.location.pathname.split('/')[2];
             if (folderId && confirm('Are you sure you want to delete this folder?')) {
                 await db.deleteFolder(folderId);
-                // Sync deletion to cloud
-                await syncManager.syncUserFolder({ id: folderId }, 'delete');
                 navigate('/library');
             }
         }
@@ -1266,7 +1311,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                             playlist.cover = cover;
                             playlist.description = description;
                             await db.performTransaction('user_playlists', 'readwrite', (store) => store.put(playlist));
-                            await syncManager.syncUserPlaylist(playlist, 'update');
                             UIRenderer.instance.renderLibraryPage();
                             // Also update current page if we are on it
                             if (window.location.pathname === `/userplaylist/${editingId}`) {
@@ -1774,7 +1818,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     await db.createPlaylist(name, tracks, cover, description).then(async (playlist) => {
                         await db.performTransaction('user_playlists', 'readwrite', (store) => store.put(playlist));
-                        await syncManager.syncUserPlaylist(playlist, 'create');
                         UIRenderer.instance.renderLibraryPage();
                         modal.classList.remove('active');
                     });
@@ -1835,7 +1878,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const playlistId = card.dataset.userPlaylistId;
             if (confirm('Are you sure you want to delete this playlist?')) {
                 await db.deletePlaylist(playlistId);
-                await syncManager.syncUserPlaylist({ id: playlistId }, 'delete');
                 UIRenderer.instance.renderLibraryPage();
             }
         }
@@ -1899,7 +1941,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const playlistId = window.location.pathname.split('/')[2];
             if (confirm('Are you sure you want to delete this playlist?')) {
                 await db.deletePlaylist(playlistId);
-                await syncManager.syncUserPlaylist({ id: playlistId }, 'delete');
                 navigate('/library');
             }
         }
@@ -1937,7 +1978,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (trackId) {
                     const updatedPlaylist = await db.removeTrackFromPlaylist(playlistId, trackId, trackType);
-                    await syncManager.syncUserPlaylist(updatedPlaylist, 'update');
                     const scrollTop = document.querySelector('.main-content').scrollTop;
                     await UIRenderer.instance.renderPlaylistPage(playlistId, 'user');
                     document.querySelector('.main-content').scrollTop = scrollTop;
@@ -2072,7 +2112,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     try {
                         await db.addTracksToPlaylist(playlistId, tracks);
                         const updatedPlaylist = await db.getPlaylist(playlistId);
-                        await syncManager.syncUserPlaylist(updatedPlaylist, 'update');
                         const { showNotification } = await loadDownloadsModule();
                         showNotification(`Added ${tracks.length} tracks to playlist.`);
                         closeModal();
@@ -2371,6 +2410,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.addEventListener('online', () => {
         hideOfflineNotification();
+        hideGatewayNotification();
         console.log('Back online');
     });
 
@@ -2585,91 +2625,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         async function updateAccountDropdown() {
-            const user = authManager?.user;
-            headerAccountDropdown.innerHTML = '';
-
-            if (!user) {
-                headerAccountDropdown.innerHTML = `
-                    <div class="dropdown-account-header">
-                        ${SVG_USER(14)}
-                        <span>Account</span>
-                    </div>
-                    <button class="btn-primary" id="header-sign-in">Sign In</button>
-                    <button class="btn-secondary" id="header-sign-up">Sign Up</button>
-                `;
-
-                document.getElementById('header-sign-in').onclick = () => {
-                    document.getElementById('email-auth-modal').classList.add('active');
-                    headerAccountDropdown.classList.remove('active');
-                    if (headerAccountOverlay) {
-                        headerAccountOverlay.classList.remove('is-visible');
-                        document.body.style.overflow = '';
-                    }
-                };
-                document.getElementById('header-sign-up').onclick = () => {
-                    document.getElementById('email-auth-modal').classList.add('active');
-                    headerAccountDropdown.classList.remove('active');
-                    if (headerAccountOverlay) {
-                        headerAccountOverlay.classList.remove('is-visible');
-                        document.body.style.overflow = '';
-                    }
-                };
-            } else {
-                const data = await syncManager.getUserData();
-                const displayName = data?.profile?.display_name || data?.profile?.username || '';
-                const email = user.email || '';
-                const avatarUrl = data?.profile?.avatar_url;
-
-                let userInfoHtml = `
-                    <div class="dropdown-user-info">
-                        ${
-                            avatarUrl
-                                ? `<img src="${avatarUrl}&s=100" class="dropdown-user-avatar" alt="avatar">`
-                                : `<span class="dropdown-user-avatar">${SVG_USER(18)}</span>`
-                        }
-                        <span class="dropdown-user-name" title="${email}">${displayName || email}</span>
-                    </div>
-                `;
-
-                let buttonsHtml = `
-                    <button class="btn-secondary" id="header-account-settings">Account Settings</button>
-                    <button class="btn-secondary danger" id="header-sign-out">Sign Out</button>
-                `;
-
-                headerAccountDropdown.innerHTML = userInfoHtml + buttonsHtml;
-
-                document.getElementById('header-account-settings').onclick = () => {
-                    navigate('/account');
-                    headerAccountDropdown.classList.remove('active');
-                    if (headerAccountOverlay) {
-                        headerAccountOverlay.classList.remove('is-visible');
-                        document.body.style.overflow = '';
-                    }
-                };
-
-                document.getElementById('header-sign-out').onclick = () => {
-                    authManager.signOut();
-                    if (headerAccountOverlay) {
-                        headerAccountOverlay.classList.remove('is-visible');
-                        document.body.style.overflow = '';
-                    }
-                };
-            }
+            headerAccountDropdown.innerHTML = `
+                <div class="dropdown-account-header">
+                    ${SVG_USER(14)}
+                    <span>Account</span>
+                </div>
+                <span style="padding: 0.5rem; font-size: 0.85rem; color: var(--muted-foreground)">PocketBase removed - account features unavailable</span>
+            `;
         }
-
-        authManager.onAuthStateChanged(async (user) => {
-            if (user) {
-                const data = await syncManager.getUserData();
-                if (data && data.profile && data.profile.avatar_url) {
-                    headerAccountImg.src = data.profile.avatar_url + '&s=100';
-                    headerAccountImg.style.display = 'block';
-                    headerAccountIcon.style.display = 'none';
-                    return;
-                }
-            }
-            headerAccountImg.style.display = 'none';
-            headerAccountIcon.style.display = 'flex';
-        });
     }
 });
 

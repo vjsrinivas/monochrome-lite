@@ -13,13 +13,11 @@ import { showNotification, downloadTrackWithMetadata, downloadAlbum, downloadPla
 import { downloadQualitySettings } from './storage.js';
 import { updateTabTitle, navigate } from './router.js';
 import { db } from './db.js';
-import { syncManager } from './accounts/pocketbase.js';
 import { waveformGenerator } from './waveform.js';
 import { audioContextManager } from './audio-context.js';
 import { hapticLongPress, hapticMedium, hapticLight } from './haptics.js';
 import { SVG_BIN, SVG_MUTE, SVG_PAUSE, SVG_PLAY, SVG_VOLUME, SVG_CHECKBOX, SVG_CHECKBOX_CHECKED } from './icons.js';
 import { MusicAPI } from './music-api.js';
-import { LyricsManager } from './lyrics.js';
 import { Player } from './player.js';
 
 let currentTrackIdForWaveform = null;
@@ -225,7 +223,7 @@ async function showMultiSelectPlaylistModal(tracks) {
                 for (const track of tracks) {
                     await db.addTrackToPlaylist(playlistId, track);
                 }
-                await syncManager.syncUserPlaylist(await db.getPlaylist(playlistId), 'update');
+                await db.getPlaylist(playlistId);
                 showNotification(`Added ${tracks.length} tracks to playlist`);
                 closeModal();
             });
@@ -349,7 +347,7 @@ async function handleSelectionAction(action) {
                         track,
                         downloadQualitySettings.getQuality(),
                         MusicAPI.instance.audioAPI,
-                        LyricsManager.instance
+                        // LyricsManager removed
                     );
                 }
             }
@@ -357,7 +355,6 @@ async function handleSelectionAction(action) {
         case 'like-selected':
             for (const track of selectedTracks) {
                 const added = await db.toggleFavorite('track', track);
-                await syncManager.syncLibraryItem('track', track, added);
             }
             showNotification(`Liked ${selectedTracks.length} tracks`);
             break;
@@ -442,7 +439,6 @@ export async function initializePlayerEvents(player, audioPlayer, scrobbler, ui)
                 if (currentTime >= 10 && player.currentTrack && player.currentTrack.id !== historyLoggedTrackId) {
                     historyLoggedTrackId = player.currentTrack.id;
                     const historyEntry = await db.addToHistory(player.currentTrack);
-                    await syncManager.syncHistoryItem(historyEntry);
 
                     if (window.location.hash === '#recent') {
                         ui.renderRecentPage();
@@ -739,6 +735,7 @@ function initializeSmoothSliders(player) {
     const progressBar = document.getElementById('progress-bar');
     const progressFill = document.getElementById('progress-fill');
     const currentTimeEl = document.getElementById('current-time');
+    const scrubTooltip = document.getElementById('scrub-tooltip');
     const volumeBar = document.getElementById('volume-bar');
     const volumeFill = document.getElementById('volume-fill');
     const volumeBtn = document.getElementById('volume-btn');
@@ -761,6 +758,9 @@ function initializeSmoothSliders(player) {
             if (currentTimeEl) {
                 currentTimeEl.textContent = formatTime(position * activeEl.duration);
             }
+            if (scrubTooltip) {
+                scrubTooltip.textContent = formatTime(position * activeEl.duration);
+            }
         }
     };
 
@@ -770,6 +770,7 @@ function initializeSmoothSliders(player) {
         isSeeking = true;
         wasPlaying = !activeEl.paused;
         if (wasPlaying) activeEl.pause();
+        if (scrubTooltip) scrubTooltip.classList.add('active');
 
         seek(progressBar, e, (position) => {
             lastSeekPosition = position;
@@ -784,6 +785,7 @@ function initializeSmoothSliders(player) {
         isSeeking = true;
         wasPlaying = !activeEl.paused;
         if (wasPlaying) activeEl.pause();
+        if (scrubTooltip) scrubTooltip.classList.add('active');
 
         const touch = e.touches[0];
         const rect = progressBar.getBoundingClientRect();
@@ -856,6 +858,7 @@ function initializeSmoothSliders(player) {
                 if (wasPlaying) activeEl.play();
             }
             isSeeking = false;
+            if (scrubTooltip) scrubTooltip.classList.remove('active');
         }
 
         if (isAdjustingVolume) {
@@ -872,6 +875,7 @@ function initializeSmoothSliders(player) {
                 if (wasPlaying) activeEl.play();
             }
             isSeeking = false;
+            if (scrubTooltip) scrubTooltip.classList.remove('active');
         }
 
         if (isAdjustingVolume) {
@@ -1092,7 +1096,6 @@ export async function showAddToPlaylistModal(track) {
             e.stopPropagation();
             await db.removeTrackFromPlaylist(playlistId, track.id);
             const updatedPlaylist = await db.getPlaylist(playlistId);
-            await syncManager.syncUserPlaylist(updatedPlaylist, 'update');
             showNotification(`Removed from playlist: ${option.querySelector('span').textContent}`);
             await renderModal();
         } else {
@@ -1100,7 +1103,6 @@ export async function showAddToPlaylistModal(track) {
 
             await db.addTrackToPlaylist(playlistId, track);
             const updatedPlaylist = await db.getPlaylist(playlistId);
-            await syncManager.syncUserPlaylist(updatedPlaylist, 'update');
             showNotification(`Added to playlist: ${option.querySelector('span').textContent}`);
             closeModal();
         }
@@ -1303,7 +1305,6 @@ export async function handleTrackAction(
         await downloadTrackWithMetadata(item, downloadQualitySettings.getQuality(), api, lyricsManager);
     } else if (action === 'toggle-like') {
         const added = await db.toggleFavorite(type, item);
-        await syncManager.syncLibraryItem(type, item, added);
 
         if (added && type === 'track' && scrobbler) {
             scrobbler.loveTrack(item);
@@ -1536,7 +1537,6 @@ export async function handleTrackAction(
                 e.stopPropagation();
                 await db.removeTrackFromPlaylist(playlistId, item.id);
                 const updatedPlaylist = await db.getPlaylist(playlistId);
-                await syncManager.syncUserPlaylist(updatedPlaylist, 'update');
                 showNotification(`Removed from playlist: ${option.querySelector('span').textContent}`);
                 await renderModal();
             } else {
@@ -1544,7 +1544,6 @@ export async function handleTrackAction(
 
                 await db.addTrackToPlaylist(playlistId, item);
                 const updatedPlaylist = await db.getPlaylist(playlistId);
-                await syncManager.syncUserPlaylist(updatedPlaylist, 'update');
                 showNotification(`Added to playlist: ${option.querySelector('span').textContent}`);
                 closeModal();
             }
@@ -2305,7 +2304,6 @@ export function initializeTrackInteractions(player, api, mainContent, contextMen
                     case 'toggle-like':
                         selectedTracks.forEach(async (t) => {
                             const added = await db.toggleFavorite('track', t);
-                            await syncManager.syncLibraryItem('track', t, added);
                         });
                         showNotification(`Liked ${selectedTracks.length} tracks`);
                         clearSelection();

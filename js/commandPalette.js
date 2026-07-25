@@ -654,8 +654,7 @@ class CommandPalette {
                 label: 'Edit Profile',
                 keywords: ['edit', 'profile', 'username', 'avatar', 'display name'],
                 action: async () => {
-                    const { openEditProfile } = await import('./profile.js');
-                    await openEditProfile();
+                    alert('Profile editing is no longer available.');
                 },
             },
             {
@@ -665,8 +664,7 @@ class CommandPalette {
                 label: 'Sign Out',
                 keywords: ['sign out', 'log out', 'logout', 'disconnect'],
                 action: async () => {
-                    const { authManager } = await import('./accounts/auth.js');
-                    await authManager.signOut();
+                    alert('Sign out is no longer available.');
                 },
             },
             {
