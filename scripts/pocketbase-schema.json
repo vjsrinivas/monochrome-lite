@@ -153,3 +153,92 @@
     "updateRule": "",
     "deleteRule": ""
 }
+---
+{
+    "name": "themes",
+    "scheme": [
+        {
+            "name": "id",
+            "type": "text",
+            "id": "pbcid",
+            "required": true,
+            "unique": true,
+            "system": true
+        },
+        {
+            "name": "name",
+            "type": "text",
+            "id": "field_name",
+            "required": true,
+            "max": 256
+        },
+        {
+            "name": "description",
+            "type": "text",
+            "id": "field_description",
+            "required": false,
+            "max": 4096
+        },
+        {
+            "name": "css",
+            "type": "text",
+            "id": "field_css",
+            "required": true,
+            "max": 65536
+        },
+        {
+            "name": "authorName",
+            "type": "text",
+            "id": "field_author_name",
+            "required": false,
+            "max": 256
+        },
+        {
+            "name": "authorUrl",
+            "type": "url",
+            "id": "field_author_url",
+            "required": false
+        },
+        {
+            "name": "author",
+            "type": "relation",
+            "id": "field_author",
+            "required": false,
+            "collectionId": "_pb_users_auth_",
+            "cascadeDelete": true
+        },
+        {
+            "name": "installs",
+            "type": "number",
+            "id": "field_installs",
+            "required": false,
+            "min": 0,
+            "default": 0
+        },
+        {
+            "name": "created",
+            "type": "auto",
+            "id": "pbccreated",
+            "system": true
+        },
+        {
+            "name": "updated",
+            "type": "auto",
+            "id": "pbcupdated",
+            "system": true
+        }
+    ],
+    "type": "base",
+    "authRule": "",
+    "authAlert": {
+        "enabled": true
+    },
+    "meta": {
+        "icon": "https://pocketbase.io/images/favicon.ico"
+    },
+    "listRule": "",
+    "viewRule": "",
+    "createRule": "",
+    "updateRule": "id = @request.auth.id",
+    "deleteRule": "id = @request.auth.id"
+}

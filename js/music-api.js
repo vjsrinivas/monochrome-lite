@@ -260,6 +260,10 @@ export class MusicAPI {
         */
     }
 
+    getSongCoverUrl(songName) {
+        return this.audioAPI.getSongCoverUrl(songName);
+    }
+
     async getCoverArtUrl(songName) {
         return this.audioAPI.getCoverArtUrl(songName);
     }
@@ -351,6 +355,10 @@ export class MusicAPI {
 
     async getCatalogArtists({ limit = 500, offset = 0 } = {}) {
         return this.audioAPI.getCatalogArtists({ limit, offset });
+    }
+
+    async getLatest({ limit = 20, offset = 0 } = {}) {
+        return this.audioAPI.getLatest({ limit, offset });
     }
 
     // Cache methods

@@ -5981,7 +5981,8 @@ export async function initializeSettings(scrobbler, player, api, ui) {
     const customDbCancelBtn = document.getElementById('custom-db-cancel');
 
     if (customDbBtn && customDbModal) {
-        const pbFromEnv = !!window.__POCKETBASE_URL__;
+        // eslint-disable-next-line no-undef
+const pbFromEnv = typeof __POCKETBASE_URL__ !== 'undefined' && !!__POCKETBASE_URL__;
 
         if (pbFromEnv) {
             const settingItem = customDbBtn.closest('.setting-item');

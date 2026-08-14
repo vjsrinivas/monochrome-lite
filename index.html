@@ -705,6 +705,88 @@
 
  
 
+        <div id="folder-modal" class="modal">
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <h3 id="folder-modal-title">Create Folder</h3>
+                <input
+                    type="text"
+                    id="folder-name-input"
+                    class="template-input"
+                    placeholder="Folder name"
+                    style="margin: 1rem 0"
+                />
+                <input
+                    type="url"
+                    id="folder-cover-input"
+                    class="template-input"
+                    placeholder="Icon URL (optional)"
+                    style="margin: 0.5rem 0"
+                />
+                <div class="modal-actions">
+                    <button id="folder-modal-cancel" class="btn-secondary">Cancel</button>
+                    <button id="folder-modal-save" class="btn-primary">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="email-auth-modal" class="modal">
+            <div class="modal-overlay"></div>
+            <div class="modal-content email-auth-modal-content">
+                <div class="email-auth-modal-header">
+                    <h3>Email Authentication</h3>
+                    <button
+                        type="button"
+                        class="btn-icon email-auth-modal-close"
+                        id="email-auth-modal-close"
+                        title="Close"
+                    >
+                        <use svg="!lucide/x.svg" size="20" />
+                    </button>
+                </div>
+                <div class="auth-mode-toggle">
+                    <button type="button" id="auth-mode-signin" class="auth-mode-btn active">Sign In</button>
+                    <button type="button" id="auth-mode-signup" class="auth-mode-btn">Sign Up</button>
+                </div>
+                <input
+                    type="email"
+                    id="auth-email"
+                    class="template-input email-auth-input"
+                    placeholder="Email Address"
+                />
+                <div class="auth-username-field" id="auth-username-field" style="display: none">
+                    <input
+                        type="text"
+                        id="auth-username"
+                        class="template-input email-auth-input"
+                        placeholder="Username"
+                    />
+                    <div id="auth-username-status"></div>
+                </div>
+                <div class="auth-password-confirm-field" id="auth-password-confirm-field" style="display: none">
+                    <input
+                        type="password"
+                        id="auth-password-confirm"
+                        class="template-input email-auth-input"
+                        placeholder="Confirm Password"
+                    />
+                </div>
+                <div class="email-auth-password-block">
+                    <input
+                        type="password"
+                        id="auth-password"
+                        class="template-input email-auth-input"
+                        placeholder="Password"
+                    />
+                    <button type="button" id="reset-password-btn" class="email-auth-forgot-link">
+                        Forgot password?
+                    </button>
+                </div>
+                <div id="auth-error" class="auth-error-msg" style="display: none"></div>
+                <button type="button" id="email-auth-submit-btn" class="btn-primary email-auth-submit">Submit</button>
+            </div>
+        </div>
+
         <div id="playlist-select-modal" class="modal">
             <div class="modal-overlay"></div>
             <div class="modal-content">

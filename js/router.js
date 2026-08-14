@@ -42,6 +42,9 @@ export function createRouter(ui) {
             case 'track':
                 await ui.renderTrackPage(param);
                 break;
+            case 'folder':
+                await ui.renderFolderPage(param);
+                break;
             case 'library':
                 await ui.renderLibraryPage();
                 break;

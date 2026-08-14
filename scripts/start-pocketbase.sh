@@ -106,32 +106,78 @@ if [[ -z "$ADMIN_RESP" || "$ADMIN_RESP" == *"invalid"* ]]; then
     log "Admin account created (or already exists)"
 fi
 
-# Create DB_users collection if not exists
+# Create/verify all collections from schema file
 if [[ -f "$SCHEMA_FILE" ]]; then
-    log "Creating/verifying DB_users collection..."
-    COLLECTION_ID="$(curl -sf "http://localhost:${PB_PORT}/api/collections" \
-        | python3 -c "
+    log "Creating/verifying collections from schema..."
+
+    # Parse collection names from the schema file (supports multiple JSON objects separated by ---)
+    COLLECTION_NAMES="$(python3 -c "
+import sys, json, re
+with open('$SCHEMA_FILE', 'r') as f:
+    content = f.read()
+# Split on --- to handle multiple JSON objects
+parts = re.split(r'\n---\n', content)
+for part in parts:
+    part = part.strip()
+    if not part:
+        continue
+    try:
+        data = json.loads(part)
+        if 'name' in data:
+            print(data['name'])
+    except json.JSONDecodeError:
+        pass
+" 2>/dev/null || true)"
+
+    for COLLECTION_NAME in $COLLECTION_NAMES; do
+        # Send only this collection's JSON object (the file holds several docs split on "---")
+        COLLECTION_SCHEMA="$(python3 -c "
+import sys, json, re
+with open('$SCHEMA_FILE', 'r') as f:
+    content = f.read()
+parts = re.split(r'\n---\n', content)
+for part in parts:
+    part = part.strip()
+    if not part:
+        continue
+    try:
+        data = json.loads(part)
+        if data.get('name') == '$COLLECTION_NAME':
+            print(json.dumps(data))
+            sys.exit(0)
+    except json.JSONDecodeError:
+        pass
+" 2>/dev/null || true)"
+
+        if [[ -z "$COLLECTION_SCHEMA" ]]; then
+            log "WARNING: No schema found for $COLLECTION_NAME, skipping"
+            continue
+        fi
+
+        COLLECTION_ID="$(curl -sf "http://localhost:${PB_PORT}/api/collections" \
+            | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
 for c in data.get('items', []):
-    if c.get('name') == 'DB_users':
+    if c.get('name') == '$COLLECTION_NAME':
         print(c['id'])
         sys.exit(0)
 print('')
 " 2>/dev/null || true)"
 
-    if [[ -n "$COLLECTION_ID" ]]; then
-        log "DB_users collection already exists (id: $COLLECTION_ID), updating..."
-        curl -sf -X PATCH "http://localhost:${PB_PORT}/api/collections/${COLLECTION_ID}" \
-            -H "Content-Type: application/json" \
-            -d @"$SCHEMA_FILE" >/dev/null 2>&1 || true
-    else
-        log "Creating DB_users collection..."
-        curl -sf -X POST "http://localhost:${PB_PORT}/api/collections" \
-            -H "Content-Type: application/json" \
-            -d @"$SCHEMA_FILE" >/dev/null 2>&1 || true
-        log "DB_users collection created"
-    fi
+        if [[ -n "$COLLECTION_ID" ]]; then
+            log "$COLLECTION_NAME collection already exists (id: $COLLECTION_ID), updating..."
+            curl -sf -X PATCH "http://localhost:${PB_PORT}/api/collections/${COLLECTION_ID}" \
+                -H "Content-Type: application/json" \
+                -d "$COLLECTION_SCHEMA" >/dev/null 2>&1 || true
+        else
+            log "Creating $COLLECTION_NAME collection..."
+            curl -sf -X POST "http://localhost:${PB_PORT}/api/collections" \
+                -H "Content-Type: application/json" \
+                -d "$COLLECTION_SCHEMA" >/dev/null 2>&1 || true
+            log "$COLLECTION_NAME collection created"
+        fi
+    done
 else
     log "WARNING: Schema file not found at $SCHEMA_FILE — skipping collection setup"
 fi

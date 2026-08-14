@@ -26,6 +26,10 @@ import { db } from './db.js';
 import { showNotification } from './downloads.js';
 import { registerSW } from 'virtual:pwa-register';
 
+import { syncManager } from './accounts/pocketbase.js';
+import { authManager } from './accounts/auth.js';
+import { initEmailAuthModal } from './accounts/emailAuthModal.js';
+
 import { ThemeStore } from './themeStore.js';
 import './commandPalette.js';
 import {
@@ -427,6 +431,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     new ThemeStore();
+    initEmailAuthModal();
 
     await MusicAPI.initialize(apiSettings);
 
@@ -1205,7 +1210,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('playlist-modal-title').textContent = 'Create Playlist';
             document.getElementById('playlist-name-input').value = '';
             document.getElementById('playlist-cover-input').value = '';
-            document.getElementById('playlist-cover-file-input').value = '';
             document.getElementById('playlist-description-input').value = '';
             modal.dataset.editingId = '';
             document.getElementById('import-section').style.display = 'block';
@@ -1261,6 +1265,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (name) {
                 const folder = await db.createFolder(name, cover);
+                await syncManager.syncUserFolder(folder, 'create');
                 UIRenderer.instance.renderLibraryPage();
                 document.getElementById('folder-modal').classList.remove('active');
             } else {
@@ -1289,6 +1294,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const folderId = window.location.pathname.split('/')[2];
             if (folderId && confirm('Are you sure you want to delete this folder?')) {
                 await db.deleteFolder(folderId);
+                await syncManager.syncUserFolder({ id: folderId }, 'delete');
                 navigate('/library');
             }
         }
@@ -1311,6 +1317,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             playlist.cover = cover;
                             playlist.description = description;
                             await db.performTransaction('user_playlists', 'readwrite', (store) => store.put(playlist));
+                            await syncManager.syncUserPlaylist(playlist, 'update');
                             UIRenderer.instance.renderLibraryPage();
                             // Also update current page if we are on it
                             if (window.location.pathname === `/userplaylist/${editingId}`) {
@@ -1818,6 +1825,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     await db.createPlaylist(name, tracks, cover, description).then(async (playlist) => {
                         await db.performTransaction('user_playlists', 'readwrite', (store) => store.put(playlist));
+                        await syncManager.syncUserPlaylist(playlist, 'create');
                         UIRenderer.instance.renderLibraryPage();
                         modal.classList.remove('active');
                     });
@@ -1878,6 +1886,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const playlistId = card.dataset.userPlaylistId;
             if (confirm('Are you sure you want to delete this playlist?')) {
                 await db.deletePlaylist(playlistId);
+                await syncManager.syncUserPlaylist({ id: playlistId }, 'delete');
                 UIRenderer.instance.renderLibraryPage();
             }
         }
@@ -1941,6 +1950,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const playlistId = window.location.pathname.split('/')[2];
             if (confirm('Are you sure you want to delete this playlist?')) {
                 await db.deletePlaylist(playlistId);
+                await syncManager.syncUserPlaylist({ id: playlistId }, 'delete');
                 navigate('/library');
             }
         }
@@ -1978,6 +1988,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (trackId) {
                     const updatedPlaylist = await db.removeTrackFromPlaylist(playlistId, trackId, trackType);
+                    await syncManager.syncUserPlaylist(updatedPlaylist, 'update');
                     const scrollTop = document.querySelector('.main-content').scrollTop;
                     await UIRenderer.instance.renderPlaylistPage(playlistId, 'user');
                     document.querySelector('.main-content').scrollTop = scrollTop;
@@ -2582,29 +2593,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     const headerAccountImg = document.getElementById('header-account-img');
     const headerAccountIcon = document.getElementById('header-account-icon');
 
-    // Temporarily disable accounts - show popup
-    const isAccountsDisabled = false;
-
     if (headerAccountBtn && headerAccountDropdown) {
-        if (isAccountsDisabled) {
-            headerAccountBtn.style.opacity = '0.5';
-            headerAccountBtn.style.cursor = 'not-allowed';
-            headerAccountBtn.title = 'Accounts temporarily unavailable';
-            headerAccountBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                alert('.');
-            });
-        } else {
-            headerAccountBtn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const isOpen = headerAccountDropdown.classList.toggle('active');
-                if (headerAccountOverlay) {
-                    headerAccountOverlay.classList.toggle('is-visible', isOpen);
-                    document.body.style.overflow = isOpen ? 'hidden' : '';
-                }
-                await updateAccountDropdown();
-            });
-        }
+        headerAccountBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const isOpen = headerAccountDropdown.classList.toggle('active');
+            if (headerAccountOverlay) {
+                headerAccountOverlay.classList.toggle('is-visible', isOpen);
+                document.body.style.overflow = isOpen ? 'hidden' : '';
+            }
+            await updateAccountDropdown();
+        });
 
         document.addEventListener('click', (e) => {
             if (!headerAccountBtn.contains(e.target) && !headerAccountDropdown.contains(e.target)) {
@@ -2625,13 +2623,92 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         async function updateAccountDropdown() {
-            headerAccountDropdown.innerHTML = `
-                <div class="dropdown-account-header">
-                    ${SVG_USER(14)}
-                    <span>Account</span>
-                </div>
-                <span style="padding: 0.5rem; font-size: 0.85rem; color: var(--muted-foreground)">PocketBase removed - account features unavailable</span>
-            `;
+            const user = authManager?.user;
+            headerAccountDropdown.innerHTML = '';
+
+            if (!user) {
+                headerAccountDropdown.innerHTML = `
+                    <div class="dropdown-account-header">
+                        ${SVG_USER(14)}
+                        <span>Account</span>
+                    </div>
+                    <button class="btn-primary" id="header-sign-in">Sign In</button>
+                    <button class="btn-secondary" id="header-sign-up">Sign Up</button>
+                `;
+
+                document.getElementById('header-sign-in').onclick = () => {
+                    document.getElementById('email-auth-modal').classList.add('active');
+                    headerAccountDropdown.classList.remove('active');
+                    if (headerAccountOverlay) {
+                        headerAccountOverlay.classList.remove('is-visible');
+                        document.body.style.overflow = '';
+                    }
+                };
+                document.getElementById('header-sign-up').onclick = () => {
+                    document.getElementById('email-auth-modal').classList.add('active');
+                    headerAccountDropdown.classList.remove('active');
+                    if (headerAccountOverlay) {
+                        headerAccountOverlay.classList.remove('is-visible');
+                        document.body.style.overflow = '';
+                    }
+                };
+            } else {
+                const data = await syncManager.getUserData();
+                const displayName = data?.profile?.display_name || data?.profile?.username || '';
+                const email = user.email || '';
+                const avatarUrl = data?.profile?.avatar_url;
+
+                let userInfoHtml = `
+                    <div class="dropdown-user-info">
+                        ${
+                            avatarUrl
+                                ? `<img src="${avatarUrl}&s=100" class="dropdown-user-avatar" alt="avatar">`
+                                : `<span class="dropdown-user-avatar">${SVG_USER(18)}</span>`
+                        }
+                        <span class="dropdown-user-name" title="${email}">${displayName || email}</span>
+                    </div>
+                `;
+
+                let buttonsHtml = `
+                    <button class="btn-secondary" id="header-account-settings">Account Settings</button>
+                    <button class="btn-secondary danger" id="header-sign-out">Sign Out</button>
+                `;
+
+                headerAccountDropdown.innerHTML = userInfoHtml + buttonsHtml;
+
+                document.getElementById('header-sign-out').onclick = async () => {
+                    await authManager.signOut();
+                    headerAccountDropdown.classList.remove('active');
+                    if (headerAccountOverlay) {
+                        headerAccountOverlay.classList.remove('is-visible');
+                        document.body.style.overflow = '';
+                    }
+                };
+
+                document.getElementById('header-account-settings').onclick = () => {
+                    navigate('/settings');
+                    headerAccountDropdown.classList.remove('active');
+                    if (headerAccountOverlay) {
+                        headerAccountOverlay.classList.remove('is-visible');
+                        document.body.style.overflow = '';
+                    }
+                };
+            }
+
+            if (headerAccountImg && headerAccountIcon) {
+                if (user) {
+                    const data = await syncManager.getUserData();
+                    const avatarUrl = data?.profile?.avatar_url;
+                    if (avatarUrl) {
+                        headerAccountImg.src = `${avatarUrl}&s=100`;
+                        headerAccountImg.style.display = 'block';
+                        headerAccountIcon.style.display = 'none';
+                    }
+                } else {
+                    headerAccountImg.style.display = 'none';
+                    headerAccountIcon.style.display = 'block';
+                }
+            }
         }
     }
 });

@@ -40,6 +40,7 @@ export default defineConfig((_options) => {
         define: {
             __COMMIT_HASH__: JSON.stringify(commitHash),
             __VITEST__: !!process.env.VITEST,
+            __POCKETBASE_URL__: JSON.stringify(process.env.POCKETBASE_URL || ''),
         },
         worker: {
             format: 'es',

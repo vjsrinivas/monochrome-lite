@@ -33,6 +33,7 @@ import {
 import { getVibrantColorFromImage } from './vibrant-color.js';
 import { MusicAPI } from './music-api.js';
 import { db } from './db.js';
+import { syncManager } from './accounts/pocketbase.js';
 import { Visualizer } from './visualizer.js';
 import { audioContextManager } from './audio-context.js';
 import { navigate } from './router.js';
@@ -459,6 +460,8 @@ export class UIRenderer {
                 } else {
                     trackImageHTML = `<div class="track-item-cover video-icon-placeholder" style="display: flex; align-items: center; justify-content: center; background: var(--secondary);">${SVG_PLAY(16, { style: 'opacity: 0.7;' })}</div>`;
                 }
+            } else if (!track.image && !track.cover && !track.album?.cover) {
+                trackImageHTML = `<img src="${this.api.getSongCoverUrl(track.title)}" alt="Track Cover" class="track-item-cover" loading="lazy">`;
             } else {
                 trackImageHTML = this.getCoverHTML(
                     track.image || track.cover || track.album?.cover,
@@ -1061,6 +1064,19 @@ export class UIRenderer {
         listener();
     }
 
+    mapWithConcurrency(items, limit, fn) {
+        const results = [];
+        let i = 0;
+        const worker = async () => {
+            while (i < items.length) {
+                const idx = i++;
+                results[idx] = await fn(items[idx], idx);
+            }
+        };
+        const workers = Math.max(0, Math.min(limit, items.length));
+        return Promise.all(Array.from({ length: workers }, () => worker())).then(() => results);
+    }
+
     async renderListWithTracks(
         container,
         tracks,
@@ -1082,6 +1098,7 @@ export class UIRenderer {
             .join('');
 
         // Bind data to elements immediately using index, avoiding selector ambiguity
+        const coverTasks = [];
         Array.from(tempDiv.children).forEach((element, index) => {
             const track = tracks[index];
             if (element && track) {
@@ -1096,20 +1113,22 @@ export class UIRenderer {
                         const currentSrc = coverEl.tagName === 'VIDEO' ? coverEl.poster : coverEl.src;
                         const isPlaceholder = !currentSrc || currentSrc.includes('appicon.png') || currentSrc.includes('folder.png') || coverEl.tagName === 'DIV';
                         if (isPlaceholder) {
-                            this.api.getCoverArtUrl(track.title).then((coverArt) => {
-                                const el = element.querySelector('.track-item-cover');
-                                if (!el) return;
-                                if (coverArt?.url) {
-                                    if (el.tagName === 'DIV') {
-                                        el.outerHTML = `<img src="${coverArt.url}" alt="" class="track-item-cover" loading="lazy">`;
-                                    } else {
-                                        el.src = coverArt.url;
+                            coverTasks.push(() =>
+                                this.api.getCoverArtUrl(track.title).then((coverArt) => {
+                                    const el = element.querySelector('.track-item-cover');
+                                    if (!el) return;
+                                    if (coverArt?.url) {
+                                        if (el.tagName === 'DIV') {
+                                            el.outerHTML = `<img src="${coverArt.url}" alt="" class="track-item-cover" loading="lazy">`;
+                                        } else {
+                                            el.src = coverArt.url;
+                                        }
+                                    } else if (el.tagName !== 'DIV') {
+                                        const musicIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.7"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`;
+                                        el.outerHTML = `<div class="track-item-cover cover-placeholder" style="width:40px;height:40px;border-radius:var(--radius-sm)">${musicIcon}</div>`;
                                     }
-                                } else if (el.tagName !== 'DIV') {
-                                    const musicIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.7"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`;
-                                    el.outerHTML = `<div class="track-item-cover cover-placeholder" style="width:40px;height:40px;border-radius:var(--radius-sm)">${musicIcon}</div>`;
-                                }
-                            }).catch(() => {});
+                                }).catch(() => {})
+                            );
                         }
                     }
                 }
@@ -1122,6 +1141,9 @@ export class UIRenderer {
 
         if (!append) container.innerHTML = '';
         container.appendChild(fragment);
+
+        // Throttle background cover resolution so a cold cache doesn't fire N requests at once
+        void this.mapWithConcurrency(coverTasks, 6, (task) => task());
     }
 
     setPageBackground(imageUrl) {
@@ -2562,56 +2584,50 @@ export class UIRenderer {
 
         const api = MusicAPI.instance;
 
-        let tracks = [], albums = [], artists = [], latest = [];
-        try {
-            const [catalogTracks, catalogAlbums, catalogArtists, latestResult] = await Promise.all([
-                api.getCatalogTracks({ limit: 500 }),
-                api.getCatalogAlbums({ limit: 500 }),
-                api.getCatalogArtists({ limit: 500 }),
-                api.getLatest({ limit: 20 }),
-            ]);
-
-            tracks = catalogTracks?.tracks || catalogTracks?.items || catalogTracks || [];
-            albums = catalogAlbums?.albums || catalogAlbums?.items || catalogAlbums || [];
-            artists = catalogArtists?.artists || catalogArtists?.items || catalogArtists || [];
-            latest = latestResult?.tracks || latestResult?.items || latestResult || [];
-        } catch (e) {
-            console.error('Failed to load catalog:', e);
-        }
-
-        // Render tracks
+        // Show skeletons while the catalog loads (reusing the theme's skeleton components)
         tracksContainer.classList.remove('card-grid');
         tracksContainer.classList.add('track-list');
-        if (tracks.length > 0) {
-            await this.renderListWithTracks(tracksContainer, tracks, true);
-            this.setupLibraryLikedTracksSearch(tracksContainer);
-        } else {
-            tracksContainer.innerHTML = createPlaceholder('No tracks in catalog.');
-        }
+        tracksContainer.innerHTML = this.createSkeletonTracks(8, true);
+        albumsContainer.innerHTML = this.createSkeletonCards(6);
+        artistsContainer.innerHTML = this.createSkeletonCards(6, true);
+        latestContainer.innerHTML = this.createSkeletonCards(6);
 
-        // Render albums
-        albumsContainer.innerHTML = '';
-        if (albums.length > 0) {
-            albumsContainer.innerHTML = albums.map((a) => this.createAlbumCardHTML(a)).join('');
-        } else {
-            albumsContainer.innerHTML = createPlaceholder('No albums in catalog.');
-        }
+        // Fire all catalog feeds concurrently; render each tab as its data lands
+        const feed = (promise, render) =>
+            promise.then(render).catch((e) => {
+                console.error('Failed to load catalog feed:', e);
+                render({});
+            });
 
-        // Render artists
-        artistsContainer.innerHTML = '';
-        if (artists.length > 0) {
-            artistsContainer.innerHTML = artists.map((a) => this.createArtistCardHTML(a)).join('');
-        } else {
-            artistsContainer.innerHTML = createPlaceholder('No artists in catalog.');
-        }
-
-        // Render latest
-        latestContainer.innerHTML = '';
-        if (latest.length > 0) {
-            latestContainer.innerHTML = latest.map((t) => this.createTrackCardHTML(t)).join('');
-        } else {
-            latestContainer.innerHTML = createPlaceholder('No recent tracks.');
-        }
+        await Promise.allSettled([
+            feed(api.getCatalogTracks({ limit: 500 }), async (r) => {
+                const tracks = r?.tracks || r?.items || r || [];
+                if (tracks.length > 0) {
+                    await this.renderListWithTracks(tracksContainer, tracks, true);
+                    this.setupLibraryLikedTracksSearch(tracksContainer);
+                } else {
+                    tracksContainer.innerHTML = createPlaceholder('No tracks in catalog.');
+                }
+            }),
+            feed(api.getCatalogAlbums({ limit: 500 }), (r) => {
+                const albums = r?.albums || r?.items || r || [];
+                albumsContainer.innerHTML = albums.length
+                    ? albums.map((a) => this.createAlbumCardHTML(a)).join('')
+                    : createPlaceholder('No albums in catalog.');
+            }),
+            feed(api.getCatalogArtists({ limit: 500 }), (r) => {
+                const artists = r?.artists || r?.items || r || [];
+                artistsContainer.innerHTML = artists.length
+                    ? artists.map((a) => this.createArtistCardHTML(a)).join('')
+                    : createPlaceholder('No artists in catalog.');
+            }),
+            feed(api.getLatest({ limit: 20 }), (r) => {
+                const latest = r?.tracks || r?.items || r || [];
+                latestContainer.innerHTML = latest.length
+                    ? latest.map((t) => this.createTrackCardHTML(t)).join('')
+                    : createPlaceholder('No recent tracks.');
+            }),
+        ]);
 
         // Folders (local)
         const folders = await db.getFolders();

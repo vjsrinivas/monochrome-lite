@@ -7,7 +7,7 @@ export class GatewayAPI {
         this.apiKey = apiKey || '';
         this.cache = new APICache({
             maxSize: 200,
-            ttl: 1000 * 60 * 5,
+            ttl: 1000 * 30,
         });
         this.onConnectionChange = null;
         this.#connected = true;
@@ -93,7 +93,13 @@ export class GatewayAPI {
     }
 
     async getLatest({ limit = 20, offset = 0 } = {}) {
-        return this._get('/browse/latest', { limit, offset });
+        const cached = await this.cache.get('latest', { limit, offset });
+        if (cached) return cached;
+
+        const res = await this._get('/browse/latest', { limit, offset });
+        const result = { tracks: (res?.data?.results ?? []).map(normalizeLatestResult), total: res?.data?.total };
+        await this.cache.set('latest', { limit, offset }, result);
+        return result;
     }
 
     async getBrowseCategories() {
@@ -105,15 +111,33 @@ export class GatewayAPI {
     }
 
     async getCatalogTracks({ limit = 500, offset = 0 } = {}) {
-        return this._get('/catalog/tracks', { limit, offset });
+        const cached = await this.cache.get('catalog-tracks', { limit, offset });
+        if (cached) return cached;
+
+        const res = await this._get('/catalog/tracks', { limit, offset });
+        const result = { tracks: (res?.data?.tracks ?? []).map(normalizeCatalogTrack), total: res?.data?.total };
+        await this.cache.set('catalog-tracks', { limit, offset }, result);
+        return result;
     }
 
     async getCatalogAlbums({ limit = 500, offset = 0 } = {}) {
-        return this._get('/catalog/albums', { limit, offset });
+        const cached = await this.cache.get('catalog-albums', { limit, offset });
+        if (cached) return cached;
+
+        const res = await this._get('/catalog/albums', { limit, offset });
+        const result = { albums: (res?.data?.albums ?? []).map(normalizeCatalogAlbum), total: res?.data?.total };
+        await this.cache.set('catalog-albums', { limit, offset }, result);
+        return result;
     }
 
     async getCatalogArtists({ limit = 500, offset = 0 } = {}) {
-        return this._get('/catalog/artists', { limit, offset });
+        const cached = await this.cache.get('catalog-artists', { limit, offset });
+        if (cached) return cached;
+
+        const res = await this._get('/catalog/artists', { limit, offset });
+        const result = { artists: (res?.data?.artists ?? []).map(normalizeCatalogArtist), total: res?.data?.total };
+        await this.cache.set('catalog-artists', { limit, offset }, result);
+        return result;
     }
 
     // ---- track / audio ----
@@ -154,28 +178,19 @@ export class GatewayAPI {
 
     // ---- cover art from gateway ----
 
+    getSongCoverUrl(songName) {
+        if (!songName) return null;
+        return `${this.gatewayUrl}/covers/song/${encodeURIComponent(songName)}`;
+    }
+
     async getCoverArtUrl(songName) {
         if (!songName) return null;
         const cached = await this.cache.get('cover-art', { songName });
         if (cached) return cached;
 
-        try {
-            const result = await this._get(`/audio/cover-art/${encodeURIComponent(songName)}`);
-            if (result?.success && result?.data) {
-                const entry = {
-                    url: result.data.cover_art_url || null,
-                    album: result.data.album || null,
-                    artist: result.data.artist || null,
-                };
-                await this.cache.set('cover-art', { songName }, entry);
-                return entry;
-            }
-        } catch (e) {
-            console.warn('Gateway cover art fetch failed:', e);
-        }
-        const empty = { url: null, album: null, artist: null };
-        await this.cache.set('cover-art', { songName }, empty);
-        return empty;
+        const entry = { url: this.getSongCoverUrl(songName), album: null, artist: null };
+        await this.cache.set('cover-art', { songName }, entry);
+        return entry;
     }
 
     // ---- cover helpers ----
@@ -191,7 +206,8 @@ export class GatewayAPI {
     }
 
     getArtistPictureUrl(id, size = '320') {
-        return `${this.gatewayUrl}/covers/artist/${id}?size=${size}`;
+        if (typeof id === 'string' && id.startsWith('blob:')) return id;
+        return `${this.gatewayUrl}/covers/${id}?size=${size}`;
     }
 
     getArtistPictureSrcset(id) {
@@ -216,4 +232,54 @@ export class GatewayAPI {
     getCacheStats() {
         return this.cache.getCacheStats();
     }
+}
+
+// ---- shape mapping: gateway catalog rows -> UI renderer shapes ----
+
+export function normalizeCatalogTrack(t) {
+    return {
+        id: t.id,
+        title: t.title,
+        artist: t.artist ? { id: t.artist, name: t.artist } : null,
+        artists: t.artist ? [{ id: t.artist, name: t.artist }] : [],
+        album: t.album ? { title: t.album, cover: t.cover_art_s3_key || null } : { cover: t.cover_art_s3_key || null },
+        cover: t.cover_art_s3_key || null,
+        duration: t.duration,
+        type: 'track',
+    };
+}
+
+export function normalizeCatalogAlbum(a) {
+    return {
+        id: a.id,
+        title: a.title,
+        artist: a.artist || 'Unknown Artist',
+        cover: a.cover_art_s3_key || null,
+        releaseDate: a.release_date || null,
+        numberOfTracks: a.track_count || null,
+        type: 'album',
+    };
+}
+
+export function normalizeCatalogArtist(a) {
+    return {
+        id: a.id,
+        name: a.name,
+        picture: a.picture_s3_key || null,
+        type: 'artist',
+    };
+}
+
+export function normalizeLatestResult(r) {
+    const artist = r.snippet ? { id: r.snippet, name: r.snippet } : null;
+    return {
+        id: r.id,
+        title: r.title,
+        artist,
+        artists: artist ? [artist] : [],
+        album: null,
+        cover: null,
+        duration: null,
+        type: 'track',
+    };
 }
