@@ -733,21 +733,20 @@
         <div id="email-auth-modal" class="modal">
             <div class="modal-overlay"></div>
             <div class="modal-content email-auth-modal-content">
-                <div class="email-auth-modal-header">
-                    <h3>Email Authentication</h3>
-                    <button
-                        type="button"
-                        class="btn-icon email-auth-modal-close"
-                        id="email-auth-modal-close"
-                        title="Close"
-                    >
-                        <use svg="!lucide/x.svg" size="20" />
-                    </button>
-                </div>
+                <button
+                    type="button"
+                    class="btn-icon email-auth-modal-close"
+                    id="email-auth-modal-close"
+                    title="Close"
+                >
+                    <use svg="!lucide/x.svg" size="20" />
+                </button>
+                <h3 class="email-auth-title">Email Authentication</h3>
                 <div class="auth-mode-toggle">
                     <button type="button" id="auth-mode-signin" class="auth-mode-btn active">Sign In</button>
                     <button type="button" id="auth-mode-signup" class="auth-mode-btn">Sign Up</button>
                 </div>
+                <label for="auth-email" class="email-auth-label">Email <span class="required">*</span></label>
                 <input
                     type="email"
                     id="auth-email"
@@ -755,6 +754,7 @@
                     placeholder="Email Address"
                 />
                 <div class="auth-username-field" id="auth-username-field" style="display: none">
+                    <label for="auth-username" class="email-auth-label">Username <span class="required">*</span></label>
                     <input
                         type="text"
                         id="auth-username"
@@ -764,6 +764,7 @@
                     <div id="auth-username-status"></div>
                 </div>
                 <div class="auth-password-confirm-field" id="auth-password-confirm-field" style="display: none">
+                    <label for="auth-password-confirm" class="email-auth-label">Confirm Password <span class="required">*</span></label>
                     <input
                         type="password"
                         id="auth-password-confirm"
@@ -771,6 +772,7 @@
                         placeholder="Confirm Password"
                     />
                 </div>
+                <label for="auth-password" class="email-auth-label">Password <span class="required">*</span></label>
                 <div class="email-auth-password-block">
                     <input
                         type="password"
@@ -778,12 +780,15 @@
                         class="template-input email-auth-input"
                         placeholder="Password"
                     />
+                    <button type="button" id="email-auth-password-toggle" class="email-auth-eye-toggle" title="Show password">
+                        <svg id="email-auth-eye-icon" width="20" height="20"></svg>
+                    </button>
                     <button type="button" id="reset-password-btn" class="email-auth-forgot-link">
-                        Forgot password?
+                        Forgotten password
                     </button>
                 </div>
                 <div id="auth-error" class="auth-error-msg" style="display: none"></div>
-                <button type="button" id="email-auth-submit-btn" class="btn-primary email-auth-submit">Submit</button>
+                <button type="button" id="email-auth-submit-btn" class="btn-primary email-auth-submit">Login →</button>
             </div>
         </div>
 
@@ -1617,7 +1622,14 @@
                                 </div>
                                 <h4 class="card-title">Create playlist</h4>
                             </button>
+                            <button type="button" class="library-create-dashed-card" id="library-create-folder-card">
+                                <div class="library-create-dashed-art">
+                                    <use svg="!lucide/folder.svg" size="20" />
+                                </div>
+                                <h4 class="card-title">Create folder</h4>
+                            </button>
                         </div>
+                        <div class="card-grid" id="my-folders-container"></div>
                         <div class="card-grid" id="my-playlists-container"></div>
                     </section>
 
@@ -1627,7 +1639,6 @@
                             <button class="search-tab active" data-tab="tracks">Tracks</button>
                             <button class="search-tab" data-tab="albums">Albums</button>
                             <button class="search-tab" data-tab="artists">Artists</button>
-                            <button class="search-tab" data-tab="playlists">Latest</button>
                         </div>
                         <div class="search-tab-content active" id="library-tab-tracks">
                             <div
@@ -1713,9 +1724,6 @@
                         <div class="search-tab-content" id="library-tab-artists">
                             <div class="card-grid" id="library-artists-container"></div>
                         </div>
-                        <div class="search-tab-content" id="library-tab-latest">
-                            <div class="card-grid" id="library-playlists-container"></div>
-                        </div>
                     </section>
                 </div>
 
@@ -1746,8 +1754,7 @@
                             <div class="meta" id="album-detail-meta"></div>
                             <div class="meta" id="album-detail-producer"></div>
                             <br />
-                            <div class="ratings" id="album-detail-ratings-critics"></div>
-                            <div class="ratings" id="album-detail-ratings-users"></div>
+ 
                             <div class="detail-header-actions">
                                 <button id="play-album-btn" class="btn-primary" title="Play Album">
                                     <use svg="./images/play.svg" size="20" />
@@ -2024,10 +2031,6 @@
                                 <button id="play-track-btn" class="btn-primary" title="Play">
                                     <use svg="./images/play.svg" size="20" />
                                     <span>Play</span>
-                                </button>
-                                <button id="track-lyrics-btn" class="btn-secondary" title="Lyrics">
-                                    <use svg="./images/mic.svg" size="20" />
-                                    <span>Lyrics</span>
                                 </button>
                                 <button id="share-track-btn" class="btn-secondary" title="Share">
                                     <use svg="!lucide/share.svg" size="20" />
@@ -4150,18 +4153,6 @@
                                     </div>
                                     <label class="toggle-switch">
                                         <input type="checkbox" id="download-lyrics-toggle" />
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                                <div class="setting-item">
-                                    <div class="info">
-                                        <span class="label">Romaji Lyrics</span>
-                                        <span class="description"
-                                            >Convert Japanese lyrics to Romaji (Latin characters)</span
-                                        >
-                                    </div>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="romaji-lyrics-toggle" />
                                         <span class="slider"></span>
                                     </label>
                                 </div>

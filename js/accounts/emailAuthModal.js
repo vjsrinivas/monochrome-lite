@@ -219,6 +219,8 @@ export function initEmailAuthModal() {
     const passwordToggle = getEl(PASSWORD_TOGGLE);
     if (passwordToggle) passwordToggle.addEventListener('click', togglePasswordVisibility);
 
+    updatePasswordToggleIcon(false);
+
     // Wire account page buttons
     const connectBtn = getEl('auth-connect-btn');
     const toggleBtn = getEl('toggle-email-auth-btn');

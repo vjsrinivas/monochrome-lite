@@ -32,7 +32,7 @@ export class GatewayAPI {
 
     async #checkConnection() {
         try {
-            await fetch(`${this.gatewayUrl}/storage/stats`, {
+            await fetch(`${this.gatewayUrl}/health`, {
                 headers: this._headers(),
                 signal: AbortSignal.timeout(5000),
             });
@@ -55,7 +55,7 @@ export class GatewayAPI {
     _headers() {
         const h = { 'Content-Type': 'application/json' };
         if (this.apiKey) {
-            h['Authorization'] = `Bearer ${this.apiKey}`;
+            h['X-Api-Key'] = this.apiKey;
         }
         return h;
     }
@@ -72,6 +72,18 @@ export class GatewayAPI {
         return res.json();
     }
 
+    async _getStream(path, params = {}) {
+        const url = new URL(path, this.gatewayUrl);
+        Object.entries(params).forEach(([k, v]) => {
+            if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
+        });
+        const res = await fetch(url.toString(), { headers: this._headers() });
+        if (!res.ok) {
+            throw new Error(`Gateway ${res.status}: ${res.statusText} ${url.toString()}`);
+        }
+        return res;
+    }
+
     // ---- search ----
 
     async search({ q, type = 'song', limit = 50, offset = 0, sort = 'title' } = {}) {
@@ -85,7 +97,26 @@ export class GatewayAPI {
     // ---- browse ----
 
     async getAlbum(albumName, { limit, offset } = {}) {
-        return this._get(`/browse/album/${encodeURIComponent(albumName)}`, { limit, offset });
+        const res = await this._get(`/catalog/albums/${encodeURIComponent(albumName)}/tracks`, { limit, offset });
+        const tracks = (res?.data?.tracks ?? []);
+        if (tracks.length === 0) return { album: null, tracks: [] };
+        const t = tracks[0];
+        return {
+            tracks,
+            album: {
+                id: t.album_id || albumName,
+                title: t.album || albumName,
+                cover: t.cover_art_s3_key || null,
+                artist: t.artist_id
+                    ? { id: t.artist_id, name: t.artist || '' }
+                    : { id: null, name: t.artist || '' },
+                releaseDate: t.release_date || null,
+                copyright: t.copyright || null,
+                explicit: t.explicit || false,
+                type: t.type || null,
+                videoCoverUrl: t.video_cover_url || null,
+            },
+        };
     }
 
     async getArtist(artistName, { limit, offset } = {}) {
@@ -151,7 +182,12 @@ export class GatewayAPI {
     }
 
     async getStreamUrl(identifier) {
-        return this._get(`/audio/${encodeURIComponent(identifier)}`);
+        const encoded = identifier.split('/').map(encodeURIComponent).join('/');
+        let url = `${this.gatewayUrl}/audio/${encoded}`;
+        if (this.apiKey) {
+            url += `?api_key=${encodeURIComponent(this.apiKey)}`;
+        }
+        return { url };
     }
 
     // ---- no-op stubs (keep signatures for MusicAPI compatibility) ----

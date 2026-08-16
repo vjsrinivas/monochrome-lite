@@ -5215,15 +5215,6 @@ export async function initializeSettings(scrobbler, player, api, ui) {
         });
     }
 
-    // Romaji Lyrics Toggle
-    const romajiLyricsToggle = document.getElementById('romaji-lyrics-toggle');
-    if (romajiLyricsToggle) {
-        romajiLyricsToggle.checked = localStorage.getItem('lyricsRomajiMode') === 'true';
-        romajiLyricsToggle.addEventListener('change', (e) => {
-            localStorage.setItem('lyricsRomajiMode', e.target.checked ? 'true' : 'false');
-        });
-    }
-
     // Album Background Toggle
     const albumBackgroundToggle = document.getElementById('album-background-toggle');
     if (albumBackgroundToggle) {

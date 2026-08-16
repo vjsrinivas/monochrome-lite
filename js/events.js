@@ -14,6 +14,7 @@ import { downloadQualitySettings } from './storage.js';
 import { updateTabTitle, navigate } from './router.js';
 import { db } from './db.js';
 import { waveformGenerator } from './waveform.js';
+import { UIRenderer } from './ui.js';
 import { audioContextManager } from './audio-context.js';
 import { hapticLongPress, hapticMedium, hapticLight } from './haptics.js';
 import { SVG_BIN, SVG_MUTE, SVG_PAUSE, SVG_PLAY, SVG_VOLUME, SVG_CHECKBOX, SVG_CHECKBOX_CHECKED } from './icons.js';
@@ -348,7 +349,7 @@ async function handleSelectionAction(action) {
                         track,
                         downloadQualitySettings.getQuality(),
                         MusicAPI.instance.audioAPI,
-                        // LyricsManager removed
+                        UIRenderer.instance.lyricsManager
                     );
                 }
             }
@@ -396,7 +397,7 @@ export async function initializePlayerEvents(player, audioPlayer, scrobbler, ui)
                     _trackPlayStartTime = Date.now();
                 }
 
-                if (scrobbler.isAuthenticated()) {
+                if (scrobbler.isEnabled()) {
                     scrobbler.updateNowPlaying(player.currentTrack);
                 }
 

@@ -16,6 +16,7 @@ import {
 import { UIRenderer } from './ui.js';
 import { Player } from './player.js';
 import { MalojaScrobbler } from './maloja.js';
+import { LyricsManager, openLyricsPanel, clearLyricsPanelSync } from './lyrics.js';
 
 import { createRouter, updateTabTitle, navigate } from './router.js';
 import { initializePlayerEvents, initializeTrackInteractions, handleTrackAction } from './events.js';
@@ -261,7 +262,7 @@ function initializeKeyboardShortcuts(player, _audioPlayer) {
         escape: () => {
             document.getElementById('search-input')?.blur();
             sidePanelManager.close();
-            // lyrics module removed
+            clearLyricsPanelSync(Player.instance?.activeElement, sidePanelManager.panel);
         },
         visualizerNext: () => {
             if (UIRenderer.instance.visualizer?.presets?.['butterchurn']) {
@@ -403,7 +404,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (import.meta.env.DEV) {
         window.monochrome = {
-            // LyricsManager removed
+            LyricsManager,
             MusicAPI,
             Player,
             UIRenderer,
@@ -569,8 +570,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const scrobbler = new MalojaScrobbler();
     window.monochromeScrobbler = scrobbler;
 
-    // lyricsManager removed - lyrics module deleted
-    UIRenderer.instance.lyricsManager = null;
+    const lyricsManager = await LyricsManager.initialize(MusicAPI.instance);
+    UIRenderer.instance.lyricsManager = lyricsManager;
 
     // Check browser support for local files
     const selectLocalBtn = document.getElementById('select-local-folder-btn');
@@ -618,7 +619,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         MusicAPI.instance,
         document.querySelector('.main-content'),
         document.getElementById('context-menu'),
-        null,
+        lyricsManager,
         UIRenderer.instance,
         scrobbler
     );
@@ -642,21 +643,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (mode === 'lyrics') {
             const isActive = sidePanelManager.isActive('lyrics');
-        } else if (mode === 'cover') {
-            const overlay = document.getElementById('fullscreen-cover-overlay');
-            if (overlay && overlay.style.display === 'flex') {
-            } else {
-            }
-        }
-
-        if (mode === 'lyrics') {
-            const isActive = sidePanelManager.isActive('lyrics');
 
             if (isActive) {
                 sidePanelManager.close();
-                // lyrics removed
+                clearLyricsPanelSync(Player.instance.activeElement, sidePanelManager.panel);
             } else {
-                // lyrics removed
+                openLyricsPanel(
+                    Player.instance.currentTrack,
+                    Player.instance.activeElement,
+                    UIRenderer.instance.lyricsManager,
+                    true
+                );
             }
         } else if (mode === 'cover') {
             const overlay = document.getElementById('fullscreen-cover-overlay');
@@ -667,7 +664,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 UIRenderer.instance.showFullscreenCover(
                     Player.instance.currentTrack,
                     nextTrack,
-                    null,
+                    UIRenderer.instance.lyricsManager,
                     Player.instance.activeElement
                 );
             }
@@ -924,9 +921,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (isActive) {
             sidePanelManager.close();
-            // lyrics removed
+            clearLyricsPanelSync(Player.instance.activeElement, sidePanelManager.panel);
         } else {
-            // lyrics removed
+            openLyricsPanel(
+                Player.instance.currentTrack,
+                Player.instance.activeElement,
+                UIRenderer.instance.lyricsManager,
+                true
+            );
         }
     });
 
@@ -937,7 +939,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 Player.instance.currentTrack,
                 Player.instance,
                 MusicAPI.instance,
-                null,
+                lyricsManager,
                 'track',
                 UIRenderer.instance
             );
@@ -959,7 +961,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (currentTrackId === previousTrackId) return;
         previousTrackId = currentTrackId;
 
-        // Update lyrics panel if it's open (lyrics module removed)
+        if (sidePanelManager.isActive('lyrics')) {
+            openLyricsPanel(
+                Player.instance.currentTrack,
+                Player.instance.activeElement,
+                UIRenderer.instance.lyricsManager,
+                true
+            );
+        }
 
         // Update Fullscreen if it's open
         const fullscreenOverlay = document.getElementById('fullscreen-cover-overlay');
@@ -968,7 +977,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             UIRenderer.instance.showFullscreenCover(
                 Player.instance.currentTrack,
                 nextTrack,
-                null,
+                UIRenderer.instance.lyricsManager,
                 Player.instance.activeElement
             );
         }
