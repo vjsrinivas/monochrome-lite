@@ -114,9 +114,6 @@ export function initializeUIInteractions(player, api, ui) {
         const showActionBtns = currentQueue.length > 0;
 
         container.innerHTML = `
-            <button id="download-queue-btn" class="btn-icon" title="Download Queue" style="display: ${showActionBtns ? 'flex' : 'none'}">
-                ${SVG_DOWNLOAD(20)}
-            </button>
             <button id="like-queue-btn" class="btn-icon" title="Add Queue to Liked" style="display: ${showActionBtns ? 'flex' : 'none'}">
                 ${SVG_HEART(20)}
             </button>
@@ -134,13 +131,6 @@ export function initializeUIInteractions(player, api, ui) {
         container.querySelector('#close-side-panel-btn').addEventListener('click', () => {
             sidePanelManager.close();
         });
-
-        const downloadBtn = container.querySelector('#download-queue-btn');
-        if (downloadBtn) {
-            downloadBtn.addEventListener('click', async () => {
-                await downloadTracks(currentQueue, api, downloadQualitySettings.getQuality());
-            });
-        }
 
         const likeBtn = container.querySelector('#like-queue-btn');
         if (likeBtn) {

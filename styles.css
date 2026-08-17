@@ -5448,11 +5448,6 @@ input:checked+.slider::before {
     border-radius: var(--radius-full);
 }
 
-#download-current-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
 .template-guide {
     width: 100%;
     border-collapse: collapse;
@@ -7039,7 +7034,6 @@ img[src=''] {
     #now-playing-add-playlist-btn,
     #now-playing-mix-btn,
     #toggle-lyrics-btn,
-    #download-current-btn,
     #cast-btn,
     #mobile-add-playlist-btn,
     #sleep-timer-btn {
@@ -11032,13 +11026,22 @@ body:has(#side-panel.active) #close-fullscreen-cover-btn {
     align-items: stretch;
     justify-content: flex-start;
     overflow: hidden;
+    overflow-y: auto;
     min-width: 0;
+    align-self: stretch;
     opacity: 1;
     transform: translateX(0);
     transition:
         opacity 0.24s ease,
         transform 0.34s cubic-bezier(0.22, 1, 0.36, 1),
         visibility 0s linear 0s;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+#fullscreen-cover-overlay .fullscreen-lyrics-pane::-webkit-scrollbar {
+    display: none;
 }
 
 #fullscreen-cover-overlay .fullscreen-lyrics-shell,
@@ -11062,9 +11065,6 @@ body:has(#side-panel.active) #close-fullscreen-cover-btn {
     position: relative;
     padding-left: clamp(0.5rem, 1.6vw, 1.5rem);
     mask-image: none;
-    overflow: visible;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
 }
 
 #fullscreen-cover-overlay .fullscreen-lyrics-content::-webkit-scrollbar {
@@ -11331,7 +11331,6 @@ body:has(#side-panel.active) #close-fullscreen-cover-btn {
     #fullscreen-cover-overlay .fullscreen-lyrics-content {
         height: 100%;
         padding: 0 0 0.2rem;
-        overflow: hidden;
         mask-image: linear-gradient(180deg, transparent 0%, black 10%, black 88%, transparent 100%);
     }
 

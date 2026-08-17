@@ -98,7 +98,10 @@ export class GatewayAPI {
 
     async getAlbum(albumName, { limit, offset } = {}) {
         const res = await this._get(`/catalog/albums/${encodeURIComponent(albumName)}/tracks`, { limit, offset });
-        const tracks = (res?.data?.tracks ?? []);
+        const tracks = (res?.data?.tracks ?? []).map(t => ({
+            ...t,
+            artists: t.artists?.length ? t.artists : t.artist ? [{ id: t.artist_id || t.artist, name: t.artist }] : [],
+        }));
         if (tracks.length === 0) return { album: null, tracks: [] };
         const t = tracks[0];
         return {

@@ -5562,50 +5562,6 @@ export async function initializeSettings(scrobbler, player, api, ui) {
         });
     }
 
-    const showEditorsPicksToggle = document.getElementById('show-editors-picks-toggle');
-    if (showEditorsPicksToggle) {
-        showEditorsPicksToggle.checked = homePageSettings.shouldShowEditorsPicks();
-        showEditorsPicksToggle.addEventListener('change', (e) => {
-            homePageSettings.setShowEditorsPicks(e.target.checked);
-        });
-    }
-
-    const shuffleEditorsPicksToggle = document.getElementById('shuffle-editors-picks-toggle');
-    if (shuffleEditorsPicksToggle) {
-        shuffleEditorsPicksToggle.checked = homePageSettings.shouldShuffleEditorsPicks();
-        shuffleEditorsPicksToggle.addEventListener('change', (e) => {
-            homePageSettings.setShuffleEditorsPicks(e.target.checked);
-        });
-    }
-
-    const editorsPicksSourceSelect = document.getElementById('editors-picks-source-select');
-    if (editorsPicksSourceSelect) {
-        async function populateEditorsPicksSource() {
-            try {
-                const response = await fetch('/editors-picks-old/index.json');
-                if (response.ok) {
-                    const oldPicks = await response.json();
-                    oldPicks.forEach((pick) => {
-                        const option = document.createElement('option');
-                        option.value = pick.file;
-                        option.textContent = pick.label;
-                        editorsPicksSourceSelect.appendChild(option);
-                    });
-                }
-            } catch (e) {
-                console.warn('Could not load editors-picks-old index:', e);
-            }
-            const currentSource = homePageSettings.getEditorsPicksSource();
-            editorsPicksSourceSelect.value = currentSource;
-        }
-        await populateEditorsPicksSource();
-
-        editorsPicksSourceSelect.addEventListener('change', (e) => {
-            homePageSettings.setEditorsPicksSource(e.target.value);
-            window.dispatchEvent(new CustomEvent('refresh-home-editors-picks'));
-        });
-    }
-
     // Sidebar Section Toggles
     const sidebarShowHomeToggle = document.getElementById('sidebar-show-home-toggle');
     if (sidebarShowHomeToggle) {

@@ -291,8 +291,7 @@ function updateSelectionBar() {
                 <button data-action="play-selected">Play</button>
                 <button data-action="add-to-queue-selected">Add to queue</button>
                 <button data-action="add-to-playlist-selected">Add to playlist</button>
-                <button data-action="download-selected">Download</button>
-                <button data-action="like-selected">Like</button>
+                                <button data-action="like-selected">Like</button>
             </div>
             <button data-action="clear-selection" style="margin-left: 8px;">Clear</button>
             `;
@@ -341,19 +340,7 @@ async function handleSelectionAction(action) {
                 await showMultiSelectPlaylistModal(selectedTracks);
             }
             break;
-        case 'download-selected':
-            if (selectedTracks.length > 0) {
-                showNotification(`Downloading ${selectedTracks.length} tracks`);
-                for (const track of selectedTracks) {
-                    await downloadTrackWithMetadata(
-                        track,
-                        downloadQualitySettings.getQuality(),
-                        MusicAPI.instance.audioAPI,
-                        UIRenderer.instance.lyricsManager
-                    );
-                }
-            }
-            break;
+ 
         case 'like-selected':
             for (const track of selectedTracks) {
                 const added = await db.toggleFavorite('track', track);
@@ -584,7 +571,6 @@ export async function initializePlayerEvents(player, audioPlayer, scrobbler, ui)
             'add-to-playlist': 'now-playing-add-playlist-btn',
             'track-mix': 'now-playing-mix-btn',
             lyrics: 'toggle-lyrics-btn',
-            download: 'download-current-btn',
             cast: 'cast-btn',
             queue: 'queue-btn',
             'sleep-timer': 'sleep-timer-btn',
@@ -1140,7 +1126,7 @@ export async function handleTrackAction(
     if (!item) return;
 
     // Actions not allowed for unavailable tracks
-    const forbiddenForUnavailable = ['add-to-queue', 'play-next', 'track-mix', 'download'];
+    const forbiddenForUnavailable = ['add-to-queue', 'play-next', 'track-mix'];
     if (item.isUnavailable && forbiddenForUnavailable.includes(action)) {
         showNotification('This track is unavailable.');
         return;
@@ -1155,7 +1141,7 @@ export async function handleTrackAction(
 
     // Collection Actions (Album, Playlist, Mix)
     const isCollection = ['album', 'playlist', 'user-playlist', 'mix'].includes(type);
-    const collectionActions = ['play-card', 'shuffle-play-card', 'add-to-queue', 'play-next', 'download', 'start-mix'];
+    const collectionActions = ['play-card', 'shuffle-play-card', 'add-to-queue', 'play-next', 'start-mix'];
 
     if (isCollection && collectionActions.includes(action)) {
         try {
@@ -1192,28 +1178,7 @@ export async function handleTrackAction(
                 return;
             }
 
-            if (action === 'download') {
-                if (type === 'album') {
-                    await downloadAlbum(
-                        collectionItem,
-                        tracks,
-                        api,
-                        downloadQualitySettings.getQuality(),
-                        lyricsManager
-                    );
-                } else {
-                    await downloadPlaylist(
-                        collectionItem,
-                        tracks,
-                        api,
-                        downloadQualitySettings.getQuality(),
-                        lyricsManager
-                    );
-                }
-                return;
-            }
-
-            // Filter blocked tracks from collections
+             // Filter blocked tracks from collections
             tracks = contentBlockingSettings.filterTracks(tracks);
 
             if (action === 'add-to-queue') {
@@ -1306,8 +1271,6 @@ export async function handleTrackAction(
         } else {
             showNotification('No mix available for this track');
         }
-    } else if (action === 'download') {
-        await downloadTrackWithMetadata(item, downloadQualitySettings.getQuality(), api, lyricsManager);
     } else if (action === 'toggle-like') {
         const added = await db.toggleFavorite(type, item);
         await syncManager.syncLibraryItem(type, item, added);
@@ -1406,9 +1369,7 @@ export async function handleTrackAction(
                             const likedToolbar = document.getElementById('library-liked-tracks-toolbar');
                             if (likedToolbar) likedToolbar.style.display = 'flex';
                             const shuffleBtn = document.getElementById('shuffle-liked-tracks-btn');
-                            const downloadBtn = document.getElementById('download-liked-tracks-btn');
                             if (shuffleBtn) shuffleBtn.style.display = 'flex';
-                            if (downloadBtn) downloadBtn.style.display = 'flex';
                             ui.setupLibraryLikedTracksSearch(tracksContainer);
                         }
                     }
@@ -2144,7 +2105,7 @@ export function initializeTrackInteractions(player, api, mainContent, contextMen
                 }
 
                 // Hide actions for unavailable tracks
-                const unavailableActions = ['play-next', 'add-to-queue', 'download', 'track-mix'];
+                const unavailableActions = ['play-next', 'add-to-queue', 'track-mix'];
                 contextMenu.querySelectorAll('[data-action]').forEach((btn) => {
                     if (unavailableActions.includes(btn.dataset.action)) {
                         btn.style.display = contextTrack.isUnavailable ? 'none' : 'block';
@@ -2212,7 +2173,7 @@ export function initializeTrackInteractions(player, api, mainContent, contextMen
         contextMenu._contextType = track.type || 'track';
         contextMenu._selectedTracks = [];
 
-        const unavailableActions = ['play-next', 'add-to-queue', 'download', 'track-mix'];
+        const unavailableActions = ['play-next', 'add-to-queue', 'track-mix'];
         contextMenu.querySelectorAll('[data-action]').forEach((btn) => {
             if (unavailableActions.includes(btn.dataset.action)) {
                 btn.style.display = track.isUnavailable ? 'none' : 'block';
@@ -2319,18 +2280,7 @@ export function initializeTrackInteractions(player, api, mainContent, contextMen
                         await showMultiSelectPlaylistModal(selectedTracks);
                         clearSelection();
                         break;
-                    case 'download':
-                        showNotification(`Downloading ${selectedTracks.length} tracks`);
-                        clearSelection();
-                        for (const track of selectedTracks) {
-                            await downloadTrackWithMetadata(
-                                track,
-                                downloadQualitySettings.getQuality(),
-                                api,
-                                lyricsManager
-                            );
-                        }
-                        break;
+  
                     default:
                         clearSelection();
                         break;

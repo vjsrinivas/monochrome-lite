@@ -176,8 +176,7 @@
                 <li data-action="open-in-harmony" data-type-filter="album">Open in Harmony</li>
                 <li data-action="track-info" data-type-filter="track,video">Track info</li>
                 <li data-action="open-original-url" data-type-filter="track,video">Open original URL</li>
-                <li data-action="download">Download</li>
-                <li class="separator"></li>
+                 <li class="separator"></li>
                 <li
                     data-action="block-track"
                     data-type-filter="track"
@@ -331,9 +330,7 @@
                                     <button id="fs-add-playlist-btn" class="btn-icon" title="Add to Playlist">
                                         <use svg="!lucide/square-pen.svg" size="24" />
                                     </button>
-                                    <button id="fs-download-btn" class="btn-icon" title="Download">
-                                        <use svg="!lucide/download.svg" size="24" />
-                                    </button>
+  
                                     <button id="fs-cast-btn" class="btn-icon" title="Cast">
                                         <use svg="!lucide/cast.svg" size="24" />
                                     </button>
@@ -921,48 +918,6 @@
             </div>
         </div>
 
-        <div id="discography-download-modal" class="modal">
-            <div class="modal-overlay"></div>
-            <div class="modal-content" style="max-width: 500px">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem">
-                    <h3 style="margin: 0">Download Discography</h3>
-                    <button
-                        class="close-modal-btn"
-                        style="
-                            background: none;
-                            border: none;
-                            font-size: 24px;
-                            cursor: pointer;
-                            color: var(--muted-foreground);
-                        "
-                    >
-                        &times;
-                    </button>
-                </div>
-                <p style="margin-bottom: 1rem; color: var(--muted-foreground)">
-                    Select which releases to download for <span id="discography-artist-name"></span>:
-                </p>
-                <div style="display: flex; flex-direction: column; gap: 1rem">
-                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer">
-                        <input type="checkbox" id="download-albums" checked />
-                        <span>Albums (<span id="albums-count">0</span>)</span>
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer">
-                        <input type="checkbox" id="download-eps" />
-                        <span>EPs (<span id="eps-count">0</span>)</span>
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer">
-                        <input type="checkbox" id="download-singles" />
-                        <span>Singles (<span id="singles-count">0</span>)</span>
-                    </label>
-                </div>
-                <div class="modal-actions" style="margin-top: 1.5rem">
-                    <button class="btn-secondary" id="cancel-discography-download">Cancel</button>
-                    <button class="btn-primary" id="start-discography-download">Download</button>
-                </div>
-            </div>
-        </div>
-
  
         <div id="theme-store-modal" class="modal">
             <div class="modal-overlay"></div>
@@ -1529,24 +1484,6 @@
                             </p>
                         </div>
 
-                        <section
-                            class="content-section"
-                            id="home-editors-picks-section-empty"
-                            style="margin-top: 0; display: none"
-                        >
-                            <div
-                                style="
-                                    display: flex;
-                                    align-items: center;
-                                    justify-content: space-between;
-                                    margin-bottom: 1rem;
-                                "
-                            >
-                                <h2 class="section-title" style="margin-bottom: 0">Editor's Picks</h2>
-                            </div>
-                            <div class="card-grid" id="home-editors-picks-empty"></div>
-                        </section>
-
                         <div id="home-content" style="display: none">
                             <section class="content-section">
                                 <div
@@ -1568,19 +1505,6 @@
                                     </button>
                                 </div>
                                 <div class="card-grid" id="home-recent-mixed"></div>
-                            </section>
-                            <section class="content-section" id="home-editors-picks-section">
-                                <div
-                                    style="
-                                        display: flex;
-                                        align-items: center;
-                                        justify-content: space-between;
-                                        margin-bottom: 1rem;
-                                    "
-                                >
-                                    <h2 class="section-title" style="margin-bottom: 0">Editor's Picks</h2>
-                                </div>
-                                <div class="card-grid" id="home-editors-picks"></div>
                             </section>
                         </div>
                     </div>
@@ -1699,21 +1623,7 @@
                                     >
                                         <use svg="!lucide/shuffle.svg" size="16" />
                                     </button>
-                                    <button
-                                        id="download-liked-tracks-btn"
-                                        class="btn-secondary"
-                                        style="
-                                            width: 32px;
-                                            height: 32px;
-                                            padding: 0;
-                                            align-items: center;
-                                            justify-content: center;
-                                            border-radius: 50%;
-                                        "
-                                        title="Download Tracks"
-                                    >
-                                        <use svg="!lucide/download.svg" size="16" />
-                                    </button>
+ 
                                 </div>
                             </div>
                             <div class="track-list" id="library-tracks-container"></div>
@@ -1768,11 +1678,7 @@
                                     <use svg="./images/mix.svg" size="20" />
                                     <span>Mix</span>
                                 </button>
-                                <button id="download-album-btn" class="btn-primary" title="Download">
-                                    <use svg="!lucide/download.svg" size="20" />
-                                    <span>Download</span>
-                                </button>
-                                <button id="add-album-to-playlist-btn" class="btn-secondary" title="Add to Playlist">
+                                 <button id="add-album-to-playlist-btn" class="btn-secondary" title="Add to Playlist">
                                     <use svg="!lucide/plus.svg" size="20" />
                                     <span>Add to Playlist</span>
                                 </button>
@@ -1859,11 +1765,7 @@
                                     <use svg="!lucide/shuffle.svg" size="18" />
                                     <span>Shuffle</span>
                                 </button>
-                                <button id="download-playlist-btn" class="btn-primary" title="Download">
-                                    <use svg="!lucide/download.svg" size="20" />
-                                    <span>Download</span>
-                                </button>
-                                <button
+                                 <button
                                     id="like-playlist-btn"
                                     class="btn-secondary like-btn"
                                     data-action="toggle-like"
@@ -1947,11 +1849,7 @@
                                     <use svg="./images/mix.svg" size="20" />
                                     <span>Mix</span>
                                 </button>
-                                <button id="download-discography-btn" class="btn-primary" title="Download">
-                                    <use svg="!lucide/download.svg" size="20" />
-                                    <span>Download</span>
-                                </button>
-                                <button
+                                  <button
                                     id="like-artist-btn"
                                     class="btn-secondary like-btn"
                                     data-action="toggle-like"
@@ -2046,10 +1944,7 @@
                                     <use svg="!lucide/heart.svg" class="heart-icon" size="20" />
                                     <span>Save</span>
                                 </button>
-                                <button id="download-track-btn" class="btn-secondary" title="Download">
-                                    <use svg="!lucide/download.svg" size="20" />
-                                    <span>Download</span>
-                                </button>
+ 
                             </div>
                         </div>
                     </header>
@@ -2561,45 +2456,6 @@
                                         <input type="checkbox" id="show-jump-back-in-toggle" checked />
                                         <span class="slider"></span>
                                     </label>
-                                </div>
-                                <div class="setting-item">
-                                    <div class="info">
-                                        <span class="label">Show Editor's Picks</span>
-                                        <span class="description"
-                                            >Display curated album selections on the home page</span
-                                        >
-                                    </div>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="show-editors-picks-toggle" checked />
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div class="settings-group">
-                                <div class="setting-item">
-                                    <div class="info">
-                                        <span class="label">Shuffle Editor's Picks</span>
-                                        <span class="description"
-                                            >Randomize the order of editor's picks on each load</span
-                                        >
-                                    </div>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="shuffle-editors-picks-toggle" checked />
-                                        <span class="slider"></span>
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div class="settings-group">
-                                <div class="setting-item">
-                                    <div class="info">
-                                        <span class="label">Editor's Picks Source</span>
-                                        <span class="description">Choose which editor's picks file to display</span>
-                                    </div>
-                                    <select id="editors-picks-source-select" class="select-dropdown">
-                                        <option value="current">Current</option>
-                                    </select>
                                 </div>
                             </div>
 
@@ -4765,9 +4621,7 @@
                         <button id="toggle-lyrics-btn" title="Lyrics" style="display: none" aria-label="Lyrics">
                             <use svg="!lucide/mic-vocal.svg" size="20" />
                         </button>
-                        <button id="download-current-btn" title="Download current track" class="desktop-only">
-                            <use svg="!lucide/download.svg" size="20" />
-                        </button>
+
                         <button id="cast-btn" title="Cast">
                             <use svg="!lucide/cast.svg" size="20" />
                         </button>
@@ -4811,8 +4665,7 @@
                     </button>
                     <button data-action="track-mix"><use svg="./images/mix.svg" size="18" /> Track Mix</button>
                     <button data-action="lyrics"><use svg="!lucide/mic-vocal.svg" size="18" /> Lyrics</button>
-                    <button data-action="download"><use svg="!lucide/download.svg" size="18" /> Download</button>
-                    <button data-action="cast"><use svg="!lucide/cast.svg" size="18" /> Cast</button>
+                          <button data-action="cast"><use svg="!lucide/cast.svg" size="18" /> Cast</button>
                     <button data-action="sleep-timer"><use svg="!lucide/clock.svg" size="18" /> Sleep Timer</button>
                 </div>
                 <div id="scrub-tooltip" class="scrub-tooltip"></div>

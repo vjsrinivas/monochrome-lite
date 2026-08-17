@@ -1809,6 +1809,43 @@ export const queueManager = {
     },
 };
 
+export const trackProgressManager = {
+    STORAGE_KEY: 'monochrome-track-progress',
+
+    save(trackId, progress, duration) {
+        if (!trackId || progress == null || duration == null) return;
+        try {
+            localStorage.setItem(
+                this.STORAGE_KEY,
+                JSON.stringify({ trackId, progress: Math.round(progress), duration: Math.round(duration), savedAt: Date.now() })
+            );
+        } catch (e) {
+            console.warn('[trackProgress] Failed to save:', e);
+        }
+    },
+
+    clear() {
+        try {
+            localStorage.removeItem(this.STORAGE_KEY);
+        } catch {
+            /* ignore */
+        }
+    },
+
+    get() {
+        try {
+            const data = localStorage.getItem(this.STORAGE_KEY);
+            return data ? JSON.parse(data) : null;
+        } catch {
+            return null;
+        }
+    },
+
+    has() {
+        return localStorage.getItem(this.STORAGE_KEY) !== null;
+    },
+};
+
 export const sidebarSettings = {
     STORAGE_KEY: 'monochrome-sidebar-collapsed',
 
@@ -1892,50 +1929,6 @@ export const homePageSettings = {
 
     setShowJumpBackIn(enabled) {
         localStorage.setItem(this.SHOW_JUMP_BACK_IN_KEY, enabled ? 'true' : 'false');
-    },
-
-    SHOW_EDITORS_PICKS_KEY: 'home-show-editors-picks',
-
-    shouldShowEditorsPicks() {
-        try {
-            const val = localStorage.getItem(this.SHOW_EDITORS_PICKS_KEY);
-            return val === null ? true : val === 'true';
-        } catch {
-            return true;
-        }
-    },
-
-    setShowEditorsPicks(enabled) {
-        localStorage.setItem(this.SHOW_EDITORS_PICKS_KEY, enabled ? 'true' : 'false');
-    },
-
-    SHUFFLE_EDITORS_PICKS_KEY: 'home-shuffle-editors-picks',
-
-    shouldShuffleEditorsPicks() {
-        try {
-            const val = localStorage.getItem(this.SHUFFLE_EDITORS_PICKS_KEY);
-            return val === null ? true : val === 'true';
-        } catch {
-            return true;
-        }
-    },
-
-    setShuffleEditorsPicks(enabled) {
-        localStorage.setItem(this.SHUFFLE_EDITORS_PICKS_KEY, enabled ? 'true' : 'false');
-    },
-
-    EDITORS_PICKS_SOURCE_KEY: 'home-editors-picks-source',
-
-    getEditorsPicksSource() {
-        try {
-            return localStorage.getItem(this.EDITORS_PICKS_SOURCE_KEY) || 'current';
-        } catch {
-            return 'current';
-        }
-    },
-
-    setEditorsPicksSource(source) {
-        localStorage.setItem(this.EDITORS_PICKS_SOURCE_KEY, source);
     },
 };
 
@@ -2546,7 +2539,6 @@ export const modalSettings = {
             'shortcuts-modal',
             'missing-tracks-modal',
             'sleep-timer-modal',
-            'discography-download-modal',
             'custom-db-modal',
             'tracker-modal',
             'epilepsy-warning-modal',
@@ -2579,7 +2571,6 @@ export const modalSettings = {
             'shortcuts-modal',
             'missing-tracks-modal',
             'sleep-timer-modal',
-            'discography-download-modal',
             'custom-db-modal',
             'tracker-modal',
             'epilepsy-warning-modal',

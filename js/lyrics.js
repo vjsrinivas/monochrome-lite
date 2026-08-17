@@ -88,6 +88,7 @@ export class LyricsManager {
 }
 
 function renderLines(container, lines, audioPlayer) {
+    container.innerHTML = '';
     const els = lines.map(({ time, text }) => {
         const el = document.createElement('div');
         el.className = 'lrc-line';

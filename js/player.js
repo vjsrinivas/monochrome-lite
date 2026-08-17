@@ -11,6 +11,7 @@ import {
 } from './utils.js';
 import {
     queueManager,
+    trackProgressManager,
     replayGainSettings,
     trackDateSettings,
     exponentialVolumeSettings,
@@ -67,6 +68,8 @@ export class Player {
         this.sleepTimer = null;
         this.sleepTimerEndTime = null;
         this.sleepTimerInterval = null;
+        // Track progress tracking
+        this._progressInterval = null;
         // Artist popular tracks state
         this.artistPopularTracksState = {
             artistId: null,
@@ -95,9 +98,17 @@ export class Player {
         this.audio.addEventListener('canplay', () => {
             this.applyAudioEffects();
         });
+        this.audio.addEventListener('ended', () => {
+            this.stopProgressTracking();
+            trackProgressManager.clear();
+        });
         if (this.video) {
             this.video.addEventListener('canplay', () => {
                 this.applyAudioEffects();
+            });
+            this.video.addEventListener('ended', () => {
+                this.stopProgressTracking();
+                trackProgressManager.clear();
             });
         }
 
@@ -173,13 +184,15 @@ export class Player {
 
         window.addEventListener('beforeunload', async () => {
             await this.saveQueueState();
+            this.saveProgressForCurrentTrack();
         });
 
         // Handle visibility change - AudioContext can be suspended when backgrounded
         document.addEventListener('visibilitychange', async () => {
             const el = this.activeElement;
             if (document.visibilityState === 'hidden' && !el.paused) {
-                // Proactively resume context when going to background to prevent suspension
+                this.stopProgressTracking();
+                this.saveProgressForCurrentTrack();
                 void audioContextManager.resume();
             }
             if (document.visibilityState === 'visible' && !el.paused) {
@@ -980,6 +993,14 @@ export class Player {
             this.isFallbackRetry = false;
         }
 
+        // Read saved progress before clearing old data
+        const savedProgress = trackProgressManager.get();
+        const wasPlayingSavedTrack = savedProgress && savedProgress.trackId && savedProgress.progress > 5;
+
+        // Clear any existing progress - old track's data is stale once a new track starts
+        this.stopProgressTracking();
+        trackProgressManager.clear();
+
         const currentSequence = ++this.playbackSequence;
         const currentQueue = this.shuffleActive ? this.shuffledQueue : this.queue;
         if (this.currentQueueIndex < 0 || this.currentQueueIndex >= currentQueue.length) {
@@ -997,6 +1018,24 @@ export class Player {
             console.warn(`Attempted to play blocked track: ${track.title}. Skipping...`);
             await this.playNext();
             return;
+        }
+
+        // Apply saved resume position as start time
+        if (startTime === 0 && wasPlayingSavedTrack) {
+            const saved = savedProgress;
+            if (saved.trackId === track.id) {
+                const resumeTime = saved.progress;
+                if (resumeTime < (saved.duration || track.duration || 0) * 0.95) {
+                    console.log(`[trackProgress] Resuming "${track.title}" at ${Math.round(resumeTime)}s`);
+                    startTime = resumeTime;
+                } else {
+                    console.log(`[trackProgress] Resume at ${Math.round(resumeTime)}s rejected (progress out of bounds for ${saved.duration || track.duration || 0}s track)`);
+                }
+            } else {
+                console.log(`[trackProgress] No resume data for "${track.title}" (saved trackId: ${saved.trackId}, current trackId: ${track.id})`);
+            }
+        } else {
+            console.log(`[trackProgress] No resume check (${startTime !== 0 ? 'startTime already set' : !wasPlayingSavedTrack ? 'no saved progress > 5s' : 'track mismatch'})`);
         }
 
         const previousActiveElement = this.activeElement;
@@ -1469,6 +1508,7 @@ export class Player {
             }
 
             this.preloadNextTracks();
+            this.startProgressTracking();
         } catch (error) {
             if (this.playbackSequence !== currentSequence) return;
             if (error && (error.name === 'NotAllowedError' || error.name === 'AbortError')) {
@@ -1654,6 +1694,8 @@ export class Player {
             });
         } else {
             el.pause();
+            this.stopProgressTracking();
+            this.saveProgressForCurrentTrack();
             await this.saveQueueState();
         }
     }
@@ -1875,6 +1917,8 @@ export class Player {
         const el = this.activeElement;
         el.pause();
         el.src = '';
+        this.stopProgressTracking();
+        trackProgressManager.clear();
         this.currentTrack = null;
         this.queue = [];
         this.shuffledQueue = [];
@@ -2357,6 +2401,28 @@ export class Player {
                 reject(new Error('Timeout waiting for audio to load'));
             }, timeoutMs);
         });
+    }
+
+    startProgressTracking() {
+        if (this._progressInterval) return;
+        this._progressInterval = setInterval(() => {
+            const el = this.activeElement;
+            if (el.paused || !el.duration || !this.currentTrack) return;
+            trackProgressManager.save(this.currentTrack.id, el.currentTime, el.duration);
+        }, 5000);
+    }
+
+    stopProgressTracking() {
+        if (this._progressInterval) {
+            clearInterval(this._progressInterval);
+            this._progressInterval = null;
+        }
+    }
+
+    saveProgressForCurrentTrack() {
+        const el = this.activeElement;
+        if (el.paused || !el.duration || !this.currentTrack) return;
+        trackProgressManager.save(this.currentTrack.id, el.currentTime, el.duration);
     }
 
     // Sleep Timer Methods

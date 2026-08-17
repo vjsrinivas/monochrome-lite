@@ -192,10 +192,6 @@ export class UIRenderer {
             }
         });
 
-        window.addEventListener('refresh-home-editors-picks', async () => {
-            await this.renderHomeEditorsPicks(true, 'home-editors-picks');
-            await this.renderHomeEditorsPicks(true, 'home-editors-picks-empty');
-        });
     }
 
     static async initialize(api, player) {
@@ -370,10 +366,6 @@ export class UIRenderer {
             overflowMenuItems('lyrics').forEach((el) => {
                 el.style.display = isLocal ? 'none' : '';
             });
-            overflowMenuItems('download').forEach((el) => {
-                el.style.display = isLocal ? 'none' : '';
-            });
-
             if (fsLikeBtn) {
                 if (shouldHideLikes) {
                     fsLikeBtn.style.display = 'none';
@@ -395,9 +387,8 @@ export class UIRenderer {
             if (fsAddPlaylistBtn) fsAddPlaylistBtn.style.display = 'none';
 
             // Hide all overflow menu items when no track
-            overflowMenuItems('add-to-playlist').forEach((el) => (el.style.display = 'none'));
+             overflowMenuItems('add-to-playlist').forEach((el) => (el.style.display = 'none'));
             overflowMenuItems('lyrics').forEach((el) => (el.style.display = 'none'));
-            overflowMenuItems('download').forEach((el) => (el.style.display = 'none'));
         }
     }
 
@@ -567,6 +558,9 @@ export class UIRenderer {
     }
 
     coverArtFallback(img) {
+        if (!img.parentNode) {
+            return;
+        }
         const size = img.classList.contains('track-item-cover') ? 80 : 320;
         const placeholder = this.createCoverPlaceholderHTML(size, img.className);
         if (placeholder) {
@@ -2138,8 +2132,7 @@ export class UIRenderer {
         const totalDurationEl = document.getElementById('fs-total-duration');
         const fsLikeBtn = document.getElementById('fs-like-btn');
         const fsAddPlaylistBtn = document.getElementById('fs-add-playlist-btn');
-        const fsDownloadBtn = document.getElementById('fs-download-btn');
-        const fsCastBtn = document.getElementById('fs-cast-btn');
+                const fsCastBtn = document.getElementById('fs-cast-btn');
         const fsQueueBtn = document.getElementById('fs-queue-btn');
         const artistEl = document.getElementById('fullscreen-track-artist');
 
@@ -2295,9 +2288,7 @@ export class UIRenderer {
         if (fsAddPlaylistBtn) {
             fsAddPlaylistBtn.onclick = () => document.getElementById('now-playing-add-playlist-btn')?.click();
         }
-        if (fsDownloadBtn) {
-            fsDownloadBtn.onclick = () => document.getElementById('download-current-btn')?.click();
-        }
+  
         if (fsCastBtn) {
             fsCastBtn.onclick = () => document.getElementById('cast-btn')?.click();
         }
@@ -2712,32 +2703,12 @@ export class UIRenderer {
             await this.showPage('home');
             const welcomeEl = document.getElementById('home-welcome');
             const contentEl = document.getElementById('home-content');
-            const editorsPicksSectionEmpty = document.getElementById('home-editors-picks-section-empty');
-            const editorsPicksSection = document.getElementById('home-editors-picks-section');
 
             const history = await db.getHistory();
             const favorites = await db.getFavorites('track');
             const playlists = await db.getPlaylists(true);
 
             const hasActivity = history.length > 0 || favorites.length > 0 || playlists.length > 0;
-
-            // Handle Editor's Picks visibility based on settings
-            if (!homePageSettings.shouldShowEditorsPicks()) {
-                if (editorsPicksSectionEmpty) editorsPicksSectionEmpty.style.display = 'none';
-                if (editorsPicksSection) editorsPicksSection.style.display = 'none';
-            } else {
-                // Show empty-state section at top when no activity, hide the bottom one
-                if (editorsPicksSectionEmpty) editorsPicksSectionEmpty.style.display = hasActivity ? 'none' : '';
-                // Show bottom section when has activity, render it
-                if (editorsPicksSection) editorsPicksSection.style.display = hasActivity ? '' : 'none';
-            }
-
-            // Render editor's picks in the visible container
-            if (hasActivity) {
-                await this.renderHomeEditorsPicks(false, 'home-editors-picks');
-            } else {
-                await this.renderHomeEditorsPicks(false, 'home-editors-picks-empty');
-            }
 
             if (!hasActivity) {
                 if (welcomeEl) welcomeEl.style.display = 'block';
@@ -2759,7 +2730,6 @@ export class UIRenderer {
                 };
 
             await this.renderHomeRecent();
-            await this.renderHomeEditorsPicks();
         } finally {
             this.renderLock = false;
         }
@@ -2792,268 +2762,6 @@ export class UIRenderer {
             `,
             isCompact,
         });
-    }
-
-    _buildEditorsPickAlbumCard(album) {
-        const explicitBadge = hasExplicitContent(album) ? this.createExplicitBadge() : '';
-        const qualityBadge = createQualityBadgeHTML(album);
-        const isBlocked = contentBlockingSettings?.shouldHideAlbum(album);
-        let yearDisplay = '';
-        if (album.releaseDate) {
-            const date = new Date(album.releaseDate);
-            if (!isNaN(date.getTime())) yearDisplay = `${date.getFullYear()}`;
-        }
-        let typeLabel = '';
-        if (album.type === 'EP') typeLabel = ' • EP';
-        else if (album.type === 'SINGLE') typeLabel = ' • Single';
-        let artistName = '';
-        if (album.artist) {
-            artistName = typeof album.artist === 'string' ? album.artist : album.artist.name;
-        } else if (album.artists?.length) {
-            artistName = album.artists.map((a) => a.name).join(', ');
-        }
-        return this.createBaseCardHTML({
-            type: 'album',
-            id: album.id,
-            href: album._href || `/album/${album.id}`,
-            title: `${escapeHtml(album.title)} ${explicitBadge} ${qualityBadge}`,
-            subtitle: `${escapeHtml(artistName)} • ${yearDisplay}${typeLabel}`,
-            imageHTML: this.getCoverHTML(
-                album.cover, escapeHtml(album.title), 'card-image',
-                album._lazy === false ? 'eager' : 'lazy',
-                album.videoCoverUrl,
-                album._isEditorsPick || false, 'album'
-            ),
-            actionButtonsHTML: `
-                <button class="like-btn card-like-btn" data-action="toggle-like" data-type="album" title="Add to Liked">
-                    ${this.createHeartIcon(false)}
-                </button>`,
-            isCompact: false,
-            extraClasses: isBlocked ? 'blocked' : '',
-            extraAttributes: isBlocked
-                ? `title="Blocked: ${contentBlockingSettings.isAlbumBlocked(album.id) ? 'Album blocked' : 'Artist blocked'}"`
-                : '',
-        });
-    }
-
-    _buildEditorsPickArtistCard(artist) {
-        const isBlocked = contentBlockingSettings?.shouldHideArtist(artist);
-        return this.createBaseCardHTML({
-            type: 'artist',
-            id: artist.id,
-            href: `/artist/${artist.id}`,
-            title: escapeHtml(artist.name),
-            subtitle: '',
-            imageHTML: this.getCoverHTML(
-                artist.picture, escapeHtml(artist.name), 'card-image',
-                artist._lazy === false ? 'eager' : 'lazy',
-                null,
-                artist._isEditorsPick || false, 'artist'
-            ),
-            actionButtonsHTML: `
-                <button class="like-btn card-like-btn" data-action="toggle-like" data-type="artist" title="Add to Liked">
-                    ${this.createHeartIcon(false)}
-                </button>`,
-            isCompact: false,
-            extraClasses: `artist${isBlocked ? ' blocked' : ''}`,
-            extraAttributes: isBlocked ? 'title="Blocked: Artist blocked"' : '',
-        });
-    }
-
-    _buildEditorsPickTrackCard(track) {
-        const explicitBadge = hasExplicitContent(track) ? this.createExplicitBadge() : '';
-        const qualityBadge = createQualityBadgeHTML(track);
-        const yearDisplay = getTrackYearDisplay(track);
-        return this.createBaseCardHTML({
-            type: 'track',
-            id: track.id,
-            href: `/track/${track.id}`,
-            title: `${escapeHtml(getTrackTitle(track))} ${explicitBadge} ${qualityBadge}`,
-            subtitle: `${escapeHtml(getTrackArtists(track))}${yearDisplay}`,
-            imageHTML: this.getCoverHTML(
-                track.album?.cover, escapeHtml(track.title), 'card-image', 'lazy',
-                track.videoUrl || track.album?.videoCoverUrl
-            ),
-            actionButtonsHTML: `
-                <button class="like-btn card-like-btn" data-action="toggle-like" data-type="${track.type === 'video' ? 'video' : 'track'}" title="Add to Liked">
-                    ${this.createHeartIcon(false)}
-                </button>`,
-            isCompact: false,
-        });
-    }
-
-    _buildEditorsPickUserPlaylistCard(item) {
-        const cover = item.squareImage || item.image || item.cover;
-        const subtitle = item.username ? `by ${item.username}` : (item.numberOfTracks ? `${item.numberOfTracks} tracks` : '');
-        return this.createBaseCardHTML({
-            type: 'user-playlist',
-            id: item.id,
-            href: item._href || `/userplaylist/${item.id}`,
-            title: escapeHtml(item.title || item.name),
-            subtitle,
-            imageHTML: cover
-                ? `<img src="${this.api.getCoverUrl(cover)}" alt="${escapeHtml(item.title || item.name)}" class="card-image" loading="lazy">`
-                : `<div class="card-image" style="display:flex;align-items:center;justify-content:center;background:var(--secondary);"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>`,
-            isCompact: false,
-        });
-    }
-
-    async renderHomeEditorsPicks(forceRefresh = false, containerId = 'home-editors-picks') {
-        const picksContainer = document.getElementById(containerId);
-
-        if (picksContainer) {
-            if (forceRefresh) picksContainer.innerHTML = this.createSkeletonCards(6);
-            else if (picksContainer.children.length > 0 && !picksContainer.querySelector('.skeleton')) return;
-
-            try {
-                const source = homePageSettings.getEditorsPicksSource();
-                const picksPath = source === 'current' ? '/editors-picks.json' : `/editors-picks-old/${source}`;
-                const response = await fetch(picksPath);
-                if (!response.ok) throw new Error("Failed to load editor's picks");
-
-                let items = await response.json();
-
-                if (!Array.isArray(items) || items.length === 0) {
-                    picksContainer.innerHTML = createPlaceholder("No editor's picks available.");
-                    return;
-                }
-
-                // Filter out blocked content
-                const { contentBlockingSettings } = await import('./storage.js');
-                items = items.filter((item) => {
-                    if (item.type === 'track') {
-                        return !contentBlockingSettings.shouldHideTrack(item);
-                    } else if (item.type === 'album') {
-                        return !contentBlockingSettings.shouldHideAlbum(item);
-                    } else if (item.type === 'artist') {
-                        return !contentBlockingSettings.shouldHideArtist(item);
-                    }
-                    return true;
-                });
-
-                // Shuffle items if enabled
-                if (homePageSettings.shouldShuffleEditorsPicks()) {
-                    items = [...items].sort(() => Math.random() - 0.5);
-                }
-
-                // Use cached metadata or fetch details for each item
-                const cardsHTML = [];
-                const itemsToStore = [];
-
-                for (const item of items) {
-                    try {
-                        if (item.type === 'album') {
-                            let albumData;
-                            if (item.title && item.artist) {
-                                albumData = {
-                                    id: item.id,
-                                    title: item.title,
-                                    artist: item.artist,
-                                    releaseDate: item.releaseDate,
-                                    cover: item.cover,
-                                    explicit: item.explicit,
-                                    audioQuality: item.audioQuality,
-                                    mediaMetadata: item.mediaMetadata,
-                                    type: 'ALBUM',
-                                    _lazy: cardsHTML.length >= 6,
-                                    _isEditorsPick: true,
-                                };
-                            } else {
-                                const result = await this.api.getAlbum(item.id);
-                                if (result && result.album) {
-                                    result.album._lazy = cardsHTML.length >= 6;
-                                    result.album._isEditorsPick = true;
-                                    albumData = result.album;
-                                }
-                            }
-                            if (albumData) {
-                                cardsHTML.push(this._buildEditorsPickAlbumCard(albumData));
-                                itemsToStore.push({ el: null, data: albumData, type: 'album' });
-                            }
-                        } else if (item.type === 'userplaylist') {
-                            if (item.id && item.title) {
-                                cardsHTML.push(this._buildEditorsPickUserPlaylistCard(item));
-                                itemsToStore.push({ el: null, data: { id: item.id, name: item.title }, type: 'user-playlist' });
-                            }
-                        } else if (item.type === 'artist') {
-                            let artistData;
-                            if (item.name && item.picture) {
-                                artistData = {
-                                    id: item.id,
-                                    name: item.name,
-                                    picture: item.picture,
-                                    _lazy: cardsHTML.length >= 6,
-                                    _isEditorsPick: true,
-                                };
-                            } else {
-                                const artist = await this.api.getArtist(item.id);
-                                if (artist) {
-                                    artist._lazy = cardsHTML.length >= 6;
-                                    artist._isEditorsPick = true;
-                                    artistData = artist;
-                                }
-                            }
-                            if (artistData) {
-                                cardsHTML.push(this._buildEditorsPickArtistCard(artistData));
-                                itemsToStore.push({ el: null, data: artistData, type: 'artist' });
-                            }
-                        } else if (item.type === 'track') {
-                            let trackData;
-                            if (item.title && item.album) {
-                                trackData = {
-                                    id: item.id,
-                                    title: item.title,
-                                    artist: item.artist,
-                                    album: item.album,
-                                    explicit: item.explicit,
-                                    audioQuality: item.audioQuality,
-                                    mediaMetadata: item.mediaMetadata,
-                                    duration: item.duration,
-                                    _lazy: cardsHTML.length >= 6,
-                                    _isEditorsPick: true,
-                                };
-                            } else {
-                                const track = await this.api.getTrackMetadata(item.id);
-                                if (track) {
-                                    track._lazy = cardsHTML.length >= 6;
-                                    track._isEditorsPick = true;
-                                    trackData = track;
-                                }
-                            }
-                            if (trackData) {
-                                cardsHTML.push(this._buildEditorsPickTrackCard(trackData));
-                                itemsToStore.push({ el: null, data: trackData, type: 'track' });
-                            }
-                        } else if (item.type === 'user-playlist') {
-                            if (item.id && item.name) {
-                                cardsHTML.push(this._buildEditorsPickUserPlaylistCard(item));
-                                itemsToStore.push({ el: null, data: item, type: 'user-playlist' });
-                            }
-                        }
-                    } catch (e) {
-                        console.warn(`Failed to load ${item.type} ${item.id}:`, e);
-                    }
-                }
-
-                if (cardsHTML.length > 0) {
-                    picksContainer.innerHTML = cardsHTML.join('');
-                    for (const item of itemsToStore) {
-                        const type = item.type;
-                        const id = item.data.id;
-                        const el = picksContainer.querySelector(`[data-${type}-id="${id}"]`);
-                        if (el) {
-                            trackDataStore.set(el, item.data);
-                            await this.updateLikeState(el, type, id);
-                        }
-                    }
-                } else {
-                    picksContainer.innerHTML = createPlaceholder("No editor's picks available.");
-                }
-            } catch (e) {
-                console.error("Failed to load editor's picks:", e);
-                picksContainer.innerHTML = createPlaceholder("Failed to load editor's picks.");
-            }
-        }
     }
 
     async renderHomeArtists(forceRefresh = false, providedSeeds = null) {
@@ -3529,8 +3237,6 @@ export class UIRenderer {
         const tracklistContainer = document.getElementById('album-detail-tracklist');
         const playBtn = document.getElementById('play-album-btn');
         if (playBtn) playBtn.innerHTML = `${SVG_PLAY(20)}<span>Play Album</span>`;
-        const dlBtn = document.getElementById('download-album-btn');
-        if (dlBtn) dlBtn.innerHTML = `${SVG_DOWNLOAD(20)}<span>Download Album</span>`;
         const mixBtn = document.getElementById('album-mix-btn');
         if (mixBtn) mixBtn.style.display = 'none';
 
@@ -3960,8 +3666,6 @@ export class UIRenderer {
         const tracklistContainer = document.getElementById('playlist-detail-tracklist');
         const playBtn = document.getElementById('play-playlist-btn');
         if (playBtn) playBtn.innerHTML = `${SVG_PLAY(20)}<span>Play</span>`;
-        const dlBtn = document.getElementById('download-playlist-btn');
-        if (dlBtn) dlBtn.innerHTML = `${SVG_DOWNLOAD(20)}<span>Download</span>`;
         const addPlaylistBtn = document.getElementById('add-playlist-to-playlist-btn');
 
         imageEl.src = '';
@@ -4316,9 +4020,6 @@ export class UIRenderer {
         const tracklistContainer = document.getElementById('mix-detail-tracklist');
         const playBtn = document.getElementById('play-mix-btn');
         if (playBtn) playBtn.innerHTML = `${SVG_PLAY(20)}<span>Play</span>`;
-        const dlBtn = document.getElementById('download-mix-btn');
-        if (dlBtn) dlBtn.innerHTML = `${SVG_DOWNLOAD(20)}<span>Download</span>`;
-
         // Skeleton loading
         imageEl.src = '';
         imageEl.style.backgroundColor = 'var(--muted)';
@@ -4490,9 +4191,6 @@ if (imageEl.tagName === 'VIDEO') {
         const similarSection = document.getElementById('artist-section-similar');
         const inLibraryContainer = document.getElementById('artist-detail-in-library');
         const inLibrarySection = document.getElementById('artist-section-in-library');
-        const dlBtn = document.getElementById('download-discography-btn');
-        if (dlBtn) dlBtn.innerHTML = `${SVG_DOWNLOAD(20)}<span>Download Discography</span>`;
-
         imageEl.src = '';
         imageEl.style.backgroundColor = 'var(--muted)';
         nameEl.innerHTML = '<div class="skeleton" style="height: 48px; width: 300px; max-width: 90%;"></div>';
@@ -5131,53 +4829,19 @@ if (imageEl.tagName === 'VIDEO') {
             fragment.appendChild(deleteBtn);
         }
 
-        // Insert buttons in the correct order: Play, Shuffle, Download, Sort, Like, Edit/Delete/Share
-        const dlBtn = actionsDiv.querySelector('#download-playlist-btn');
+        // Insert buttons in the correct order: Play, Shuffle, Sort, Like, Edit/Delete/Share
         const likeBtn = actionsDiv.querySelector('#like-playlist-btn');
 
-        if (dlBtn) {
-            // We want Shuffle first, then Edit/Delete/Share.
-            // But Download is usually first or second.
-            // In renderPlaylistPage: Play, Download, Like.
-            // We want Shuffle after Play? Or after Download?
-            // Previous code: actionsDiv.insertBefore(shuffleBtn, dlBtn); => Shuffle before Download.
-            // Then appended others.
+        actionsDiv.appendChild(shuffleBtn);
+        if (sortBtn && likeBtn) {
+            actionsDiv.insertBefore(sortBtn, likeBtn);
+        } else if (sortBtn) {
+            actionsDiv.appendChild(sortBtn);
+        }
 
-            // Let's just append everything for now to keep it simple, or insert Shuffle specifically.
-            // The Play button is static. Download is static.
-
-            // If we want Shuffle before Download:
-            // fragment has Shuffle, Edit, Delete, Share.
-            // If we insert fragment before Download, all go before Download.
-            // That might change the order.
-            // Previous order: Shuffle (before Download), then Edit/Delete/Share (appended = after Like).
-
-            // Let's split fragment?
-            // Or just use append for all.
-            // The user didn't complain about order, but consistency is good.
-            // "Fix popup buttons" was the request.
-
-            // Let's stick to appending for now to minimize visual layout shifts from previous (where Edit/Delete were appended).
-            // Shuffle was inserted before Download.
-            actionsDiv.insertBefore(shuffleBtn, dlBtn);
-            // Insert Sort after Download, before Like
-            if (sortBtn && likeBtn) {
-                actionsDiv.insertBefore(sortBtn, likeBtn);
-            } else if (sortBtn) {
-                actionsDiv.appendChild(sortBtn);
-            }
-
-            // Append Edit/Delete/Share buttons after Like
-            while (fragment.firstChild) {
-                actionsDiv.appendChild(fragment.firstChild);
-            }
-        } else {
-            // If no Download button, just append everything
-            actionsDiv.appendChild(shuffleBtn);
-            if (sortBtn) actionsDiv.appendChild(sortBtn);
-            while (fragment.firstChild) {
-                actionsDiv.appendChild(fragment.firstChild);
-            }
+        // Append Edit/Delete/Share buttons after Like
+        while (fragment.firstChild) {
+            actionsDiv.appendChild(fragment.firstChild);
         }
     }
 

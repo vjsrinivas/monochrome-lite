@@ -932,20 +932,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    document.getElementById('download-current-btn')?.addEventListener('click', async () => {
-        if (Player.instance.currentTrack) {
-            await handleTrackAction(
-                'download',
-                Player.instance.currentTrack,
-                Player.instance,
-                MusicAPI.instance,
-                lyricsManager,
-                'track',
-                UIRenderer.instance
-            );
-        }
-    });
-
     // Auto-update lyrics when track changes
     let previousTrackId = null;
     audioPlayer.addEventListener('play', async () => {
@@ -1141,76 +1127,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     btn.disabled = false;
                     btn.innerHTML = originalHTML;
                 }
-            }
-        }
-        if (e.target.closest('#download-mix-btn')) {
-            const btn = e.target.closest('#download-mix-btn');
-            if (btn.disabled) return;
-
-            const mixId = window.location.pathname.split('/')[2];
-            if (!mixId) return;
-
-            btn.disabled = true;
-            const originalHTML = btn.innerHTML;
-            btn.innerHTML = `${SVG_ANIMATE_SPIN(20)}<span>Downloading...</span>`;
-
-            try {
-                const { mix, tracks } = await MusicAPI.instance.getMix(mixId);
-                const { downloadPlaylist } = await loadDownloadsModule();
-                await downloadPlaylist(
-                    mix,
-                    tracks,
-                    MusicAPI.instance,
-                    downloadQualitySettings.getQuality(),
-                    null
-                );
-            } catch (error) {
-                console.error('Mix download failed:', error);
-                alert('Failed to download mix: ' + error.message);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalHTML;
-            }
-        }
-
-        if (e.target.closest('#download-playlist-btn')) {
-            const btn = e.target.closest('#download-playlist-btn');
-            if (btn.disabled) return;
-
-            const playlistId = window.location.pathname.split('/')[2];
-            if (!playlistId) return;
-
-            btn.disabled = true;
-            const originalHTML = btn.innerHTML;
-            btn.innerHTML = `${SVG_ANIMATE_SPIN(20)}<span>Downloading...</span>`;
-
-            try {
-                let playlist, tracks;
-                let userPlaylist = await db.getPlaylist(playlistId);
-
-                if (userPlaylist) {
-                    playlist = { ...userPlaylist, title: userPlaylist.name || userPlaylist.title };
-                    tracks = userPlaylist.tracks || [];
-                } else {
-                    const data = await MusicAPI.instance.getPlaylist(playlistId);
-                    playlist = data.playlist;
-                    tracks = data.tracks;
-                }
-
-                const { downloadPlaylist } = await loadDownloadsModule();
-                await downloadPlaylist(
-                    playlist,
-                    tracks,
-                    MusicAPI.instance,
-                    downloadQualitySettings.getQuality(),
-                    null
-                );
-            } catch (error) {
-                console.error('Playlist download failed:', error);
-                alert('Failed to download playlist: ' + error.message);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalHTML;
             }
         }
 
@@ -2032,36 +1948,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        if (e.target.closest('#download-album-btn')) {
-            const btn = e.target.closest('#download-album-btn');
-            if (btn.disabled) return;
-
-            const albumId = window.location.pathname.split('/')[2];
-            if (!albumId) return;
-
-            btn.disabled = true;
-            const originalHTML = btn.innerHTML;
-            btn.innerHTML = `${SVG_ANIMATE_SPIN(20)}<span>Downloading...</span>`;
-
-            try {
-                const { album, tracks } = await MusicAPI.instance.getAlbum(albumId);
-                const { downloadAlbum } = await loadDownloadsModule();
-                await downloadAlbum(
-                    album,
-                    tracks,
-                    MusicAPI.instance,
-                    downloadQualitySettings.getQuality(),
-                    lyricsManager
-                );
-            } catch (error) {
-                console.error('Album download failed:', error);
-                alert('Failed to download album: ' + error.message);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalHTML;
-            }
-        }
-
         if (e.target.closest('#add-album-to-playlist-btn')) {
             const btn = e.target.closest('#add-album-to-playlist-btn');
             if (btn.disabled) return;
@@ -2248,58 +2134,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             } catch (error) {
                 console.error('Failed to shuffle liked tracks:', error);
-            }
-        }
-
-        if (e.target.closest('#download-liked-tracks-btn')) {
-            const btn = e.target.closest('#download-liked-tracks-btn');
-            if (btn.disabled) return;
-
-            btn.disabled = true;
-            const originalHTML = btn.innerHTML;
-            btn.innerHTML = SVG_ANIMATE_SPIN(16);
-
-            try {
-                const likedTracks = await db.getFavorites('track');
-                if (likedTracks.length === 0) {
-                    alert('No liked tracks to download.');
-                    return;
-                }
-                const { downloadLikedTracks } = await loadDownloadsModule();
-                await downloadLikedTracks(
-                    likedTracks,
-                    MusicAPI.instance,
-                    downloadQualitySettings.getQuality(),
-                    lyricsManager
-                );
-            } catch (error) {
-                console.error('Liked tracks download failed:', error);
-                alert('Failed to download liked tracks: ' + error.message);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalHTML;
-            }
-        }
-
-        if (e.target.closest('#download-discography-btn')) {
-            const btn = e.target.closest('#download-discography-btn');
-            if (btn.disabled) return;
-
-            const artistId = window.location.pathname.split('/')[2];
-            if (!artistId) return;
-
-            try {
-                const artist = await MusicAPI.instance.getArtist(artistId);
-                showDiscographyDownloadModal(
-                    artist,
-                    MusicAPI.instance,
-                    downloadQualitySettings.getQuality(),
-                    lyricsManager,
-                    btn
-                );
-            } catch (error) {
-                console.error('Failed to load artist for discography download:', error);
-                alert('Failed to load artist: ' + error.message);
             }
         }
 
@@ -2972,79 +2806,6 @@ function showMissingTracksNotification(missingTracks, playlistName) {
     };
 
     modal.addEventListener('click', handleClose);
-    modal.classList.add('active');
-}
-
-function showDiscographyDownloadModal(artist, api, quality, lyricsManager, triggerBtn) {
-    const modal = document.getElementById('discography-download-modal');
-
-    document.getElementById('discography-artist-name').textContent = artist.name;
-    document.getElementById('albums-count').textContent = artist.albums?.length || 0;
-    document.getElementById('eps-count').textContent = (artist.eps || []).filter((a) => a.type === 'EP').length;
-    document.getElementById('singles-count').textContent = (artist.eps || []).filter((a) => a.type === 'SINGLE').length;
-
-    // Reset checkboxes
-    document.getElementById('download-albums').checked = true;
-    document.getElementById('download-eps').checked = true;
-    document.getElementById('download-singles').checked = true;
-
-    const closeModal = () => {
-        modal.classList.remove('active');
-    };
-
-    const handleClose = (e) => {
-        if (
-            e.target === modal ||
-            e.target.classList.contains('modal-overlay') ||
-            e.target.closest('.close-modal-btn') ||
-            e.target.id === 'cancel-discography-download'
-        ) {
-            closeModal();
-        }
-    };
-
-    modal.addEventListener('click', handleClose);
-
-    document.getElementById('start-discography-download').onclick = async () => {
-        const includeAlbums = document.getElementById('download-albums').checked;
-        const includeEPs = document.getElementById('download-eps').checked;
-        const includeSingles = document.getElementById('download-singles').checked;
-
-        if (!includeAlbums && !includeEPs && !includeSingles) {
-            alert('Please select at least one type of release to download.');
-            return;
-        }
-
-        closeModal();
-
-        // Filter releases based on selection
-        let selectedReleases = [];
-        if (includeAlbums) {
-            selectedReleases = selectedReleases.concat(artist.albums || []);
-        }
-        if (includeEPs) {
-            selectedReleases = selectedReleases.concat((artist.eps || []).filter((a) => a.type === 'EP'));
-        }
-        if (includeSingles) {
-            selectedReleases = selectedReleases.concat((artist.eps || []).filter((a) => a.type === 'SINGLE'));
-        }
-
-        triggerBtn.disabled = true;
-        const originalHTML = triggerBtn.innerHTML;
-        triggerBtn.innerHTML = `${SVG_ANIMATE_SPIN(20)}<span>Downloading...</span>`;
-
-        try {
-            const { downloadDiscography } = await loadDownloadsModule();
-            await downloadDiscography(artist, selectedReleases, api, quality, lyricsManager);
-        } catch (error) {
-            console.error('Discography download failed:', error);
-            alert('Failed to download discography: ' + error.message);
-        } finally {
-            triggerBtn.disabled = false;
-            triggerBtn.innerHTML = originalHTML;
-        }
-    };
-
     modal.classList.add('active');
 }
 
