@@ -400,12 +400,17 @@ export const getTrackArtists = (track = {}, { fallback = 'Unknown Artist' } = {}
         return track.artists.map((artist) => artist?.name).join(', ');
     }
 
+    if (track?.artist?.name) {
+        return track.artist.name;
+    }
+
     return fallback;
 };
 
 export const getTrackArtistsHTML = (track = {}, { fallback = 'Unknown Artist' } = {}) => {
-    if (track?.artists?.length) {
-        return track.artists
+    const artists = track?.artists?.length ? track.artists : (track?.artist ? [track.artist] : []);
+    if (artists.length) {
+        return artists
             .map((artist) => {
                 const escapedName = escapeHtml(artist.name || 'Unknown Artist');
                 const escapedId = escapeHtml(artist.id || '');

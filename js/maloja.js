@@ -169,6 +169,10 @@ export class MalojaScrobbler {
         this.clearScrobbleTimer();
     }
 
+    async loveTrack(track) {
+        await this.submitScrobble(track, Math.floor(Date.now() / 1000));
+    }
+
     disconnect() {
         this.clearScrobbleTimer();
         this.currentTrack = null;

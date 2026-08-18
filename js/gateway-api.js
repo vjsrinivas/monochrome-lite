@@ -85,13 +85,61 @@ export class GatewayAPI {
     }
 
     // ---- search ----
+    // Gateway /search always returns type:"song" hits regardless of the `type` param.
+    // The `type` enum only controls which DB column is searched (title / album / artist).
+    // We group the returned tracks into separate artists/albums sections by extracting
+    // unique artist and album entries from the flat hit payload.
 
-    async search({ q, type = 'song', limit = 50, offset = 0, sort = 'title' } = {}) {
-        return this._get('/search', { q, type, limit, offset, sort });
+    #normalizeTrack(h) {
+        const artistName = h.artist || 'Unknown Artist';
+        const albumName = h.album || 'Unknown Album';
+        const artistObj = { id: h.artist_id || artistName, name: artistName };
+        const albumObj = { id: h.album_id || albumName, title: albumName, cover: h.cover_art_s3_key || null };
+        return {
+            id: h.id,
+            title: h.title,
+            type: 'track',
+            artist: artistObj,
+            artists: [artistObj],
+            album: albumObj,
+            cover: h.cover_art_s3_key || null,
+            image: h.cover_art_s3_key || null,
+            imageId: h.cover_art_s3_key || null,
+            copyright: h.copyright || null,
+            duration: h.duration || null,
+        };
     }
 
-    async searchAll({ q, limit = 100 } = {}) {
-        return this._get('/search', { q, type: 'all', limit });
+    async search(q, { type = 'all', limit = 50, offset = 0 } = {}) {
+        const res = await this._get('/search', { q, type, limit, offset });
+        const hits = (res?.data?.results ?? []);
+        const total = res?.data?.total ?? 0;
+
+        const tracks = hits.map((h) => this.#normalizeTrack(h));
+
+        const artistMap = new Map();
+        const albumMap = new Map();
+        for (const t of tracks) {
+            if (!artistMap.has(t.artist.id)) {
+                artistMap.set(t.artist.id, { id: t.artist.id, name: t.artist.name, type: 'artist' });
+            }
+            if (!albumMap.has(t.album.id)) {
+                albumMap.set(t.album.id, { id: t.album.id, title: t.album.title, artist: t.artist.name, cover: t.album.cover, type: 'album' });
+            }
+        }
+
+        return {
+            tracks: { items: tracks, limit, offset, total },
+            videos: { items: [], limit: 0, offset: 0, total: 0 },
+            artists: { items: Array.from(artistMap.values()), limit: 0, offset: 0, total },
+            albums: { items: Array.from(albumMap.values()), limit: 0, offset: 0, total },
+            playlists: { items: [], limit: 0, offset: 0, total: 0 },
+            podcasts: { items: [], limit: 0, offset: 0, total: 0 },
+        };
+    }
+
+    async searchAll(q, { limit = 100 } = {}) {
+        return this.search(q, { type: 'all', limit });
     }
 
     // ---- browse ----
@@ -122,8 +170,49 @@ export class GatewayAPI {
         };
     }
 
-    async getArtist(artistName, { limit, offset } = {}) {
-        return this._get(`/browse/artist/${encodeURIComponent(artistName)}`, { limit, offset });
+    async getArtist(artistName, { limit = 500, offset = 0 } = {}) {
+        const [tracksRes, artistsRes] = await Promise.all([
+            this._get(`/catalog/artists/${encodeURIComponent(artistName)}/tracks`, { limit, offset }),
+            this._get('/catalog/artists', { limit: 500 }),
+        ]);
+
+        const rawTracks = tracksRes?.data?.tracks ?? [];
+        const tracks = rawTracks.map(normalizeCatalogTrack);
+
+        const catalog = (artistsRes?.data?.artists ?? []).find(
+            (a) => a.id === artistName || a.name === artistName
+        );
+
+        const albums = new Map();
+        let fallbackArtist = '';
+        for (const t of rawTracks) {
+            fallbackArtist = t.artist || fallbackArtist;
+            const key = t.album_id || t.album || t.title;
+            if (albums.has(key)) continue;
+            albums.set(key, {
+                id: t.album_id || key,
+                title: t.album || t.title,
+                artist: catalog?.name || t.artist || 'Unknown Artist',
+                cover: t.cover_art_s3_key || null,
+                releaseDate: t.release_date || null,
+                copyright: t.copyright || null,
+                type: t.type || null,
+                videoCoverUrl: t.video_cover_url || null,
+            });
+        }
+
+        return {
+            id: catalog?.id || artistName,
+            name: catalog?.name || fallbackArtist || artistName,
+            picture: catalog?.picture_s3_key || null,
+            popularity: catalog?.track_count || 0,
+            tracks,
+            albums: Array.from(albums.values()),
+            eps: [],
+            videos: [],
+            mixes: null,
+            artistRoles: [],
+        };
     }
 
     async getLatest({ limit = 20, offset = 0 } = {}) {

@@ -584,7 +584,7 @@ export class MusicDatabase {
     _updatePlaylistMetadata(playlist) {
         playlist.numberOfTracks = playlist.tracks ? playlist.tracks.length : 0;
 
-        if (!playlist.cover) {
+        if (!playlist.cover && playlist.iconMode !== 'none') {
             const uniqueCovers = [];
             const seenCovers = new Set();
             const tracks = playlist.tracks || [];
@@ -610,7 +610,7 @@ export class MusicDatabase {
     }
 
     // User Playlists API
-    async createPlaylist(name, tracks = [], cover = '', description = '') {
+    async createPlaylist(name, tracks = [], cover = '', description = '', iconMode = 'auto') {
         const id = crypto.randomUUID();
         const playlist = {
             id: id,
@@ -618,6 +618,7 @@ export class MusicDatabase {
             tracks: tracks.map((t) => this._minifyItem(t.type || 'track', { ...t, addedAt: Date.now() })),
             cover: cover,
             description: description,
+            iconMode: iconMode,
             createdAt: Date.now(),
             updatedAt: Date.now(),
             numberOfTracks: tracks.length,

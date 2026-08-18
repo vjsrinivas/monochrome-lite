@@ -1586,7 +1586,6 @@ body.has-page-background .search-bar input {
 
 body.has-page-background .track-item:hover {
     background-color: var(--track-hover-bg, var(--secondary));
-    transform: scale(1.005);
 }
 
 .search-history {
@@ -2395,8 +2394,7 @@ input[type='search']::-webkit-search-cancel-button {
     border-radius: var(--radius-sm);
     align-items: center;
     transition:
-        background-color var(--transition-fast),
-        transform var(--transition-fast);
+        background-color var(--transition-fast);
     cursor: pointer;
     border: 1px solid transparent;
     position: relative;
@@ -2416,7 +2414,6 @@ input[type='search']::-webkit-search-cancel-button {
 
 .track-item:hover {
     background-color: var(--secondary);
-    transform: scale(1.005);
 }
 
 /* Add active state for click feedback */

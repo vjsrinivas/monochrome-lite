@@ -54,6 +54,12 @@ export function createRouter(ui) {
             case 'home':
                 await ui.renderHomePage();
                 break;
+            case 'playlist':
+                await ui.renderPlaylistPage(param, null);
+                break;
+            case 'userplaylist':
+                await ui.renderPlaylistPage(param, 'user');
+                break;
             default:
                 ui.showPage(page);
                 break;

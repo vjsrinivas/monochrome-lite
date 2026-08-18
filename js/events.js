@@ -1340,9 +1340,26 @@ export async function handleTrackAction(
                               : `No liked ${type}s yet.`;
                     container.innerHTML = `<div class="placeholder-text">${msg}</div>`;
                 }
+            }
+
+            if (!added && type === 'track') {
+                const likedContainer = document.getElementById('library-liked-container');
+                if (likedContainer) {
+                    const likedItem = likedContainer.querySelector(`.track-item[data-track-id="${id}"], .card[data-track-id="${id}"]`);
+                    if (likedItem) {
+                        likedItem.remove();
+                        if (likedContainer.children.length === 0) {
+                            likedContainer.innerHTML = '<div class="placeholder-text">No liked tracks yet.</div>';
+                            const likedToolbar = document.getElementById('library-liked-toolbar');
+                            if (likedToolbar) likedToolbar.style.display = 'none';
+                            const shuffleBtn = document.getElementById('shuffle-liked-btn');
+                            if (shuffleBtn) shuffleBtn.style.display = 'none';
+                        }
+                    }
+                }
             } else if (added && !itemEl && ui && (type === 'track' || type === 'video')) {
                 // Add item
-                if (type === 'track') {
+                               if (type === 'track') {
                     const tracksContainer = document.getElementById('library-tracks-container');
                     if (tracksContainer) {
                         const placeholder = tracksContainer.querySelector('.placeholder-text');
@@ -1371,6 +1388,37 @@ export async function handleTrackAction(
                             const shuffleBtn = document.getElementById('shuffle-liked-tracks-btn');
                             if (shuffleBtn) shuffleBtn.style.display = 'flex';
                             ui.setupLibraryLikedTracksSearch(tracksContainer);
+                        }
+                    }
+
+                    const likedContainer = document.getElementById('library-liked-container');
+                    if (likedContainer) {
+                        const placeholder = likedContainer.querySelector('.placeholder-text');
+                        if (placeholder) placeholder.remove();
+
+                        const likedLayout = localStorage.getItem('libraryLikedView') || 'list';
+                        const tempDiv = document.createElement('div');
+                        if (likedLayout === 'grid') {
+                            likedContainer.classList.remove('track-list');
+                            likedContainer.classList.add('card-grid');
+                            tempDiv.innerHTML = ui.createTrackCardHTML(item);
+                        } else {
+                            likedContainer.classList.remove('card-grid');
+                            likedContainer.classList.add('track-list');
+                            const index = likedContainer.children.length;
+                            tempDiv.innerHTML = ui.createTrackItemHTML(item, index, true, false, false, true);
+                        }
+                        const newEl = tempDiv.firstElementChild;
+
+                        if (newEl) {
+                            likedContainer.appendChild(newEl);
+                            trackDataStore.set(newEl, item);
+                            ui.updateLikeState(newEl, 'track', item.id);
+                            const likedToolbar = document.getElementById('library-liked-toolbar');
+                            if (likedToolbar) likedToolbar.style.display = 'flex';
+                            const shuffleBtn = document.getElementById('shuffle-liked-btn');
+                            if (shuffleBtn) shuffleBtn.style.display = 'flex';
+                            ui.setupLikedTracksSearch(likedContainer);
                         }
                     }
                 } else if (type === 'video') {

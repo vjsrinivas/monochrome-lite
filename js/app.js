@@ -1214,6 +1214,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await UIRenderer.instance.renderLibraryPage();
             }
         }
+        if (e.target.closest('#library-liked-view-list')) {
+            localStorage.setItem('libraryLikedView', 'list');
+            if (window.location.pathname.split('/').filter(Boolean)[0] === 'library') {
+                await UIRenderer.instance.renderLibraryPage();
+            }
+        }
+        if (e.target.closest('#library-liked-view-grid')) {
+            localStorage.setItem('libraryLikedView', 'grid');
+            if (window.location.pathname.split('/').filter(Boolean)[0] === 'library') {
+                await UIRenderer.instance.renderLibraryPage();
+            }
+        }
 
         if (e.target.closest('#delete-folder-btn')) {
             const folderId = window.location.pathname.split('/')[2];
@@ -2137,6 +2149,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
+        if (e.target.closest('#shuffle-liked-btn')) {
+            const btn = e.target.closest('#shuffle-liked-btn');
+            if (btn.disabled) return;
+
+            try {
+                const likedTracks = await db.getFavorites('track');
+                if (likedTracks.length > 0) {
+                    for (let i = likedTracks.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [likedTracks[i], likedTracks[j]] = [likedTracks[j], likedTracks[i]];
+                    }
+                    Player.instance.setQueue(likedTracks, 0);
+                    document.getElementById('shuffle-btn').classList.remove('active');
+                    await Player.instance.playTrackFromQueue();
+                }
+            } catch (error) {
+                console.error('Failed to shuffle liked tracks:', error);
+            }
+        }
+
         // Local Files Logic lollll
         if (e.target.closest('#select-local-folder-btn') || e.target.closest('#change-local-folder-btn')) {
             const isChange = e.target.closest('#change-local-folder-btn') !== null;
@@ -2189,7 +2221,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (query && query === searchInput.value.trim()) {
             performSearch(query);
         }
-    }, 3000);
+    }, 500);
 
     const handleExternalLink = (query) => {
         const isExternalLink =
