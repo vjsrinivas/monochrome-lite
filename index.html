@@ -1648,9 +1648,99 @@
                             <div class="track-list" id="library-tracks-container"></div>
                         </div>
                         <div class="search-tab-content" id="library-tab-albums">
+                            <div
+                                id="library-albums-toolbar"
+                                class="library-liked-tracks-toolbar"
+                                style="display: none"
+                            >
+                                <form class="library-liked-search track-list-search-container" onsubmit="return false;">
+                                    <use svg="!lucide/search.svg" class="search-icon" size="18" />
+                                    <input
+                                        type="search"
+                                        id="library-albums-search"
+                                        class="track-list-search-input"
+                                        placeholder="Search albums..."
+                                        autocomplete="off"
+                                        autocorrect="off"
+                                        autocapitalize="off"
+                                        spellcheck="false"
+                                    />
+                                    <button
+                                        type="button"
+                                        class="search-clear-btn btn-icon"
+                                        title="Clear search"
+                                        style="display: none"
+                                    >
+                                        &times;
+                                    </button>
+                                </form>
+                                <div class="library-liked-tracks-toolbar-actions">
+                                    <button
+                                        type="button"
+                                        id="library-albums-view-list"
+                                        class="btn-icon library-liked-view-btn"
+                                        title="List view"
+                                    >
+                                        <use svg="!lucide/layout-list.svg" size="18" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        id="library-albums-view-grid"
+                                        class="btn-icon library-liked-view-btn"
+                                        title="Card view"
+                                    >
+                                        <use svg="!lucide/layout-grid.svg" size="18" />
+                                    </button>
+                                </div>
+                            </div>
                             <div class="card-grid" id="library-albums-container"></div>
                         </div>
                         <div class="search-tab-content" id="library-tab-artists">
+                            <div
+                                id="library-artists-toolbar"
+                                class="library-liked-tracks-toolbar"
+                                style="display: none"
+                            >
+                                <form class="library-liked-search track-list-search-container" onsubmit="return false;">
+                                    <use svg="!lucide/search.svg" class="search-icon" size="18" />
+                                    <input
+                                        type="search"
+                                        id="library-artists-search"
+                                        class="track-list-search-input"
+                                        placeholder="Search artists..."
+                                        autocomplete="off"
+                                        autocorrect="off"
+                                        autocapitalize="off"
+                                        spellcheck="false"
+                                    />
+                                    <button
+                                        type="button"
+                                        class="search-clear-btn btn-icon"
+                                        title="Clear search"
+                                        style="display: none"
+                                    >
+                                        &times;
+                                    </button>
+                                </form>
+                                <div class="library-liked-tracks-toolbar-actions">
+                                    <button
+                                        type="button"
+                                        id="library-artists-view-list"
+                                        class="btn-icon library-liked-view-btn"
+                                        title="List view"
+                                    >
+                                        <use svg="!lucide/layout-list.svg" size="18" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        id="library-artists-view-grid"
+                                        class="btn-icon library-liked-view-btn"
+                                        title="Card view"
+                                    >
+                                        <use svg="!lucide/layout-grid.svg" size="18" />
+                                    </button>
+                                </div>
+                            </div>
                             <div class="card-grid" id="library-artists-container"></div>
                         </div>
                         <div class="search-tab-content" id="library-tab-liked">
@@ -1712,6 +1802,32 @@
                                     >
                                         <use svg="!lucide/shuffle.svg" size="16" />
                                     </button>
+                                    <div class="library-liked-filter-dropdown" style="position: relative;">
+                                        <button
+                                            type="button"
+                                            id="library-liked-filter-btn"
+                                            class="btn-secondary library-liked-filter-btn"
+                                            title="Filter liked content"
+                                        >
+                                            <use svg="!lucide/funnel.svg" size="16" />
+                                            <span id="library-liked-filter-label">Tracks</span>
+                                            <use svg="!lucide/chevron-down.svg" size="14" />
+                                        </button>
+                                        <div class="dropdown-menu library-liked-filter-menu" id="library-liked-filter-menu">
+                                            <button type="button" class="library-liked-filter-option active" data-filter="track">
+                                                <use svg="!lucide/music.svg" size="16" />
+                                                <span>Tracks</span>
+                                            </button>
+                                            <button type="button" class="library-liked-filter-option" data-filter="album">
+                                                <use svg="!lucide/disc.svg" size="16" />
+                                                <span>Albums</span>
+                                            </button>
+                                            <button type="button" class="library-liked-filter-option" data-filter="artist">
+                                                <use svg="!lucide/users.svg" size="16" />
+                                                <span>Artists</span>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="track-list" id="library-liked-container"></div>
@@ -1787,6 +1903,29 @@
                         </div>
                     </header>
                     <div class="album-content-layout">
+                        <div class="album-search-container">
+                            <form class="album-detail-search track-list-search-container" onsubmit="return false;">
+                                <use svg="!lucide/search.svg" class="search-icon" size="18" />
+                                <input
+                                    type="search"
+                                    id="album-detail-search"
+                                    class="track-list-search-input"
+                                    placeholder="Search tracks..."
+                                    autocomplete="off"
+                                    autocorrect="off"
+                                    autocapitalize="off"
+                                    spellcheck="false"
+                                />
+                                <button
+                                    type="button"
+                                    class="search-clear-btn btn-icon"
+                                    title="Clear search"
+                                    style="display: none"
+                                >
+                                    &times;
+                                </button>
+                            </form>
+                        </div>
                         <div class="track-list" id="album-detail-tracklist"></div>
 
                         <section
@@ -1920,7 +2059,7 @@
                             <div class="meta" id="artist-detail-meta"></div>
                             <div class="detail-header-actions">
                                 <button id="play-artist-radio-btn" class="btn-primary" title="Artist Radio">
-                                    <use svg="!lucide/volume-1.svg" size="20" />
+                                    <use svg="!lucide/play.svg" size="20" />
                                     <span>Radio</span>
                                 </button>
                                 <button id="shuffle-artist-btn" class="btn-primary" title="Shuffle">

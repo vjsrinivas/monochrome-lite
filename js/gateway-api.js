@@ -145,7 +145,8 @@ export class GatewayAPI {
     // ---- browse ----
 
     async getAlbum(albumName, { limit, offset } = {}) {
-        const res = await this._get(`/catalog/albums/${encodeURIComponent(albumName)}/tracks`, { limit, offset });
+        const name = normalizeKey(albumName);
+        const res = await this._get(`/catalog/albums/${encodeURIComponent(name)}/tracks`, { limit, offset });
         const tracks = (res?.data?.tracks ?? []).map(t => ({
             ...t,
             artists: t.artists?.length ? t.artists : t.artist ? [{ id: t.artist_id || t.artist, name: t.artist }] : [],
@@ -171,8 +172,9 @@ export class GatewayAPI {
     }
 
     async getArtist(artistName, { limit = 500, offset = 0 } = {}) {
+        const name = normalizeKey(artistName);
         const [tracksRes, artistsRes] = await Promise.all([
-            this._get(`/catalog/artists/${encodeURIComponent(artistName)}/tracks`, { limit, offset }),
+            this._get(`/catalog/artists/${encodeURIComponent(name)}/tracks`, { limit, offset }),
             this._get('/catalog/artists', { limit: 500 }),
         ]);
 
@@ -266,15 +268,20 @@ export class GatewayAPI {
     // ---- track / audio ----
 
     async getTrack(identifier) {
-        return this._get(`/audio/metadata/${encodeURIComponent(identifier)}`);
+        const key = normalizeKey(identifier);
+        const res = await this._get(`/audio/metadata/${encodeURIComponent(key)}`);
+        return normalizeTrackDetail(res?.data);
     }
 
     async getTrackQuality(identifier) {
-        return this._get(`/audio/metadata/${encodeURIComponent(identifier)}`);
+        const key = normalizeKey(identifier);
+        const res = await this._get(`/audio/metadata/${encodeURIComponent(key)}`);
+        return normalizeTrackDetail(res?.data);
     }
 
     async getStreamUrl(identifier) {
-        const encoded = identifier.split('/').map(encodeURIComponent).join('/');
+        const key = normalizeKey(identifier);
+        const encoded = key.split('/').map(encodeURIComponent).join('/');
         let url = `${this.gatewayUrl}/audio/${encoded}`;
         if (this.apiKey) {
             url += `?api_key=${encodeURIComponent(this.apiKey)}`;
@@ -362,6 +369,16 @@ export class GatewayAPI {
     }
 }
 
+// Identifiers arrive either URL-encoded (from router pathname) or as raw
+// catalog keys (from track.id). Normalize to the raw key before re-encoding.
+export function normalizeKey(identifier) {
+    try {
+        return decodeURIComponent(identifier);
+    } catch {
+        return identifier; // already decoded (may contain literal %)
+    }
+}
+
 // ---- shape mapping: gateway catalog rows -> UI renderer shapes ----
 
 export function normalizeCatalogTrack(t) {
@@ -374,6 +391,27 @@ export function normalizeCatalogTrack(t) {
         cover: t.cover_art_s3_key || null,
         duration: t.duration,
         type: 'track',
+    };
+}
+
+// Gateway /audio/metadata returns a flat AudioItem. Expand it into the UI track shape.
+export function normalizeTrackDetail(t) {
+    if (!t) return null;
+    const artist = t.artist ? { id: t.artist, name: t.artist } : null;
+    return {
+        id: t.id,
+        title: t.title,
+        type: 'track',
+        artist,
+        artists: artist ? [artist] : [],
+        album: t.album ? { id: t.album, title: t.album, cover: t.cover_art_s3_key || null } : null,
+        cover: t.cover_art_s3_key || null,
+        image: t.cover_art_s3_key || null,
+        imageId: t.cover_art_s3_key || null,
+        copyright: t.copyright || null,
+        duration: t.duration,
+        bitrate: t.bitrate,
+        format: t.format,
     };
 }
 

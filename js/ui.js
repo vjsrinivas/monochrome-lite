@@ -822,7 +822,7 @@ export class UIRenderer {
         return this.createBaseCardHTML({
             type: 'album',
             id: album.id,
-            href: album._href || `/album/${album.id}`,
+            href: album._href || `/album/${encodeURIComponent(album.id)}`,
             title: `${escapeHtml(album.title)} ${explicitBadge} ${qualityBadge}`,
             subtitle: `${escapeHtml(artistName)} • ${yearDisplay}${typeLabel}`,
             imageHTML: this.getCoverHTML(
@@ -900,7 +900,7 @@ export class UIRenderer {
         return this.createBaseCardHTML({
             type: 'artist',
             id: artist.id,
-            href: `/artist/${artist.id}`,
+            href: `/artist/${encodeURIComponent(artist.id)}`,
             title: escapeHtml(artist.name),
             subtitle: '',
             imageHTML: this.getCoverHTML(
@@ -921,6 +921,35 @@ export class UIRenderer {
             extraClasses: `artist${isBlocked ? ' blocked' : ''}`,
             extraAttributes: isBlocked ? 'title="Blocked: Artist blocked"' : '',
         });
+    }
+
+    createArtistListItemHTML(artist, index) {
+        const isBlocked = contentBlockingSettings?.shouldHideArtist(artist);
+        const href = `/artist/${encodeURIComponent(artist.id)}`;
+        const nameHTML = escapeHtml(artist.name);
+        const imageHTML = this.getCoverHTML(
+            artist.picture,
+            nameHTML,
+            'track-item-cover',
+            artist._lazy === false ? 'eager' : 'lazy',
+            null,
+            artist._isEditorsPick || false,
+            'artist'
+        );
+
+        return `
+            <div class="card track-item artist-list-item${isBlocked ? ' blocked' : ''}" data-artist-id="${artist.id}" data-href="${href}" style="cursor: pointer;" ${isBlocked ? 'title="Blocked: Artist blocked"' : ''}>
+                <div class="card-image-container">
+                    ${imageHTML}
+                </div>
+                <div class="card-info">
+                    <div class="card-title">${nameHTML}</div>
+                </div>
+                <button class="like-btn card-like-btn" data-action="toggle-like" data-type="artist" title="Add to Liked">
+                    ${this.createHeartIcon(false)}
+                </button>
+            </div>
+        `;
     }
 
     createSkeletonTrack(showCover = false) {
@@ -1068,9 +1097,14 @@ export class UIRenderer {
         listener();
     }
 
-    setupLikedTracksSearch(container) {
+    setupLikedTracksSearch(container, filterType) {
         const searchInput = document.getElementById('library-liked-search');
         if (!searchInput || !container) return;
+
+        filterType = filterType || localStorage.getItem('libraryLikedFilter') || 'track';
+
+        const placeholderMap = { track: 'Search liked tracks...', album: 'Search liked albums...', artist: 'Search liked artists...' };
+        searchInput.placeholder = placeholderMap[filterType] || placeholderMap.track;
 
         this.setupSearchClearButton(searchInput);
 
@@ -1081,8 +1115,81 @@ export class UIRenderer {
 
         const listener = () => {
             const query = searchInput.value.toLowerCase().trim();
-            const selector = container.classList.contains('card-grid') ? '.card[data-track-id]' : '.track-item';
+            const selector = container.classList.contains('card-grid') ? '.card' : '.track-item';
             container.querySelectorAll(selector).forEach((item) => {
+                const data = trackDataStore.get(item);
+                if (!data) {
+                    item.style.display = '';
+                    return;
+                }
+                let title = '';
+                let artist = '';
+                if (filterType === 'track') {
+                    title = getTrackTitle(data) || '';
+                    artist = data.artist?.name || data.artists?.[0]?.name || '';
+                } else if (filterType === 'album') {
+                    title = data.title || '';
+                    artist = data.artist?.name || (data.artists?.[0]?.name) || '';
+                } else if (filterType === 'artist') {
+                    title = data.name || '';
+                    artist = title;
+                }
+                const matches = !query || title.toLowerCase().includes(query) || artist.toLowerCase().includes(query);
+                item.style.display = matches ? '' : 'none';
+            });
+        };
+
+        searchInput._likedSearchListener = listener;
+        searchInput.addEventListener('input', listener);
+        listener();
+    }
+
+    setupAlbumsSearch(container) {
+        const searchInput = document.getElementById('library-albums-search');
+        if (!searchInput || !container) return;
+
+        this.setupSearchClearButton(searchInput);
+
+        const oldListener = searchInput._albumsSearchListener;
+        if (oldListener) {
+            searchInput.removeEventListener('input', oldListener);
+        }
+
+        const listener = () => {
+            const query = searchInput.value.toLowerCase().trim();
+            const selector = container.classList.contains('card-grid') ? '.card[data-album-id]' : '.track-item';
+            container.querySelectorAll(selector).forEach((item) => {
+                const album = trackDataStore.get(item);
+                if (!album) {
+                    item.style.display = '';
+                    return;
+                }
+                const title = (album.title || '').toLowerCase();
+                const artist = (album.artist?.name || album.artists?.[0]?.name || '').toLowerCase();
+                const matches = !query || title.includes(query) || artist.includes(query);
+                item.style.display = matches ? '' : 'none';
+            });
+        };
+
+        searchInput._albumsSearchListener = listener;
+        searchInput.addEventListener('input', listener);
+        listener();
+    }
+
+    setupAlbumDetailSearch() {
+        const searchInput = document.getElementById('album-detail-search');
+        if (!searchInput) return;
+
+        this.setupSearchClearButton(searchInput);
+
+        const oldListener = searchInput._albumDetailSearchListener;
+        if (oldListener) {
+            searchInput.removeEventListener('input', oldListener);
+        }
+
+        const listener = () => {
+            const query = searchInput.value.toLowerCase().trim();
+            document.querySelectorAll('#album-detail-tracklist .track-item').forEach((item) => {
                 const track = trackDataStore.get(item);
                 if (!track) {
                     item.style.display = '';
@@ -1095,9 +1202,71 @@ export class UIRenderer {
             });
         };
 
-        searchInput._likedSearchListener = listener;
+        searchInput._albumDetailSearchListener = listener;
+        searchInput.addEventListener('input', listener);
+    }
+
+    setupAlbumsViewButtons(currentView) {
+        const listBtn = document.getElementById('library-albums-view-list');
+        const gridBtn = document.getElementById('library-albums-view-grid');
+
+        if (listBtn) listBtn.classList.toggle('active', currentView === 'list');
+        if (gridBtn) gridBtn.classList.toggle('active', currentView === 'grid');
+    }
+
+    setupTracksViewButtons(currentView) {
+        const listBtn = document.getElementById('library-liked-tracks-view-list');
+        const gridBtn = document.getElementById('library-liked-tracks-view-grid');
+
+        if (listBtn) listBtn.classList.toggle('active', currentView === 'list');
+        if (gridBtn) gridBtn.classList.toggle('active', currentView === 'grid');
+    }
+
+    setupLikedTracksViewButtons(currentView) {
+        const listBtn = document.getElementById('library-liked-view-list');
+        const gridBtn = document.getElementById('library-liked-view-grid');
+
+        if (listBtn) listBtn.classList.toggle('active', currentView === 'list');
+        if (gridBtn) gridBtn.classList.toggle('active', currentView === 'grid');
+    }
+
+    setupArtistsSearch(container) {
+        const searchInput = document.getElementById('library-artists-search');
+        if (!searchInput || !container) return;
+
+        this.setupSearchClearButton(searchInput);
+
+        const oldListener = searchInput._artistsSearchListener;
+        if (oldListener) {
+            searchInput.removeEventListener('input', oldListener);
+        }
+
+        const listener = () => {
+            const query = searchInput.value.toLowerCase().trim();
+            const selector = container.classList.contains('card-grid') ? '.card[data-artist-id]' : '.track-item';
+            container.querySelectorAll(selector).forEach((item) => {
+                const artist = trackDataStore.get(item);
+                if (!artist) {
+                    item.style.display = '';
+                    return;
+                }
+                const name = (artist.name || '').toLowerCase();
+                const matches = !query || name.includes(query);
+                item.style.display = matches ? '' : 'none';
+            });
+        };
+
+        searchInput._artistsSearchListener = listener;
         searchInput.addEventListener('input', listener);
         listener();
+    }
+
+    setupArtistsViewButtons(currentView) {
+        const listBtn = document.getElementById('library-artists-view-list');
+        const gridBtn = document.getElementById('library-artists-view-grid');
+
+        if (listBtn) listBtn.classList.toggle('active', currentView === 'list');
+        if (gridBtn) gridBtn.classList.toggle('active', currentView === 'grid');
     }
 
     mapWithConcurrency(items, limit, fn) {
@@ -2173,7 +2342,7 @@ export class UIRenderer {
             artistEl.onclick = () => {
                 if (this.player.currentTrack && this.player.currentTrack.artist) {
                     this.closeFullscreenCover();
-                    navigate(`/artist/${this.player.currentTrack.artist.id}`);
+                    navigate(`/artist/${encodeURIComponent(this.player.currentTrack.artist.id)}`);
                 }
             };
         }
@@ -2636,35 +2805,107 @@ export class UIRenderer {
         await Promise.allSettled([
             feed(api.getCatalogTracks({ limit: 500 }), async (r) => {
                 const tracks = r?.tracks || r?.items || r || [];
+                const tracksView = localStorage.getItem('libraryLikedTracksView') || 'list';
                 if (tracks.length > 0) {
-                    await this.renderListWithTracks(tracksContainer, tracks, true);
+                    if (tracksView === 'grid') {
+                        tracksContainer.classList.remove('track-list');
+                        tracksContainer.classList.add('card-grid');
+                        tracksContainer.innerHTML = tracks.map((t) => this.createTrackCardHTML(t)).join('');
+                        for (const card of tracksContainer.querySelectorAll('.card')) {
+                            const trackId = card.dataset.trackId;
+                            if (trackId) {
+                                await this.updateLikeState(card, 'track', trackId);
+                            }
+                        }
+                    } else {
+                        tracksContainer.classList.remove('card-grid');
+                        tracksContainer.classList.add('track-list');
+                        await this.renderListWithTracks(tracksContainer, tracks, true);
+                    }
                     this.setupLibraryLikedTracksSearch(tracksContainer);
                     const tracksToolbar = document.getElementById('library-liked-tracks-toolbar');
                     if (tracksToolbar) tracksToolbar.style.display = 'flex';
                     const tracksShuffleBtn = document.getElementById('shuffle-liked-tracks-btn');
                     if (tracksShuffleBtn) tracksShuffleBtn.style.display = 'flex';
+                    this.setupTracksViewButtons(tracksView);
                 } else {
                     tracksContainer.innerHTML = createPlaceholder('No tracks in catalog.');
                 }
             }),
-            feed(api.getCatalogAlbums({ limit: 500 }), (r) => {
+            feed(api.getCatalogAlbums({ limit: 500 }), async (r) => {
                 const albums = r?.albums || r?.items || r || [];
-                albumsContainer.innerHTML = albums.length
-                    ? albums.map((a) => this.createAlbumCardHTML(a)).join('')
-                    : createPlaceholder('No albums in catalog.');
+                const albumsView = localStorage.getItem('libraryAlbumsView') || 'grid';
+
+                if (albumsView === 'list') {
+                    albumsContainer.classList.remove('card-grid');
+                    albumsContainer.classList.add('track-list');
+                    albumsContainer.innerHTML = albums.length
+                        ? albums.map((a, i) => this.createTrackItemHTML(a, i, true, false, false, true)).join('')
+                        : createPlaceholder('No albums in catalog.');
+                } else {
+                    albumsContainer.classList.remove('track-list');
+                    albumsContainer.classList.add('card-grid');
+                    albumsContainer.innerHTML = albums.length
+                        ? albums.map((a) => this.createAlbumCardHTML(a)).join('')
+                        : createPlaceholder('No albums in catalog.');
+                }
+
+                for (const a of albums) {
+                    const selector = albumsView === 'list' ? `[data-track-id="${a.id}"]` : `[data-album-id="${a.id}"]`;
+                    const el = albumsContainer.querySelector(selector);
+                    if (el) {
+                        trackDataStore.set(el, a);
+                        await this.updateLikeState(el, 'album', a.id);
+                    }
+                }
+
+                if (albums.length > 0) {
+                    const albumsToolbar = document.getElementById('library-albums-toolbar');
+                    if (albumsToolbar) albumsToolbar.style.display = 'flex';
+                    this.setupAlbumsSearch(albumsContainer);
+                    this.setupAlbumsViewButtons(albumsView);
+                }
             }),
-            feed(api.getCatalogArtists({ limit: 500 }), (r) => {
+            feed(api.getCatalogArtists({ limit: 500 }), async (r) => {
                 const artists = r?.artists || r?.items || r || [];
-                artistsContainer.innerHTML = artists.length
-                    ? artists.map((a) => this.createArtistCardHTML(a)).join('')
-                    : createPlaceholder('No artists in catalog.');
+                const artistsView = localStorage.getItem('libraryArtistsView') || 'grid';
+
+                if (artistsView === 'list') {
+                    artistsContainer.classList.remove('card-grid');
+                    artistsContainer.classList.add('track-list');
+                    artistsContainer.innerHTML = artists.length
+                        ? artists.map((a, i) => this.createArtistListItemHTML(a, i)).join('')
+                        : createPlaceholder('No artists in catalog.');
+                } else {
+                    artistsContainer.classList.remove('track-list');
+                    artistsContainer.classList.add('card-grid');
+                    artistsContainer.innerHTML = artists.length
+                        ? artists.map((a) => this.createArtistCardHTML(a)).join('')
+                        : createPlaceholder('No artists in catalog.');
+                }
+
+                for (const a of artists) {
+                    const selector = `[data-artist-id="${a.id}"]`;
+                    const el = artistsContainer.querySelector(selector);
+                    if (el) {
+                        trackDataStore.set(el, a);
+                        await this.updateLikeState(el, 'artist', a.id);
+                    }
+                }
+
+                if (artists.length > 0) {
+                    const artistsToolbar = document.getElementById('library-artists-toolbar');
+                    if (artistsToolbar) artistsToolbar.style.display = 'flex';
+                    this.setupArtistsSearch(artistsContainer);
+                    this.setupArtistsViewButtons(artistsView);
+                }
             }),
-            feed(db.getFavorites('track'), () => this.renderLikedTracks()),
+            feed(db.getFavorites('track'), () => this.renderLikedContent()),
         ]);
 
         // Keep the liked tab live: re-render it when favorites change while on this page
         this._onFavoritesChanged ||= () => {
-            if (this.currentPage === 'library') void this.renderLikedTracks();
+            if (this.currentPage === 'library') void this.renderLikedContent();
         };
         window.removeEventListener('favorites-changed', this._onFavoritesChanged);
         window.addEventListener('favorites-changed', this._onFavoritesChanged);
@@ -2701,31 +2942,129 @@ export class UIRenderer {
                 });
             }
         }
+
+        this.setupLikedFilterDropdown();
     }
 
-    async renderLikedTracks() {
+    async renderLikedContent(filterType) {
         const likedContainer = document.getElementById('library-liked-container');
         if (!likedContainer) return;
-        const likedTracks = await db.getFavorites('track');
-        if (likedTracks && likedTracks.length > 0) {
-            const likedLayout = localStorage.getItem('libraryLikedView') || 'list';
-            if (likedLayout === 'grid') {
-                likedContainer.classList.remove('track-list');
-                likedContainer.classList.add('card-grid');
-                likedContainer.innerHTML = likedTracks.map((t) => this.createTrackCardHTML(t)).join('');
-            } else {
-                likedContainer.classList.remove('card-grid');
-                likedContainer.classList.add('track-list');
-                await this.renderListWithTracks(likedContainer, likedTracks, true);
-            }
-            this.setupLikedTracksSearch(likedContainer);
+
+        filterType = filterType || localStorage.getItem('libraryLikedFilter') || 'track';
+        localStorage.setItem('libraryLikedFilter', filterType);
+
+        let items = [];
+        let placeholderText = '';
+        let shuffleBtn = document.getElementById('shuffle-liked-btn');
+
+        if (filterType === 'track') {
+            items = await db.getFavorites('track');
+            placeholderText = 'No liked tracks yet.';
+            if (shuffleBtn) shuffleBtn.style.display = 'flex';
+        } else if (filterType === 'album') {
+            items = await db.getFavorites('album');
+            placeholderText = 'No liked albums yet.';
+            if (shuffleBtn) shuffleBtn.style.display = 'none';
+        } else if (filterType === 'artist') {
+            items = await db.getFavorites('artist');
+            placeholderText = 'No liked artists yet.';
+            if (shuffleBtn) shuffleBtn.style.display = 'none';
+        }
+
+        if (items && items.length > 0) {
             const likedToolbar = document.getElementById('library-liked-toolbar');
             if (likedToolbar) likedToolbar.style.display = 'flex';
-            const shuffleBtn = document.getElementById('shuffle-liked-btn');
-            if (shuffleBtn) shuffleBtn.style.display = 'flex';
+
+            if (filterType === 'track') {
+                const likedLayout = localStorage.getItem('libraryLikedView') || 'list';
+                if (likedLayout === 'grid') {
+                    likedContainer.classList.remove('track-list');
+                    likedContainer.classList.add('card-grid');
+                    likedContainer.innerHTML = items.map((t) => this.createTrackCardHTML(t)).join('');
+                    for (const card of likedContainer.querySelectorAll('.card')) {
+                        const trackId = card.dataset.trackId;
+                        if (trackId) {
+                            await this.updateLikeState(card, 'track', trackId);
+                        }
+                    }
+                } else {
+                    likedContainer.classList.remove('card-grid');
+                    likedContainer.classList.add('track-list');
+                    await this.renderListWithTracks(likedContainer, items, true);
+                }
+                this.setupLikedTracksViewButtons(likedLayout);
+            } else if (filterType === 'album') {
+                likedContainer.classList.remove('track-list');
+                likedContainer.classList.add('card-grid');
+                likedContainer.innerHTML = items.map((a) => this.createAlbumCardHTML(a)).join('');
+                for (const card of likedContainer.querySelectorAll('.card')) {
+                    const albumId = card.dataset.albumId;
+                    if (albumId) {
+                        await this.updateLikeState(card, 'album', albumId);
+                    }
+                }
+            } else if (filterType === 'artist') {
+                likedContainer.classList.remove('track-list');
+                likedContainer.classList.add('card-grid');
+                likedContainer.innerHTML = items.map((a) => this.createArtistCardHTML(a)).join('');
+                for (const card of likedContainer.querySelectorAll('.card')) {
+                    const artistId = card.dataset.artistId;
+                    if (artistId) {
+                        await this.updateLikeState(card, 'artist', artistId);
+                    }
+                }
+            }
+
+            this.setupLikedTracksSearch(likedContainer, filterType);
         } else {
-            likedContainer.innerHTML = createPlaceholder('No liked tracks yet.');
+            likedContainer.classList.remove('card-grid');
+            likedContainer.classList.add('track-list');
+            likedContainer.innerHTML = createPlaceholder(placeholderText);
+            if (likedToolbar) likedToolbar.style.display = 'none';
         }
+
+        this.updateFilterLabel(filterType);
+    }
+
+    updateFilterLabel(filterType) {
+        const labelMap = { track: 'Tracks', album: 'Albums', artist: 'Artists' };
+        const label = document.getElementById('library-liked-filter-label');
+        if (label) label.textContent = labelMap[filterType] || 'Tracks';
+
+        document.querySelectorAll('.library-liked-filter-option').forEach((btn) => {
+            btn.classList.toggle('active', btn.dataset.filter === filterType);
+        });
+    }
+
+    setupLikedFilterDropdown() {
+        if (this._likedFilterSetup) return;
+        this._likedFilterSetup = true;
+
+        const filterBtn = document.getElementById('library-liked-filter-btn');
+        const filterMenu = document.getElementById('library-liked-filter-menu');
+        if (!filterBtn || !filterMenu) return;
+
+        const savedFilter = localStorage.getItem('libraryLikedFilter') || 'track';
+        this.updateFilterLabel(savedFilter);
+
+        filterBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            filterMenu.classList.toggle('active');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!filterMenu.contains(e.target) && !filterBtn.contains(e.target)) {
+                filterMenu.classList.remove('active');
+            }
+        });
+
+        filterMenu.querySelectorAll('.library-liked-filter-option').forEach((option) => {
+            option.addEventListener('click', () => {
+                const filterType = option.dataset.filter;
+                filterMenu.classList.remove('active');
+                this.renderLikedContent(filterType);
+            });
+        });
     }
 
     async renderLocalFiles(container) {
@@ -2818,7 +3157,7 @@ export class UIRenderer {
         return this.createBaseCardHTML({
             type: 'track',
             id: track.id,
-            href: `/track/${track.id}`,
+            href: `/track/${encodeURIComponent(track.id)}`,
             title: `${escapeHtml(getTrackTitle(track))} ${explicitBadge} ${qualityBadge}`,
             subtitle: `${escapeHtml(getTrackArtists(track))}${yearDisplay}`,
             imageHTML: this.getCoverHTML(
@@ -3442,6 +3781,9 @@ export class UIRenderer {
                 return a.trackNumber - b.trackNumber;
             });
             await this.renderListWithTracks(tracklistContainer, tracks, false, true);
+
+            // Setup search for album detail page
+            this.setupAlbumDetailSearch();
 
             recentActivityManager.addAlbum(album);
 

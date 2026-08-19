@@ -3,6 +3,7 @@
 // line-level synced lyrics (highlight + click-to-seek). No karaoke widget,
 // no romaji, no timing offsets.
 import { getTrackTitle, getTrackArtists, buildTrackFilename } from './utils.js';
+import { normalizeKey } from './gateway-api.js';
 import { SVG_CLOSE } from './icons.ts';
 import { sidePanelManager } from './side-panel.js';
 
@@ -34,7 +35,8 @@ export class LyricsManager {
             const gw = this.api?.getAPI?.();
             if (!gw?.gatewayUrl) return null;
 
-            const encoded = String(trackId).split('/').map(encodeURIComponent).join('/');
+            const key = normalizeKey(String(trackId));
+            const encoded = key.split('/').map(encodeURIComponent).join('/');
             const res = await fetch(`${gw.gatewayUrl}/audio/lyrics/${encoded}`, {
                 headers: gw._headers(),
                 signal: AbortSignal.timeout(10000),

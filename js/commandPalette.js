@@ -859,7 +859,7 @@ class CommandPalette {
                     label: album.title,
                     description: album.artist?.name || 'Unknown',
                     action: () => {
-                        navigate(`/album/${album.id}`);
+                        navigate(`/album/${encodeURIComponent(album.id)}`);
                     },
                 }));
             }
@@ -873,7 +873,7 @@ class CommandPalette {
                     label: artist.name,
                     description: 'Artist',
                     action: () => {
-                        navigate(`/artist/${artist.id}`);
+                        navigate(`/artist/${encodeURIComponent(artist.id)}`);
                     },
                 }));
             }

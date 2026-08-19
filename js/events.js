@@ -1207,7 +1207,7 @@ export async function handleTrackAction(
                 if (tracks.length > 0 && tracks[0].mixes?.TRACK_MIX) {
                     navigate(`/mix/${tracks[0].mixes.TRACK_MIX}`);
                 } else {
-                    navigate(`/${type.replace('user-', '')}/${item.id || item.uuid}`);
+                    navigate(`/${type.replace('user-', '')}/${encodeURIComponent(item.id || item.uuid)}`);
                 }
                 return;
             }
@@ -1580,18 +1580,18 @@ export async function handleTrackAction(
         const artistId = extraData?.artistId || item.artist?.id || item.artists?.[0]?.id;
 
         if (artistId) {
-            navigate(`/artist/${artistId}`);
+            navigate(`/artist/${encodeURIComponent(artistId)}`);
         }
     } else if (action === 'go-to-album') {
         if (item.album?.id) {
-            navigate(`/album/${item.album.id}`);
+            navigate(`/album/${encodeURIComponent(item.album.id)}`);
         }
     } else if (action === 'copy-link' || action === 'share') {
         // Use stored href from card if available, otherwise construct URL
         const contextMenu = document.getElementById('context-menu');
         const storedHref = contextMenu?._contextHref;
         const typeForUrl = type === 'user-playlist' ? 'userplaylist' : type;
-        const url = getShareUrl(storedHref ? storedHref : `/${typeForUrl}/${item.id || item.uuid}`);
+        const url = getShareUrl(storedHref ? storedHref : `/${typeForUrl}/${encodeURIComponent(item.id || item.uuid)}`);
 
         await navigator.clipboard
             .writeText(url)
@@ -2071,7 +2071,7 @@ export function initializeTrackInteractions(player, api, mainContent, contextMen
             e.stopPropagation();
             const artistId = artistLink.dataset.artistId;
             if (artistId) {
-                navigate(`/artist/${artistId}`);
+                navigate(`/artist/${encodeURIComponent(artistId)}`);
             }
             return;
         }
@@ -2352,14 +2352,14 @@ export function initializeTrackInteractions(player, api, mainContent, contextMen
     document.querySelector('.now-playing-bar .title').addEventListener('click', () => {
         const track = player.currentTrack;
         if (track?.album?.id) {
-            navigate(`/album/${track.album.id}`);
+            navigate(`/album/${encodeURIComponent(track.album.id)}`);
         }
     });
 
     document.querySelector('.now-playing-bar .album').addEventListener('click', () => {
         const track = player.currentTrack;
         if (track?.album?.id) {
-            navigate(`/album/${track.album.id}`);
+            navigate(`/album/${encodeURIComponent(track.album.id)}`);
         }
     });
 
@@ -2369,7 +2369,7 @@ export function initializeTrackInteractions(player, api, mainContent, contextMen
             e.stopPropagation();
             const artistId = link.dataset.artistId;
             if (artistId) {
-                navigate(`/artist/${artistId}`);
+                navigate(`/artist/${encodeURIComponent(artistId)}`);
             }
             return;
         }
@@ -2377,7 +2377,7 @@ export function initializeTrackInteractions(player, api, mainContent, contextMen
         // Fallback for non-link clicks (e.g. separators) or single artist legacy
         const track = player.currentTrack;
         if (track && track.artist?.id) {
-            navigate(`/artist/${track.artist.id}`);
+            navigate(`/artist/${encodeURIComponent(track.artist.id)}`);
         }
     });
 

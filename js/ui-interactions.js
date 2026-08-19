@@ -241,8 +241,8 @@ export function initializeUIInteractions(player, api, ui) {
             : '';
 
         const isVideo = track.type === 'video';
-        const coverUrl =
-            isVideo && track.imageId ? api.getVideoCoverUrl(track.imageId) : api.getCoverUrl(track.album?.cover);
+        const coverId = isVideo ? track.imageId : (track.image || track.cover || track.album?.cover);
+        const coverUrl = coverId ? (isVideo ? api.getVideoCoverUrl(coverId) : api.getCoverUrl(coverId)) : '';
 
         return `
         <div class="queue-track-item ${isPlaying ? 'playing' : ''} ${isBlocked ? 'blocked' : ''}" data-queue-index="${index}" data-track-id="${track.id}" draggable="${isBlocked ? 'false' : 'true'}" ${blockedTitle}>

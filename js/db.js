@@ -365,12 +365,12 @@ export class MusicDatabase {
             case 'album':
                 name = item.title;
                 cover = item.cover;
-                href = `/album/${id}`;
+                href = `/album/${encodeURIComponent(id)}`;
                 break;
             case 'artist':
                 name = item.name;
                 cover = item.picture;
-                href = `/artist/${id}`;
+                href = `/artist/${encodeURIComponent(id)}`;
                 break;
             case 'playlist':
                 name = item.title || item.name;

@@ -4,6 +4,7 @@ import {
     normalizeCatalogAlbum,
     normalizeCatalogArtist,
     normalizeLatestResult,
+    normalizeKey,
 } from '../gateway-api.js';
 
 // Fixtures captured live from the gateway on 2026-08-13.
@@ -82,5 +83,25 @@ describe('gateway catalog normalization', () => {
         expect(r.artist).toEqual({ id: 'Arctic Monkeys', name: 'Arctic Monkeys' });
         expect(r.artists).toEqual([{ id: 'Arctic Monkeys', name: 'Arctic Monkeys' }]);
         expect(r.type).toBe('track');
+    });
+
+    test('normalizeKey decodes URL-encoded ids and leaves raw keys intact', () => {
+        expect(normalizeKey('music/After%20The%20Storm/transcode_0/song.flac')).toBe(
+            'music/After The Storm/transcode_0/song.flac'
+        );
+        expect(normalizeKey('music/30% Off!/hash/transcode_0/30% Off!.flac')).toBe(
+            'music/30% Off!/hash/transcode_0/30% Off!.flac'
+        );
+        expect(normalizeKey('music/505/060fe/transcode_0/505.flac')).toBe(
+            'music/505/060fe/transcode_0/505.flac'
+        );
+    });
+
+    test('route hrefs round-trip through normalizeKey (percent-in-name bug)', () => {
+        const raw = track.id;
+        const hrefSegment = encodeURIComponent(raw);
+        const param = hrefSegment; // router reads the path after /track/
+        expect(normalizeKey(param)).toBe(raw);
+        expect(decodeURIComponent(hrefSegment)).toBe(raw);
     });
 });

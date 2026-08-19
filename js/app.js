@@ -671,7 +671,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             // Default to 'album' mode - navigate to album
             if (Player.instance.currentTrack.album?.id) {
-                navigate(`/album/${Player.instance.currentTrack.album.id}`);
+                navigate(`/album/${encodeURIComponent(Player.instance.currentTrack.album.id)}`);
             }
         }
     });
@@ -1222,6 +1222,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         if (e.target.closest('#library-liked-view-grid')) {
             localStorage.setItem('libraryLikedView', 'grid');
+            if (window.location.pathname.split('/').filter(Boolean)[0] === 'library') {
+                await UIRenderer.instance.renderLibraryPage();
+            }
+        }
+        if (e.target.closest('#library-albums-view-list')) {
+            localStorage.setItem('libraryAlbumsView', 'list');
+            if (window.location.pathname.split('/').filter(Boolean)[0] === 'library') {
+                await UIRenderer.instance.renderLibraryPage();
+            }
+        }
+        if (e.target.closest('#library-albums-view-grid')) {
+            localStorage.setItem('libraryAlbumsView', 'grid');
+            if (window.location.pathname.split('/').filter(Boolean)[0] === 'library') {
+                await UIRenderer.instance.renderLibraryPage();
+            }
+        }
+        if (e.target.closest('#library-artists-view-list')) {
+            localStorage.setItem('libraryArtistsView', 'list');
+            if (window.location.pathname.split('/').filter(Boolean)[0] === 'library') {
+                await UIRenderer.instance.renderLibraryPage();
+            }
+        }
+        if (e.target.closest('#library-artists-view-grid')) {
+            localStorage.setItem('libraryArtistsView', 'grid');
             if (window.location.pathname.split('/').filter(Boolean)[0] === 'library') {
                 await UIRenderer.instance.renderLibraryPage();
             }
