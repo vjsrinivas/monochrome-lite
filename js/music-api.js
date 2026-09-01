@@ -264,6 +264,10 @@ export class MusicAPI {
         return this.audioAPI.getSongCoverUrl(songName);
     }
 
+    getAlbumCoverUrl(albumName) {
+        return this.audioAPI.getAlbumCoverUrl(albumName);
+    }
+
     async getCoverArtUrl(songName) {
         return this.audioAPI.getCoverArtUrl(songName);
     }

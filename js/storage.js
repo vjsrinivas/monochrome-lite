@@ -35,16 +35,25 @@ export const recentActivityManager = {
         try {
             const data = localStorage.getItem(this.STORAGE_KEY);
             const parsed = data ? JSON.parse(data) : { artists: [], albums: [], playlists: [], mixes: [] };
-            if (!parsed.playlists) parsed.playlists = [];
-            if (!parsed.mixes) parsed.mixes = [];
+            if (!Array.isArray(parsed.artists)) parsed.artists = [];
+            if (!Array.isArray(parsed.albums)) parsed.albums = [];
+            if (!Array.isArray(parsed.playlists)) parsed.playlists = [];
+            if (!Array.isArray(parsed.mixes)) parsed.mixes = [];
+            console.log('[recentActivityManager] get:', JSON.parse(JSON.stringify(parsed)));
             return parsed;
         } catch {
+            console.warn('[recentActivityManager] get failed, returning empty');
             return { artists: [], albums: [], playlists: [], mixes: [] };
         }
     },
 
     _save(data) {
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+        try {
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+            console.log('[recentActivityManager] saved:', JSON.parse(JSON.stringify(data)));
+        } catch (e) {
+            console.warn('[recentActivityManager] Failed to save:', e);
+        }
     },
 
     getRecents() {
@@ -52,14 +61,17 @@ export const recentActivityManager = {
     },
 
     _add(type, item) {
+        console.log('[recentActivityManager] adding', type, item);
         const data = this._get();
         data[type] = data[type].filter((i) => i.id !== item.id);
         data[type].unshift(item);
         data[type] = data[type].slice(0, this.LIMIT);
+        console.log('[recentActivityManager] after add', type, ':', data[type].length, 'items');
         this._save(data);
     },
 
     clear() {
+        console.log('[recentActivityManager] clearing all');
         this._save({ artists: [], albums: [], playlists: [], mixes: [] });
     },
 

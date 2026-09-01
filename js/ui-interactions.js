@@ -20,6 +20,8 @@ import {
     SVG_SQUARE_PEN,
     SVG_TRASH,
     SVG_EQUAL,
+    SVG_FOLDER,
+    SVG_MUSIC,
 } from './icons.js';
 import { hapticSuccess } from './haptics.js';
 
@@ -241,8 +243,17 @@ export function initializeUIInteractions(player, api, ui) {
             : '';
 
         const isVideo = track.type === 'video';
+        const isFolder = track.type === 'folder';
+        const isPlaylist = track.type === 'user-playlist';
+        const isNonTrack = isFolder || isPlaylist;
         const coverId = isVideo ? track.imageId : (track.image || track.cover || track.album?.cover);
-        const coverUrl = coverId ? (isVideo ? api.getVideoCoverUrl(coverId) : api.getCoverUrl(coverId)) : '';
+        const coverUrl = coverId
+            ? (isVideo ? api.getVideoCoverUrl(coverId) : api.getCoverUrl(coverId))
+            : api.getSongCoverUrl(trackTitle);
+
+        const coverArtHTML = isNonTrack
+            ? `<div class="track-item-cover ${isFolder ? 'folder-placeholder' : 'playlist-placeholder'}" style="display: flex; align-items: center; justify-content: center;">${isFolder ? SVG_FOLDER(16) : SVG_MUSIC(16)}</div>`
+            : `<img src="${coverUrl}" class="track-item-cover" loading="lazy">`;
 
         return `
         <div class="queue-track-item ${isPlaying ? 'playing' : ''} ${isBlocked ? 'blocked' : ''}" data-queue-index="${index}" data-track-id="${track.id}" draggable="${isBlocked ? 'false' : 'true'}" ${blockedTitle}>
@@ -250,8 +261,7 @@ export function initializeUIInteractions(player, api, ui) {
                 ${SVG_EQUAL(16)}
             </div>
             <div class="track-item-info">
-                <img src="${coverUrl}"
-                     class="track-item-cover" loading="lazy">
+                ${coverArtHTML}
                 <div class="track-item-details">
                     <div class="title">${escapeHtml(trackTitle)} ${qualityBadge}</div>
                     <div class="artist">${escapeHtml(trackArtists)}</div>

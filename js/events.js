@@ -401,6 +401,7 @@ export async function initializePlayerEvents(player, audioPlayer, scrobbler, ui)
             if (player.activeElement !== element) return;
             player.updateMediaSessionPlaybackState();
             player.updateMediaSessionPositionState();
+            ui.updateCardPlayButtons();
         });
 
         element.addEventListener('pause', () => {
@@ -408,6 +409,7 @@ export async function initializePlayerEvents(player, audioPlayer, scrobbler, ui)
             playPauseBtn.innerHTML = SVG_PLAY(20);
             player.updateMediaSessionPlaybackState();
             player.updateMediaSessionPositionState();
+            ui.updateCardPlayButtons();
         });
 
         element.addEventListener('ended', () => {
@@ -1112,6 +1114,134 @@ export async function showAddToPlaylistModal(track) {
     modal.classList.add('active');
 }
 
+export async function showFolderPickerModal(playlistId) {
+    const modal = document.getElementById('folder-select-modal');
+    const list = document.getElementById('folder-select-list');
+    const cancelBtn = document.getElementById('folder-select-cancel');
+    const overlay = modal.querySelector('.modal-overlay');
+
+    const renderModal = async () => {
+        const folders = await db.getFolders();
+
+        if (folders.length === 0) {
+            list.innerHTML = '<div class="modal-option" style="opacity: 0.5;">No folders yet</div>';
+            return true;
+        }
+
+        list.innerHTML = folders
+            .map((f) => {
+                const count = f.playlists?.length || 0;
+                return `
+                <div class="modal-option" data-folder-id="${f.id}">
+                    <span>${escapeHtml(f.name)}</span>
+                    <span style="opacity: 0.5; margin-left: auto;">${count} playlist${count !== 1 ? 's' : ''}</span>
+                </div>
+            `;
+            })
+            .join('');
+        return true;
+    };
+
+    if (!(await renderModal())) return;
+
+    const closeModal = () => {
+        modal.classList.remove('active');
+        cleanup();
+    };
+
+    const handleOptionClick = async (e) => {
+        const option = e.target.closest('.modal-option');
+        if (!option || option.style.opacity === '0.5') return;
+
+        const folderId = option.dataset.folderId;
+        await db.addPlaylistToFolder(folderId, playlistId);
+        await syncManager.syncUserFolder(await db.getFolder(folderId), 'update');
+        showNotification(`Added to folder: ${option.querySelector('span').textContent}`);
+        closeModal();
+        if (window.renderQueueFunction) await window.renderQueueFunction();
+    };
+
+    const cleanup = () => {
+        cancelBtn.removeEventListener('click', closeModal);
+        overlay.removeEventListener('click', closeModal);
+        list.removeEventListener('click', handleOptionClick);
+    };
+
+    cancelBtn.addEventListener('click', closeModal);
+    overlay.addEventListener('click', closeModal);
+    list.addEventListener('click', handleOptionClick);
+
+    modal.classList.add('active');
+}
+
+// Shared play/pause toggle for cards and their play buttons. Every card with a
+// play button routes through this so clicking always toggles playback and keeps
+// the card icon in sync. `queue` lets a caller play a full list from a track.
+export async function toggleCardPlay(card, item, type, player, api, queue = null) {
+    if (!item) return;
+
+    const playBtn = card?.querySelector('.card-play-btn');
+    const setIcon = (playing) => {
+        if (!playBtn) return;
+        playBtn.innerHTML = playing ? SVG_PAUSE(20) : SVG_PLAY(20);
+        playBtn.title = playing ? 'Pause' : 'Play';
+    };
+
+    const currentTrack = player.currentTrack;
+    const itemId = item.uuid || item.id;
+    const isCurrent =
+        currentTrack &&
+        (currentTrack.id === itemId ||
+            currentTrack.album?.id === itemId ||
+            currentTrack.playlist?.uuid === itemId ||
+            currentTrack.playlist?.id === itemId);
+
+    if (isCurrent) {
+        const wasPlaying = !player.activeElement.paused;
+        await player.handlePlayPause();
+        setIcon(!wasPlaying);
+        return;
+    }
+
+    try {
+        let tracks = queue;
+        if (!tracks) {
+            if (type === 'album') {
+                const data = await api.getAlbum(item.id);
+                tracks = data.tracks;
+            } else if (type === 'playlist') {
+                const data = await api.getPlaylist(item.uuid);
+                tracks = data.tracks;
+            } else if (type === 'user-playlist') {
+                const playlist = await db.getPlaylist(item.id);
+                tracks = playlist ? playlist.tracks : item.tracks || [];
+            } else if (type === 'mix') {
+                const data = await api.getMix(item.id);
+                tracks = data.tracks;
+            } else {
+                tracks = [item];
+            }
+        }
+
+        if (!tracks || tracks.length === 0) {
+            if (type === 'mix') {
+                navigate(`/mix/${itemId}`);
+            } else {
+                showNotification(`No tracks found in this ${type}`);
+            }
+            return;
+        }
+
+        player.setQueue(tracks, 0);
+        document.getElementById('shuffle-btn')?.classList.remove('active');
+        await player.playTrackFromQueue();
+        setIcon(true);
+    } catch (error) {
+        console.error('Failed to play card:', error);
+        showNotification('Failed to start playback');
+    }
+}
+
 export async function handleTrackAction(
     action,
     item,
@@ -1286,7 +1416,7 @@ export async function handleTrackAction(
                 ? `[data-track-id="${id}"] .like-btn`
                 : type === 'video'
                   ? `.card[data-video-id="${id}"] .like-btn`
-                  : `.card[data-${type}-id="${id}"] .like-btn, .card[data-playlist-id="${id}"] .like-btn`;
+                  : `.card[data-${type}-id="${id}"] .like-btn, .track-item[data-${type}-id="${id}"] .like-btn, .card[data-playlist-id="${id}"] .like-btn`;
 
         // Also check header buttons
         const headerBtn = document.getElementById(`like-${type}-btn`);
@@ -1897,7 +2027,12 @@ export function initializeTrackInteractions(player, api, mainContent, contextMen
             }
 
             if (item) {
-                await handleTrackAction(action, item, player, api, lyricsManager, type, ui, scrobbler);
+                if (action === 'play-card') {
+                    const itemElement = actionBtn.closest('.track-item, .card');
+                    await toggleCardPlay(itemElement, item, type, player, api);
+                } else {
+                    await handleTrackAction(action, item, player, api, lyricsManager, type, ui, scrobbler);
+                }
             }
             return;
         }
@@ -2009,6 +2144,16 @@ export function initializeTrackInteractions(player, api, mainContent, contextMen
             !e.target.closest('.artist-link') &&
             !e.target.closest('.like-btn')
         ) {
+            if (trackItem.dataset.albumId) {
+                e.preventDefault();
+                navigate(`/album/${encodeURIComponent(trackItem.dataset.albumId)}`);
+                return;
+            }
+            if (trackItem.dataset.artistId) {
+                e.preventDefault();
+                navigate(`/artist/${encodeURIComponent(trackItem.dataset.artistId)}`);
+                return;
+            }
             const clickedTrackId = trackItem.dataset.trackId;
             const isSearch = window.location.pathname.startsWith('/search/');
 
@@ -2078,7 +2223,8 @@ export function initializeTrackInteractions(player, api, mainContent, contextMen
 
         const card = e.target.closest('.card');
         if (card) {
-            if (e.target.closest('.edit-playlist-btn') || e.target.closest('.delete-playlist-btn')) {
+            if (e.target.closest('.edit-playlist-btn') || e.target.closest('.delete-playlist-btn') ||
+                e.target.closest('.edit-folder-btn') || e.target.closest('.delete-folder-btn')) {
                 return;
             }
 
@@ -2100,12 +2246,21 @@ export function initializeTrackInteractions(player, api, mainContent, contextMen
                 const trackList = allTrackElements.map((el) => trackDataStore.get(el)).filter(Boolean);
                 if (trackList.length === 0) return;
                 const startIndex = trackList.findIndex((t) => t.id == clickedTrackId);
-                player.setQueue(trackList, startIndex);
                 if (ui.currentPage === 'artist' && ui.currentArtistId) {
                     player.setArtistPopularTracksContext(ui.currentArtistId, trackList, trackList.length, true);
                 }
-                document.getElementById('shuffle-btn').classList.remove('active');
-                player.playTrackFromQueue();
+                const startOfList = [...trackList.slice(startIndex), ...trackList.slice(0, startIndex)];
+                await toggleCardPlay(card, clickedTrack, 'track', player, api, startOfList);
+                return;
+            }
+
+            // Playlist, user-playlist and mix cards toggle play/pause on click
+            const cardType = ['playlist', 'user-playlist', 'mix'].find((t) => card.dataset[`${t}Id`]);
+            if (cardType) {
+                if (e.target.closest('a')) return;
+                e.preventDefault();
+                const item = trackDataStore.get(card);
+                if (item) await toggleCardPlay(card, item, cardType, player, api);
                 return;
             }
 
@@ -2328,10 +2483,15 @@ export function initializeTrackInteractions(player, api, mainContent, contextMen
                         await showMultiSelectPlaylistModal(selectedTracks);
                         clearSelection();
                         break;
-  
+
                     default:
                         clearSelection();
                         break;
+                }
+            } else if (action === 'add-to-folder') {
+                const playlistId = track.id || track.uuid;
+                if (playlistId) {
+                    await showFolderPickerModal(playlistId);
                 }
             } else {
                 await handleTrackAction(action, track, player, api, lyricsManager, type, ui, scrobbler, target.dataset);

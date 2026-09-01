@@ -47,6 +47,8 @@ import { parseRawData, TARGETS, SPEAKER_TARGETS } from './autoeq-data.js';
 import { fetchAutoEqIndex, fetchHeadphoneData, searchHeadphones, POPULAR_HEADPHONES } from './autoeq-importer.js';
 import { db } from './db.js';
 import { BulkDownloadMethod, modernSettings } from './ModernSettings.js';
+import { GatewayAPI } from './gateway-api.js';
+import { MusicAPI } from './music-api.js';
 
 const containerFormats = {};
 const customFormats = {};
@@ -125,14 +127,25 @@ export async function initializeSettings(scrobbler, player, api, ui) {
     const malojaCustomUrlSetting = document.getElementById('maloja-custom-url-setting');
     const malojaTokenInput = document.getElementById('maloja-token-input');
     const malojaCustomUrlInput = document.getElementById('maloja-custom-url-input');
+    const malojaSaveSetting = document.getElementById('maloja-save-setting');
+    const malojaSaveBtn = document.getElementById('maloja-save-btn');
+
+    let malojaOriginalToken = '';
+    let malojaOriginalUrl = '';
+    let malojaDirty = false;
 
     const updateMalojaUI = () => {
         const isEnabled = malojaSettings.isEnabled();
         if (malojaToggle) malojaToggle.checked = isEnabled;
         if (malojaTokenSetting) malojaTokenSetting.style.display = isEnabled ? 'flex' : 'none';
         if (malojaCustomUrlSetting) malojaCustomUrlSetting.style.display = isEnabled ? 'flex' : 'none';
+        if (malojaSaveSetting) malojaSaveSetting.style.display = isEnabled ? 'flex' : 'none';
         if (malojaTokenInput) malojaTokenInput.value = malojaSettings.getToken();
         if (malojaCustomUrlInput) malojaCustomUrlInput.value = malojaSettings.getCustomUrl();
+        if (malojaSaveBtn) malojaSaveBtn.disabled = true;
+        malojaOriginalToken = malojaSettings.getToken();
+        malojaOriginalUrl = malojaSettings.getCustomUrl();
+        malojaDirty = false;
     };
 
     updateMalojaUI();
@@ -145,41 +158,130 @@ export async function initializeSettings(scrobbler, player, api, ui) {
         });
     }
 
-    if (malojaTokenInput) {
-        malojaTokenInput.addEventListener('change', (e) => {
-            malojaSettings.setToken(e.target.value.trim());
-        });
+    function checkMalojaDirty() {
+        const tokenDirty = malojaTokenInput && malojaTokenInput.value.trim() !== malojaOriginalToken;
+        const urlDirty = malojaCustomUrlInput && malojaCustomUrlInput.value.trim() !== malojaOriginalUrl;
+        malojaDirty = tokenDirty || urlDirty;
+        if (malojaSaveBtn) malojaSaveBtn.disabled = !malojaDirty;
     }
 
-   if (malojaCustomUrlInput) {
-            malojaCustomUrlInput.addEventListener('change', (e) => {
-                malojaSettings.setCustomUrl(e.target.value.trim());
-            });
-        }
+    if (malojaTokenInput) {
+        malojaTokenInput.addEventListener('input', checkMalojaDirty);
+    }
+
+    if (malojaCustomUrlInput) {
+        malojaCustomUrlInput.addEventListener('input', checkMalojaDirty);
+    }
+
+    if (malojaSaveBtn) {
+        malojaSaveBtn.disabled = true;
+        malojaSaveBtn.addEventListener('click', () => {
+            const savedToken = malojaTokenInput.value.trim();
+            const savedUrl = malojaCustomUrlInput.value.trim();
+            malojaSettings.setToken(savedToken);
+            malojaSettings.setCustomUrl(savedUrl);
+            malojaOriginalToken = savedToken;
+            malojaOriginalUrl = savedUrl;
+            malojaDirty = false;
+            if (malojaSaveBtn) malojaSaveBtn.disabled = true;
+
+            let notifEl = document.querySelector('.maloja-notification');
+            if (notifEl) {
+                notifEl.style.animation = 'slide-out 0.3s ease forwards';
+                setTimeout(() => notifEl.remove(), 300);
+            }
+
+            const notification = document.createElement('div');
+            notification.className = 'maloja-notification save-confirm';
+            notification.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <span>Maloja settings saved</span>
+            `;
+            notification.classList.add('save-success');
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.animation = 'slide-out 0.3s ease forwards';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        });
+    }
 
     // Gateway Settings
     // ========================================
     const gatewayUrlInput = document.getElementById('gateway-url-input');
     const gatewayApiKeyInput = document.getElementById('gateway-api-key-input');
 
+    const gatewaySaveBtn = document.getElementById('gateway-save-btn');
+    let gatewayDirty = false;
+
     function updateGatewayUI() {
         if (gatewayUrlInput) gatewayUrlInput.value = apiSettings.gatewayUrl;
         if (gatewayApiKeyInput) gatewayApiKeyInput.value = apiSettings.gatewayApiKey;
+        gatewayDirty = false;
+        if (gatewaySaveBtn) gatewaySaveBtn.disabled = true;
+    }
+
+    function checkGatewayDirty() {
+        const urlDirty = gatewayUrlInput && gatewayUrlInput.value.trim() !== apiSettings.gatewayUrl;
+        const keyDirty = gatewayApiKeyInput && gatewayApiKeyInput.value.trim() !== apiSettings.gatewayApiKey;
+        gatewayDirty = urlDirty || keyDirty;
+        if (gatewaySaveBtn) gatewaySaveBtn.disabled = !gatewayDirty;
     }
 
     updateGatewayUI();
 
     if (gatewayUrlInput) {
-        gatewayUrlInput.addEventListener('change', (e) => {
-            apiSettings.setGatewayUrl(e.target.value.trim());
-            MusicAPI.reinitialize();
-        });
+        gatewayUrlInput.addEventListener('input', checkGatewayDirty);
     }
 
     if (gatewayApiKeyInput) {
-        gatewayApiKeyInput.addEventListener('change', (e) => {
-            apiSettings.setGatewayApiKey(e.target.value.trim());
+        gatewayApiKeyInput.addEventListener('input', checkGatewayDirty);
+    }
+
+    if (gatewaySaveBtn) {
+        gatewaySaveBtn.disabled = true;
+
+        gatewaySaveBtn.addEventListener('click', async () => {
+            const savedUrl = gatewayUrlInput.value.trim();
+            const savedKey = gatewayApiKeyInput.value.trim();
+            apiSettings.setGatewayUrl(savedUrl);
+            apiSettings.setGatewayApiKey(savedKey);
+            gatewayDirty = false;
+            if (gatewaySaveBtn) gatewaySaveBtn.disabled = true;
+
             MusicAPI.reinitialize();
+
+            const testApi = new GatewayAPI(savedUrl, savedKey);
+            const connected = await testApi.triggerHealthCheck();
+
+            let notifEl = document.querySelector('.gateway-notification');
+            if (notifEl) {
+                notifEl.style.animation = 'slide-out 0.3s ease forwards';
+                setTimeout(() => notifEl.remove(), 300);
+            }
+
+            const notification = document.createElement('div');
+            notification.className = 'gateway-notification save-confirm';
+            if (connected) {
+                notification.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    <span>Gateway connection successful</span>
+                `;
+                notification.classList.add('save-success');
+            } else {
+                notification.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                    <span>Gateway server not accessible</span>
+                `;
+                notification.classList.add('save-failed');
+            }
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.animation = 'slide-out 0.3s ease forwards';
+                setTimeout(() => notification.remove(), 300);
+            }, 4000);
         });
     }
 
@@ -5559,6 +5661,9 @@ export async function initializeSettings(scrobbler, player, api, ui) {
         showJumpBackInToggle.checked = homePageSettings.shouldShowJumpBackIn();
         showJumpBackInToggle.addEventListener('change', (e) => {
             homePageSettings.setShowJumpBackIn(e.target.checked);
+            if (UIRenderer.instance.currentPage === 'home') {
+                void UIRenderer.instance.renderHomeRecent();
+            }
         });
     }
 

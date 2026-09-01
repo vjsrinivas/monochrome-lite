@@ -1314,6 +1314,20 @@ ul {
     border-radius: var(--radius-full);
 }
 
+#pinned-items-list .nav-item a .pinned-item-cover.folder-placeholder,
+#pinned-items-list .nav-item a .pinned-item-cover.playlist-placeholder,
+#pinned-items-list .nav-item a .pinned-item-cover.default-placeholder {
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--secondary);
+    color: var(--muted-foreground);
+}
+
 #pinned-items-list .nav-item a .pinned-item-name {
     white-space: nowrap;
     overflow: hidden;
@@ -2090,6 +2104,95 @@ input[type='search']::-webkit-search-cancel-button {
     color: #ef4444 !important;
 }
 
+.edit-folder-btn,
+.delete-folder-btn {
+    background: rgb(0, 0, 0, 0.4) !important;
+    backdrop-filter: blur(8px);
+    border-radius: 50% !important;
+    width: 32px !important;
+    height: 32px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: scale(0.8);
+    transition:
+        transform var(--transition-fast),
+        opacity var(--transition-fast),
+        background-color var(--transition-fast) !important;
+    z-index: 10;
+    color: white !important;
+    border: 1px solid rgb(255, 255, 255, 0.1) !important;
+    cursor: pointer;
+}
+
+.edit-folder-btn:hover,
+.delete-folder-btn:hover {
+    background: rgb(0, 0, 0, 0.7) !important;
+    transform: scale(1.1) rotate(5deg) !important;
+    border-color: rgb(255, 255, 255, 0.3) !important;
+}
+
+.card:hover .edit-folder-btn,
+.card:hover .delete-folder-btn {
+    opacity: 1;
+    transform: scale(1);
+    transition-delay: 0.05s;
+}
+
+.edit-folder-btn {
+    position: absolute;
+    top: 2%;
+    right: 2%;
+}
+
+.delete-folder-btn {
+    position: absolute;
+    top: 2%;
+    left: 2%;
+}
+
+.delete-folder-btn:hover {
+    color: #ef4444 !important;
+}
+
+.remove-from-folder-btn {
+    background: rgb(0, 0, 0, 0.5) !important;
+    backdrop-filter: blur(8px);
+    border-radius: 50% !important;
+    width: 28px !important;
+    height: 28px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: scale(0.8);
+    transition:
+        transform var(--transition-fast),
+        opacity var(--transition-fast),
+        background-color var(--transition-fast) !important;
+    z-index: 10;
+    color: white !important;
+    border: 1px solid rgb(255, 255, 255, 0.1) !important;
+    cursor: pointer;
+    position: absolute;
+    top: 2%;
+    right: 2%;
+}
+
+.remove-from-folder-btn:hover {
+    background: rgb(0, 0, 0, 0.8) !important;
+    transform: scale(1.1) !important;
+    color: #ef4444 !important;
+}
+
+.card:hover .remove-from-folder-btn {
+    opacity: 1;
+    transform: scale(1);
+}
+
 .card-collage {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -2339,9 +2442,10 @@ input[type='search']::-webkit-search-cancel-button {
         margin-bottom: var(--spacing-2xl);
     }
 
-    /* Switch to inline-block layout for flow behavior */
+    /* Inline-block layout so grid wraps correctly beside the float */
     .album-content-layout .content-section .card-grid {
-        display: block;
+        display: inline-block;
+        width: calc(100% - 55% - var(--spacing-2xl) - var(--spacing-md));
         gap: 0;
     }
 
@@ -2410,6 +2514,10 @@ input[type='search']::-webkit-search-cancel-button {
 
 .track-item.no-duration {
     grid-template-columns: 40px 1fr auto;
+}
+
+.track-item.no-duration.artist-list-item {
+    grid-template-columns: 80px 1fr auto;
 }
 
 .track-item.no-duration .track-item-duration {
@@ -2571,6 +2679,28 @@ body.multi-select-mode .track-item:hover {
     border-radius: var(--radius-sm);
     object-fit: cover;
     flex-shrink: 0;
+}
+
+.track-item-cover.artist-list-item-cover {
+    width: 80px;
+    height: 80px;
+    border-radius: var(--radius);
+}
+
+.track-item-cover.folder-placeholder,
+.track-item-cover.playlist-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--secondary);
+    color: var(--muted-foreground);
+}
+
+.track-item-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    min-width: 0;
 }
 
 .track-item-details {
@@ -3944,11 +4074,11 @@ input:checked+.slider::before {
 .progress-bar:active .progress-fill::after {
     content: '';
     position: absolute;
-    right: -4px;
+    right: -6px;
     top: 50%;
     transform: translateY(-50%);
-    width: 8px;
-    height: 8px;
+    width: 12px;
+    height: 12px;
     background-color: var(--highlight);
     border-radius: var(--radius-full);
     box-shadow: 0 2px 4px rgb(0, 0, 0, 0.3);
@@ -5543,6 +5673,47 @@ input:checked+.slider::before {
     color: var(--card);
 }
 
+.gateway-notification.save-confirm {
+    position: fixed;
+    bottom: calc(var(--player-bar-height-desktop) + 20px);
+    left: calc(190px + 2%);
+    width: calc(96% - 190px);
+    max-width: 350px;
+    margin: 0 auto;
+    background: var(--card-foreground);
+    color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    box-shadow: var(--shadow-lg);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    animation: slide-in 0.3s ease;
+}
+
+.gateway-notification.save-confirm svg {
+    flex-shrink: 0;
+    color: var(--card-foreground);
+}
+
+.gateway-notification.save-success svg {
+    color: #22c55e;
+}
+
+.gateway-notification.save-success span {
+    color: var(--card);
+}
+
+.gateway-notification.save-failed svg {
+    color: var(--card);
+}
+
+.gateway-notification.save-failed span {
+    color: var(--card);
+}
+
 body.sidebar-collapsed .gateway-notification {
     left: calc(80px + 2%);
     width: calc(96% - 80px);
@@ -5550,6 +5721,13 @@ body.sidebar-collapsed .gateway-notification {
 
 @media (max-width: 768px) {
     .gateway-notification {
+        left: 2%;
+        width: 96%;
+        max-width: none;
+        bottom: calc(var(--player-bar-height-mobile) + 15px);
+    }
+
+    .gateway-notification.save-confirm {
         left: 2%;
         width: 96%;
         max-width: none;
@@ -6711,7 +6889,7 @@ img[src=''] {
     font-weight: 600;
 }
 
-#page-library .folder-empty-placeholder {
+.folder-empty-placeholder {
     width: 100%;
     height: 100%;
     display: flex;
@@ -7637,7 +7815,9 @@ img[src=''] {
         height: 14px;
     }
 
-    .queue-track-item .track-item-cover {
+    .queue-track-item .track-item-cover,
+    .queue-track-item .track-item-cover.folder-placeholder,
+    .queue-track-item .track-item-cover.playlist-placeholder {
         width: 36px;
         height: 36px;
     }
@@ -7899,7 +8079,9 @@ img[src=''] {
         width: 20px;
     }
 
-    .queue-track-item .track-item-cover {
+    .queue-track-item .track-item-cover,
+    .queue-track-item .track-item-cover.folder-placeholder,
+    .queue-track-item .track-item-cover.playlist-placeholder {
         width: 32px;
         height: 32px;
     }

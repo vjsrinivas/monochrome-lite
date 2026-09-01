@@ -310,7 +310,9 @@ export class MusicDatabase {
                 explicit: item.explicit || false,
                 // UI uses singular 'artist'
                 artist: item.artist
-                    ? { name: item.artist.name || null, id: item.artist.id }
+                    ? typeof item.artist === 'string'
+                        ? { name: item.artist, id: null }
+                        : { name: item.artist.name || null, id: item.artist.id }
                     : item.artists?.[0]
                       ? { name: item.artists[0].name || null, id: item.artists[0].id }
                       : null,
@@ -382,6 +384,11 @@ export class MusicDatabase {
                 cover = item.cover;
                 images = item.images;
                 href = `/userplaylist/${id}`;
+                break;
+            case 'folder':
+                name = item.name;
+                cover = item.cover;
+                href = `/folder/${encodeURIComponent(id)}`;
                 break;
             default:
                 return null;
@@ -728,6 +735,15 @@ export class MusicDatabase {
             folder.updatedAt = Date.now();
             await this.performTransaction('user_folders', 'readwrite', (store) => store.put(folder));
         }
+        return folder;
+    }
+
+    async removePlaylistFromFolder(folderId, playlistId) {
+        const folder = await this.getFolder(folderId);
+        if (!folder) throw new Error('Folder not found');
+        folder.playlists = (folder.playlists || []).filter(id => id !== playlistId);
+        folder.updatedAt = Date.now();
+        await this.performTransaction('user_folders', 'readwrite', s => s.put(folder));
         return folder;
     }
 

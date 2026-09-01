@@ -1187,12 +1187,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.target.closest('#folder-modal-save')) {
             const name = document.getElementById('folder-name-input').value.trim();
             const cover = document.getElementById('folder-cover-input').value.trim();
+            const editingId = document.getElementById('folder-modal').dataset.editingId;
 
             if (name) {
-                const folder = await db.createFolder(name, cover);
-                await syncManager.syncUserFolder(folder, 'create');
-                UIRenderer.instance.renderLibraryPage();
+                if (editingId) {
+                    const folder = await db.getFolder(editingId);
+                    folder.name = name;
+                    folder.cover = cover;
+                    folder.updatedAt = Date.now();
+                    await db.performTransaction('user_folders', 'readwrite', s => s.put(folder));
+                    await syncManager.syncUserFolder(folder, 'update');
+                    if (window.location.pathname.startsWith(`/folder/${editingId}`)) {
+                        UIRenderer.instance.renderFolderPage(editingId);
+                    }
+                    UIRenderer.instance.renderLibraryPage();
+                } else {
+                    const folder = await db.createFolder(name, cover);
+                    await syncManager.syncUserFolder(folder, 'create');
+                    UIRenderer.instance.renderLibraryPage();
+                }
                 document.getElementById('folder-modal').classList.remove('active');
+                delete document.getElementById('folder-modal').dataset.editingId;
             } else {
                 showNotification('Please enter a folder name.');
             }
@@ -1200,6 +1215,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (e.target.closest('#folder-modal-cancel')) {
             document.getElementById('folder-modal').classList.remove('active');
+            delete document.getElementById('folder-modal').dataset.editingId;
         }
 
         if (e.target.closest('#library-liked-tracks-view-list')) {
@@ -1251,13 +1267,31 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        if (e.target.closest('#delete-folder-btn')) {
-            const folderId = window.location.pathname.split('/')[2];
+        if (e.target.closest('#delete-folder-btn') || e.target.closest('.delete-folder-btn')) {
+            const card = e.target.closest('.card[data-folder-id]');
+            const isDetailPage = e.target.closest('#delete-folder-btn');
+            const folderId = isDetailPage ? window.location.pathname.split('/')[2] : card?.dataset.folderId;
             if (folderId && confirm('Are you sure you want to delete this folder?')) {
                 await db.deleteFolder(folderId);
                 await syncManager.syncUserFolder({ id: folderId }, 'delete');
                 navigate('/library');
             }
+        }
+
+        if (e.target.closest('.edit-folder-btn') || e.target.closest('#edit-folder-btn')) {
+            const card = e.target.closest('.card[data-folder-id]');
+            const isDetailPage = e.target.closest('#edit-folder-btn');
+            const folderId = isDetailPage ? window.location.pathname.split('/')[2] : card.dataset.folderId;
+
+            const folder = await db.getFolder(folderId);
+            if (!folder) return;
+
+            const modal = document.getElementById('folder-modal');
+            document.getElementById('folder-modal-title').textContent = 'Edit Folder';
+            document.getElementById('folder-name-input').value = folder.name;
+            document.getElementById('folder-cover-input').value = folder.cover || '';
+            modal.dataset.editingId = folderId;
+            modal.classList.add('active');
         }
 
         if (e.target.closest('#playlist-modal-save')) {
@@ -2157,19 +2191,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (btn.disabled) return;
 
             try {
-                const likedTracks = await db.getFavorites('track');
-                if (likedTracks.length > 0) {
-                    // Shuffle array
-                    for (let i = likedTracks.length - 1; i > 0; i--) {
+                const catalogResult = await MusicAPI.instance.getCatalogTracks({ limit: 500 });
+                const catalogTracks = catalogResult?.tracks || catalogResult?.items || catalogResult || [];
+                if (catalogTracks.length > 0) {
+                    for (let i = catalogTracks.length - 1; i > 0; i--) {
                         const j = Math.floor(Math.random() * (i + 1));
-                        [likedTracks[i], likedTracks[j]] = [likedTracks[j], likedTracks[i]];
+                        [catalogTracks[i], catalogTracks[j]] = [catalogTracks[j], catalogTracks[i]];
                     }
-                    Player.instance.setQueue(likedTracks, 0);
+                    Player.instance.setQueue(catalogTracks, 0);
                     document.getElementById('shuffle-btn').classList.remove('active');
                     await Player.instance.playTrackFromQueue();
                 }
             } catch (error) {
-                console.error('Failed to shuffle liked tracks:', error);
+                console.error('Failed to shuffle catalog tracks:', error);
             }
         }
 

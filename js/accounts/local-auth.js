@@ -1,6 +1,8 @@
 // js/accounts/local-auth.js - Offline fallback auth (IndexedDB + Web Crypto)
 // Mirrors AuthManager interface for seamless swap-in when PocketBase is unavailable
 
+import { db } from '../db.js';
+
 const DB_NAME = 'monochrome_local_auth';
 const DB_VERSION = 1;
 const STORE_NAME = 'local_accounts';
@@ -88,6 +90,7 @@ class LocalAuthManager {
                         .then((u) => {
                             this.user = u;
                             this.authListeners.forEach((l) => l(u));
+                            this.syncFoldersToDb();
                         })
                         .catch(() => {});
                 }
@@ -337,6 +340,29 @@ class LocalAuthManager {
             };
         }
         await this.updateProfile({ user_folders: userFolders });
+    }
+
+    async syncFoldersToDb() {
+        const folders = Object.values(this.user.user_folders || {});
+        if (folders.length === 0) return;
+        for (const folder of folders) {
+            try {
+                const existing = await db.getFolder(folder.id);
+                if (!existing) {
+                    await db.createFolder(folder.name, folder.cover);
+                }
+                if (folder.playlists?.length) {
+                    const updated = await db.getFolder(folder.id);
+                    if (updated) {
+                        for (const pid of folder.playlists) {
+                            await db.addPlaylistToFolder(folder.id, pid);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('[LocalAuth] Failed to sync folder to DB:', e);
+            }
+        }
     }
 
     async getUserData() {

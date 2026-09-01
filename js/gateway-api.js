@@ -1,5 +1,6 @@
 // js/gateway-api.js
 import { APICache } from './cache.js';
+import { decodeHtml } from './utils.js';
 
 export class GatewayAPI {
     constructor(gatewayUrl, apiKey) {
@@ -49,6 +50,18 @@ export class GatewayAPI {
                     this.onConnectionChange({ connected: false });
                 }
             }
+        }
+    }
+
+    async triggerHealthCheck() {
+        try {
+            await fetch(`${this.gatewayUrl}/health`, {
+                headers: this._headers(),
+                signal: AbortSignal.timeout(5000),
+            });
+            return true;
+        } catch {
+            return false;
         }
     }
 
@@ -315,7 +328,12 @@ export class GatewayAPI {
 
     getSongCoverUrl(songName) {
         if (!songName) return null;
-        return `${this.gatewayUrl}/covers/song/${encodeURIComponent(songName)}`;
+        return `${this.gatewayUrl}/covers/song/${encodeURIComponent(decodeHtml(songName))}`;
+    }
+
+    getAlbumCoverUrl(albumName) {
+        if (!albumName) return null;
+        return `${this.gatewayUrl}/covers/album/${encodeURIComponent(decodeHtml(albumName))}`;
     }
 
     async getCoverArtUrl(songName) {
